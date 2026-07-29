@@ -1,49 +1,134 @@
 import 'package:flutter/material.dart';
+import 'main.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({Key? key}) : super(key: key);
+class DashboardPage extends StatefulWidget {
+  const DashboardPage({super.key}); // Key ditambahkan untuk refresh
 
-  // Tema warna yang mendekati desain
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
   final Color primaryBrown = const Color(0xFF8B5A2B);
   final Color primaryOrange = const Color(0xFFF39C12);
   final Color bgGrey = const Color(0xFFFAFAFA);
+
+  // State Variables
+  bool _isLoading = true;
+  String _userName = 'Pengguna';
+  String _userAddress = 'Memuat alamat...';
+  List<Map<String, dynamic>> _recentJobs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  // Fungsi untuk mengambil data dari Supabase
+  Future<void> _fetchDashboardData() async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // Asumsi: Kita menggunakan dummy user ID, atau mengambil dari user yang sedang login
+      // final userId = supabase.auth.currentUser?.id;
+
+      // 1. Ambil data profil (Contoh tabel: 'profiles')
+      // Ubah query ini sesuai dengan nama tabel dan kolom di Supabase Anda
+      final userData = await supabase
+          .from('profiles')
+          .select('full_name, address')
+          .limit(1)
+          .maybeSingle();
+
+      // 2. Ambil data pekerjaan terbaru (Contoh tabel: 'jobs')
+      // Ubah query ini sesuai dengan nama tabel dan kolom di Supabase Anda
+      final jobsData = await supabase
+          .from('jobs')
+          .select('status, created_at, title, address, price')
+          .order('created_at', ascending: false)
+          .limit(3); // Ambil 3 pekerjaan terakhir
+
+      if (mounted) {
+        setState(() {
+          _userName = userData?['full_name'] ?? 'Budi (Dummy)';
+          _userAddress = userData?['address'] ?? 'Jl. Default No. 1, Jakarta';
+          
+          if (jobsData.isNotEmpty) {
+            _recentJobs = List<Map<String, dynamic>>.from(jobsData);
+          } else {
+            // Data dummy jika tabel kosong (Untuk testing)
+            _recentJobs = [
+              {
+                'status': 'Dalam Proses',
+                'created_at': '2 Jam Lalu',
+                'title': 'Potong Rumput Taman Depan',
+                'address': 'Jl. Sudirman No. 12',
+                'price': 'Rp 150.000',
+              },
+              {
+                'status': 'Selesai',
+                'created_at': 'Kemarin',
+                'title': 'Service AC Ruang Tamu',
+                'address': 'Jl. Sudirman No. 12',
+                'price': 'Rp 250.000',
+              }
+            ];
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching Supabase data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _userName = 'Error Memuat';
+          _userAddress = 'Gagal mengambil data';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgGrey,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildSearchBar(),
-            const SizedBox(height: 24),
-            _buildPromoBanner(),
-            const SizedBox(height: 32),
-            _buildCategorySection(),
-            const SizedBox(height: 32),
-            _buildRecentJobsSection(),
-            const SizedBox(height: 80), // Padding bawah untuk menghindari FAB
-          ],
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryOrange))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 130.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  _buildSearchBar(),
+                  const SizedBox(height: 24),
+                  _buildPromoBanner(),
+                  const SizedBox(height: 32),
+                  _buildCategorySection(),
+                  const SizedBox(height: 32),
+                  _buildRecentJobsSection(),
+                ],
+              ),
+            ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90.0),
+        child: FloatingActionButton(
+          onPressed: () {
+            // TODO: Aksi tambah pesanan baru
+          },
+          backgroundColor: primaryOrange,
+          elevation: 4,
+          child: const Icon(Icons.add, color: Colors.black87, size: 28),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Aksi tambah pesanan baru
-        },
-        backgroundColor: primaryOrange,
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.black87, size: 28),
-      ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // --- KOMPONEN APP BAR ---
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: bgGrey,
@@ -69,40 +154,47 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // --- KOMPONEN HEADER (PROFIL & LOKASI) ---
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Halo, Budi!",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16, color: primaryBrown),
-                const SizedBox(width: 4),
-                const Text(
-                  "Jl. Sudirman No. 12, Jakarta",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Halo, $_userName!",
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
-              ],
-            ),
-          ],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 16, color: primaryBrown),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _userAddress,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        // Gambar dihapus, diganti dengan avatar ikon
+        const SizedBox(width: 16),
         CircleAvatar(
           radius: 24,
           backgroundColor: Colors.orange.shade100,
@@ -112,8 +204,8 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // --- KOMPONEN KOLOM PENCARIAN ---
   Widget _buildSearchBar() {
+    // [Kode tidak berubah]
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -132,13 +224,13 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // --- KOMPONEN BANNER PROMO (Tanpa Gambar) ---
   Widget _buildPromoBanner() {
+    // [Kode tidak berubah]
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFD6E8D3), // Warna hijau sage
+        color: const Color(0xFFD6E8D3),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -173,8 +265,8 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // --- KOMPONEN KATEGORI ---
   Widget _buildCategorySection() {
+    // [Kode tidak berubah]
     return Column(
       children: [
         Row(
@@ -198,17 +290,22 @@ class DashboardPage extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _categoryItem(Icons.cleaning_services, "Kebersihan", Colors.orange.shade100, Colors.orange.shade800),
-            _categoryItem(Icons.local_shipping, "Kurir", Colors.green.shade50, Colors.green.shade800),
-            _categoryItem(Icons.build, "Tukang", Colors.red.shade50, Colors.red.shade800),
-            _categoryItem(Icons.grid_view, "Lainnya", Colors.grey.shade200, Colors.black87),
+            _categoryItem(Icons.cleaning_services, "Kebersihan",
+                Colors.orange.shade100, Colors.orange.shade800),
+            _categoryItem(Icons.local_shipping, "Kurir",
+                Colors.green.shade50, Colors.green.shade800),
+            _categoryItem(Icons.build, "Tukang", Colors.red.shade50,
+                Colors.red.shade800),
+            _categoryItem(Icons.grid_view, "Lainnya", Colors.grey.shade200,
+                Colors.black87),
           ],
         ),
       ],
     );
   }
 
-  Widget _categoryItem(IconData icon, String label, Color bgColor, Color iconColor) {
+  Widget _categoryItem(
+      IconData icon, String label, Color bgColor, Color iconColor) {
     return Column(
       children: [
         Container(
@@ -229,8 +326,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // --- KOMPONEN PEKERJAAN TERBARU (Tanpa Gambar Thumbnail) ---
   Widget _buildRecentJobsSection() {
+    if (_recentJobs.isEmpty) {
+      return const SizedBox.shrink(); // Sembunyikan section jika tidak ada data
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,38 +339,47 @@ class DashboardPage extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        _jobCard(
-          status: "Dalam Proses",
-          statusColor: Colors.green.shade100,
-          statusTextColor: Colors.green.shade800,
-          time: "2 Jam Lalu",
-          title: "Potong Rumput Taman Depan",
-          address: "Jl. Sudirman No. 12...",
-          price: "Rp 150.000",
-        ),
-        const SizedBox(height: 12),
-        _jobCard(
-          status: "Selesai",
-          statusColor: Colors.grey.shade200,
-          statusTextColor: Colors.black54,
-          time: "Kemarin",
-          title: "Service AC Ruang Tamu",
-          address: "Jl. Sudirman No. 12...",
-          price: "Rp 250.000",
-        ),
+        
+        // Looping data dari Supabase
+        ..._recentJobs.map((job) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: _jobCard(
+              status: job['status'] ?? 'Menunggu',
+              time: job['created_at'] ?? '-',
+              title: job['title'] ?? 'Pekerjaan',
+              address: job['address'] ?? '-',
+              price: job['price']?.toString() ?? 'Rp 0',
+            ),
+          );
+        }),
       ],
     );
   }
 
   Widget _jobCard({
     required String status,
-    required Color statusColor,
-    required Color statusTextColor,
     required String time,
     required String title,
     required String address,
     required String price,
   }) {
+    
+    // Menentukan warna secara dinamis berdasarkan status
+    Color statusBgColor;
+    Color statusTextColor;
+    
+    if (status.toLowerCase() == 'dalam proses') {
+      statusBgColor = Colors.green.shade100;
+      statusTextColor = Colors.green.shade800;
+    } else if (status.toLowerCase() == 'selesai') {
+      statusBgColor = Colors.grey.shade200;
+      statusTextColor = Colors.black54;
+    } else {
+      statusBgColor = Colors.orange.shade100;
+      statusTextColor = Colors.orange.shade800;
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -287,12 +396,15 @@ class DashboardPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor,
+                  color: statusBgColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   status,
-                  style: TextStyle(fontSize: 12, color: statusTextColor, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: statusTextColor,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
@@ -323,28 +435,12 @@ class DashboardPage extends StatelessWidget {
                   color: primaryBrown,
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black54),
+              const Icon(Icons.arrow_forward_ios,
+                  size: 16, color: Colors.black54),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  // --- KOMPONEN BOTTOM NAVIGATION ---
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryBrown,
-      unselectedItemColor: Colors.black54,
-      showUnselectedLabels: true,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
-        BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: "Pekerjaan"),
-        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: "Chat"),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profil"),
-      ],
     );
   }
 }
