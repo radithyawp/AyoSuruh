@@ -1,3 +1,4 @@
+import 'package:ayosuruh/navbar.dart';
 import 'package:flutter/material.dart';
 import 'customer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -26,17 +27,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ayo Suruh', // Anda bisa mengubah judul aplikasinya
-      debugShowCheckedModeBanner: false, // Opsional: Menghilangkan pita "DEBUG" di kanan atas
+      title: 'AyoSuruh', 
+      debugShowCheckedModeBanner: false, 
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5A2B)),
       ),
-      // 2. Ubah properti 'home' ini agar mengarah ke halaman yang baru kita buat
-      home: const DashboardPage(), 
+      
+      home: const MainNavigation(), 
     );
   }
 }
 
-// Catatan: Anda bisa menghapus kelas MyHomePage dan _MyHomePageState 
-// dari file main.dart karena kode bawaan *counter app* tersebut sudah 
-// tidak kita gunakan lagi.
