@@ -1,8 +1,8 @@
-import 'package:ayosuruh/navbar.dart';
+import 'package:ayosuruh/onboarding_screen.dart'; // <--- Import file onboarding
 import 'package:flutter/material.dart';
-import 'customer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -33,8 +33,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5A2B)),
       ),
       
-      home: const MainNavigation(), 
+      // Ubah home menjadi SplashScreen
+      home: const SplashScreen(), 
     );
   }
 }
-

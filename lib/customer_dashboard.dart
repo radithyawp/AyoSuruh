@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'main.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'notification.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key}); // Key ditambahkan untuk refresh
+  const DashboardPage({super.key});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -16,8 +16,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // State Variables
   bool _isLoading = true;
-  String _userName = 'Pengguna';
-  String _userAddress = 'Memuat alamat...';
+  String _userName = '';
+  String _userAddress = '';
+  String? _avatarUrl;
   List<Map<String, dynamic>> _recentJobs = [];
 
   @override
@@ -26,66 +27,49 @@ class _DashboardPageState extends State<DashboardPage> {
     _fetchDashboardData();
   }
 
-  // Fungsi untuk mengambil data dari Supabase
+  // Fetch Data dari Supabase berdasarkan user yang sedang login
   Future<void> _fetchDashboardData() async {
     try {
       final supabase = Supabase.instance.client;
-      
-      // Asumsi: Kita menggunakan dummy user ID, atau mengambil dari user yang sedang login
-      // final userId = supabase.auth.currentUser?.id;
+      final currentUser = supabase.auth.currentUser;
 
-      // 1. Ambil data profil (Contoh tabel: 'profiles')
-      // Ubah query ini sesuai dengan nama tabel dan kolom di Supabase Anda
-      final userData = await supabase
-          .from('profiles')
-          .select('full_name, address')
-          .limit(1)
-          .maybeSingle();
+      if (currentUser != null) {
+        // 1. Ambil data profil dari tabel 'users' / 'profiles'
+        final userData = await supabase
+            .from('users')
+            .select('nama_lengkap, alamat, avatar_url')
+            .eq('id_user', currentUser.id)
+            .maybeSingle();
 
-      // 2. Ambil data pekerjaan terbaru (Contoh tabel: 'jobs')
-      // Ubah query ini sesuai dengan nama tabel dan kolom di Supabase Anda
-      final jobsData = await supabase
-          .from('jobs')
-          .select('status, created_at, title, address, price')
-          .order('created_at', ascending: false)
-          .limit(3); // Ambil 3 pekerjaan terakhir
+        // 2. Ambil data pekerjaan dari tabel 'jobs'
+        final jobsData = await supabase
+            .from('jobs')
+            .select('id, title, status, created_at, price, image_url, bids_count')
+            .eq('user_id', currentUser.id)
+            .order('created_at', ascending: false)
+            .limit(3);
 
-      if (mounted) {
-        setState(() {
-          _userName = userData?['full_name'] ?? 'Budi (Dummy)';
-          _userAddress = userData?['address'] ?? 'Jl. Default No. 1, Jakarta';
-          
-          if (jobsData.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _userName = userData?['nama_lengkap'] ?? 'Pengguna';
+            _userAddress = userData?['alamat'] ?? 'Alamat belum diatur';
+            _avatarUrl = userData?['avatar_url'];
             _recentJobs = List<Map<String, dynamic>>.from(jobsData);
-          } else {
-            // Data dummy jika tabel kosong (Untuk testing)
-            _recentJobs = [
-              {
-                'status': 'Dalam Proses',
-                'created_at': '2 Jam Lalu',
-                'title': 'Potong Rumput Taman Depan',
-                'address': 'Jl. Sudirman No. 12',
-                'price': 'Rp 150.000',
-              },
-              {
-                'status': 'Selesai',
-                'created_at': 'Kemarin',
-                'title': 'Service AC Ruang Tamu',
-                'address': 'Jl. Sudirman No. 12',
-                'price': 'Rp 250.000',
-              }
-            ];
-          }
-          _isLoading = false;
-        });
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching Supabase data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _userName = 'Error Memuat';
-          _userAddress = 'Gagal mengambil data';
         });
       }
     }
@@ -104,26 +88,34 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   _buildSearchBar(),
                   const SizedBox(height: 24),
                   _buildPromoBanner(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   _buildCategorySection(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   _buildRecentJobsSection(),
                 ],
               ),
             ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 90.0),
-        child: FloatingActionButton(
+        child: FloatingActionButton.extended(
           onPressed: () {
-            // TODO: Aksi tambah pesanan baru
+            // TODO: Navigasi ke halaman Buat Pekerjaan
           },
           backgroundColor: primaryOrange,
           elevation: 4,
-          child: const Icon(Icons.add, color: Colors.black87, size: 28),
+          icon: const Icon(Icons.add, color: Colors.black87, size: 24),
+          label: const Text(
+            'Buat Pekerjaan',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          tooltip: 'Buat Pekerjaan',
         ),
       ),
     );
@@ -133,22 +125,30 @@ class _DashboardPageState extends State<DashboardPage> {
     return AppBar(
       backgroundColor: bgGrey,
       elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.menu, color: primaryBrown),
-        onPressed: () {},
-      ),
-      title: Text(
-        "Ayo Suruh",
-        style: TextStyle(
-          color: primaryBrown,
-          fontWeight: FontWeight.w800,
-          fontSize: 22,
-        ),
+      title: Row(
+        children: [
+          // Icon/Logo Ayo Suruh
+          Icon(Icons.directions_run_rounded, color: primaryOrange, size: 30),
+          const SizedBox(width: 8),
+          Text(
+            "ayo suruh",
+            style: TextStyle(
+              color: primaryBrown,
+              fontWeight: FontWeight.w900,
+              fontSize: 24,
+            ),
+          ),
+        ],
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.black87),
-          onPressed: () {},
+          icon: const Icon(Icons.notifications_none, color: Colors.black87, size: 26),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const notificationPage()),
+            );
+          },
         ),
       ],
     );
@@ -195,17 +195,28 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
         const SizedBox(width: 16),
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: Colors.orange.shade100,
-          child: Icon(Icons.person, color: primaryBrown, size: 28),
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: primaryOrange, width: 2),
+          ),
+          child: CircleAvatar(
+            radius: 22,
+            backgroundColor: Colors.orange.shade100,
+            backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? NetworkImage(_avatarUrl!)
+                : null,
+            child: _avatarUrl == null || _avatarUrl!.isEmpty
+                ? Icon(Icons.person, color: primaryBrown, size: 26)
+                : null,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildSearchBar() {
-    // [Kode tidak berubah]
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -218,46 +229,55 @@ class _DashboardPageState extends State<DashboardPage> {
           hintText: "Cari layanan...",
           hintStyle: TextStyle(color: Colors.black38),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16),
+          contentPadding: EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
   }
 
   Widget _buildPromoBanner() {
-    // [Kode tidak berubah]
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFD6E8D3),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFFD8EAD3), // Hijau pastel sesuai gambar
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Text(
-            "Rumah bersih, hati\nsenang.",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBrown,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text(
-              "Pesan Sekarang",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Rumah bersih, hati\nsenang.",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryBrown,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                  child: const Text(
+                    "Pesan Sekarang",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -266,7 +286,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildCategorySection() {
-    // [Kode tidak berubah]
     return Column(
       children: [
         Row(
@@ -286,18 +305,18 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _categoryItem(Icons.cleaning_services, "Kebersihan",
-                Colors.orange.shade100, Colors.orange.shade800),
+                const Color(0xFFFDE8CD), primaryOrange),
             _categoryItem(Icons.local_shipping, "Kurir",
-                Colors.green.shade50, Colors.green.shade800),
-            _categoryItem(Icons.build, "Tukang", Colors.red.shade50,
-                Colors.red.shade800),
-            _categoryItem(Icons.grid_view, "Lainnya", Colors.grey.shade200,
-                Colors.black87),
+                const Color(0xFFEAF5EA), Colors.green.shade700),
+            _categoryItem(Icons.build_rounded, "Tukang",
+                const Color(0xFFFDEAEA), Colors.red.shade400),
+            _categoryItem(Icons.grid_view_rounded, "Lainnya",
+                const Color(0xFFEFEFEF), Colors.black87),
           ],
         ),
       ],
@@ -309,13 +328,13 @@ class _DashboardPageState extends State<DashboardPage> {
     return Column(
       children: [
         Container(
-          width: 70,
-          height: 70,
+          width: 65,
+          height: 65,
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Icon(icon, color: iconColor, size: 32),
+          child: Icon(icon, color: iconColor, size: 28),
         ),
         const SizedBox(height: 8),
         Text(
@@ -327,117 +346,150 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildRecentJobsSection() {
-    if (_recentJobs.isEmpty) {
-      return const SizedBox.shrink(); // Sembunyikan section jika tidak ada data
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Pekerjaan Terbaru",
+          "Status Pekerjaan Saya",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        
-        // Looping data dari Supabase
-        ..._recentJobs.map((job) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: _jobCard(
-              status: job['status'] ?? 'Menunggu',
-              time: job['created_at'] ?? '-',
-              title: job['title'] ?? 'Pekerjaan',
-              address: job['address'] ?? '-',
-              price: job['price']?.toString() ?? 'Rp 0',
+        if (_recentJobs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-          );
-        }),
+            child: const Center(
+              child: Text(
+                "Belum ada pekerjaan yang dibuat",
+                style: TextStyle(color: Colors.black54),
+              ),
+            ),
+          )
+        else
+          ..._recentJobs.map((job) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: _jobCard(job: job),
+            );
+          }),
       ],
     );
   }
 
-  Widget _jobCard({
-    required String status,
-    required String time,
-    required String title,
-    required String address,
-    required String price,
-  }) {
-    
-    // Menentukan warna secara dinamis berdasarkan status
-    Color statusBgColor;
-    Color statusTextColor;
-    
-    if (status.toLowerCase() == 'dalam proses') {
-      statusBgColor = Colors.green.shade100;
-      statusTextColor = Colors.green.shade800;
-    } else if (status.toLowerCase() == 'selesai') {
-      statusBgColor = Colors.grey.shade200;
-      statusTextColor = Colors.black54;
-    } else {
-      statusBgColor = Colors.orange.shade100;
-      statusTextColor = Colors.orange.shade800;
-    }
+  Widget _jobCard({required Map<String, dynamic> job}) {
+    final String title = job['title'] ?? 'Pekerjaan';
+    final String status = job['status'] ?? 'Mencari Mitra';
+    final String createdAt = job['created_at'] != null ? '2 Jam Lalu' : '-'; // Bisa diformat timeago
+    final String price = job['price']?.toString() ?? 'Rp 0';
+    final String? imageUrl = job['image_url'];
+    final int bidsCount = job['bids_count'] ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
+        color: const Color(0xFFFAF7F7), // Sesuai warna background card di gambar
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.shade100, width: 1.2),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(20),
+          // Gambar Pekerjaan
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 80,
+              height: 80,
+              color: Colors.grey.shade300,
+              child: imageUrl != null && imageUrl.isNotEmpty
+                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                  : Icon(Icons.image, color: Colors.grey.shade600, size: 36),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Detail Informasi Pekerjaan
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Status Badge + Waktu
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: primaryOrange,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        status,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      createdAt,
+                      style: const TextStyle(fontSize: 12, color: Colors.black45),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  status,
+                const SizedBox(height: 6),
+
+                // Judul Pekerjaan
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+
+                // Penawaran Masuk (Sub-info)
+                Text(
+                  "$bidsCount Penawaran Masuk",
                   style: TextStyle(
-                      fontSize: 12,
-                      color: statusTextColor,
-                      fontWeight: FontWeight.bold),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBrown,
+                  ),
                 ),
-              ),
-              Text(
-                time,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            address,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                price,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: primaryBrown,
+                const SizedBox(height: 6),
+
+                // Harga + Chevron Icon
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      price,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryBrown,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: primaryBrown,
+                      size: 22,
+                    ),
+                  ],
                 ),
-              ),
-              const Icon(Icons.arrow_forward_ios,
-                  size: 16, color: Colors.black54),
-            ],
+              ],
+            ),
           ),
         ],
       ),
