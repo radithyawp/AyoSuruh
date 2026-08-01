@@ -1,5 +1,5 @@
+import 'package:ayosuruh/login.dart';
 import 'package:flutter/material.dart';
-import 'package:ayosuruh/navbar.dart'; // Navigasi utama setelah onboarding
 
 // 1. SPLASH SCREEN
 class SplashScreen extends StatefulWidget {
@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const Spacer(),
               // Ilustrasi / Logo Splash
               Image.asset(
-                'images/logo.jpeg', // Sesuaikan path gambar kamu
+                'assets/images/logo.jpeg', // Sesuaikan path gambar kamu
                 width: 480,
                 height: 480,
                 errorBuilder: (_, __, ___) => const Icon(
@@ -113,25 +113,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Butuh Bantuan?',
       description:
           'Temukan mitra terpercaya untuk menyelesaikan pekerjaan Anda dengan cepat dan mudah.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Temukan Mitra Terpercaya',
       description:
           'Pilih mitra terbaik berdasarkan rating dan ulasan dari pengguna lain untuk hasil kerja yang memuaskan.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Selesai Lebih Cepat',
       description:
           'Lacak progres pekerjaan secara langsung dan bayar dengan mudah serta aman.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
   ];
 
   void _finishOnboarding() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavigation()),
+      MaterialPageRoute(builder: (_) => const LoginPage()),
     );
   }
 
