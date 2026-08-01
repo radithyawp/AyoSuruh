@@ -16,8 +16,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // State Variables
   bool _isLoading = true;
-  String _userName = '';
-  String _userAddress = '';
+  String _userName = 'Pengguna';
+  String _userAddress = 'Alamat belum diatur';
   String? _avatarUrl;
   List<Map<String, dynamic>> _recentJobs = [];
 
@@ -34,27 +34,33 @@ class _DashboardPageState extends State<DashboardPage> {
       final currentUser = supabase.auth.currentUser;
 
       if (currentUser != null) {
-        // 1. Ambil data profil dari tabel 'users' / 'profiles'
+        // 1. Ambil data profil dari tabel 'users' (termasuk kolom 'alamat')
         final userData = await supabase
             .from('users')
-            .select('nama_lengkap, alamat, avatar_url')
-            .eq('id_user', currentUser.id)
+            .select('fullname, alamat, avatar_url')
+            .eq('id', currentUser.id)
             .maybeSingle();
 
-        // 2. Ambil data pekerjaan dari tabel 'jobs'
-        final jobsData = await supabase
-            .from('jobs')
-            .select('id, title, status, created_at, price, image_url, bids_count')
-            .eq('user_id', currentUser.id)
-            .order('created_at', ascending: false)
-            .limit(3);
+        // 2. Ambil data pekerjaan dari tabel 'jobs' (dengan try-catch terpisah agar aman)
+        List<Map<String, dynamic>> jobsData = [];
+        try {
+          final res = await supabase
+              .from('jobs')
+              .select('id, title, status, created_at, price, image_url, bids_count')
+              .eq('user_id', currentUser.id)
+              .order('created_at', ascending: false)
+              .limit(3);
+          jobsData = List<Map<String, dynamic>>.from(res);
+        } catch (jobError) {
+          debugPrint('Info/Error pada tabel jobs: $jobError');
+        }
 
         if (mounted) {
           setState(() {
-            _userName = userData?['nama_lengkap'] ?? 'Pengguna';
+            _userName = userData?['fullname'] ?? 'Pengguna';
             _userAddress = userData?['alamat'] ?? 'Alamat belum diatur';
             _avatarUrl = userData?['avatar_url'];
-            _recentJobs = List<Map<String, dynamic>>.from(jobsData);
+            _recentJobs = jobsData;
             _isLoading = false;
           });
         }
@@ -127,7 +133,6 @@ class _DashboardPageState extends State<DashboardPage> {
       elevation: 0,
       title: Row(
         children: [
-          // Icon/Logo Ayo Suruh
           Icon(Icons.directions_run_rounded, color: primaryOrange, size: 30),
           const SizedBox(width: 8),
           Text(
@@ -240,7 +245,7 @@ class _DashboardPageState extends State<DashboardPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFD8EAD3), // Hijau pastel sesuai gambar
+        color: const Color(0xFFD8EAD3),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -384,7 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _jobCard({required Map<String, dynamic> job}) {
     final String title = job['title'] ?? 'Pekerjaan';
     final String status = job['status'] ?? 'Mencari Mitra';
-    final String createdAt = job['created_at'] != null ? '2 Jam Lalu' : '-'; // Bisa diformat timeago
+    final String createdAt = job['created_at'] != null ? 'Terbaru' : '-';
     final String price = job['price']?.toString() ?? 'Rp 0';
     final String? imageUrl = job['image_url'];
     final int bidsCount = job['bids_count'] ?? 0;
@@ -392,14 +397,13 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7F7), // Sesuai warna background card di gambar
+        color: const Color(0xFFFAF7F7),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.orange.shade100, width: 1.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gambar Pekerjaan
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Container(
@@ -412,13 +416,10 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Detail Informasi Pekerjaan
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Status Badge + Waktu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -444,8 +445,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 6),
-
-                // Judul Pekerjaan
                 Text(
                   title,
                   style: const TextStyle(
@@ -457,8 +456,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-
-                // Penawaran Masuk (Sub-info)
                 Text(
                   "$bidsCount Penawaran Masuk",
                   style: TextStyle(
@@ -468,8 +465,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-
-                // Harga + Chevron Icon
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
