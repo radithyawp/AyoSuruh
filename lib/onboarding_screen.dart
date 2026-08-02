@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const Spacer(),
               // Ilustrasi / Logo Splash
               Image.asset(
-                'assets/images/logo.jpeg', // Sesuaikan path gambar kamu
+                'images/logo.jpeg', // Sesuaikan path gambar kamu
                 width: 480,
                 height: 480,
                 errorBuilder: (_, __, ___) => const Icon(
@@ -113,19 +113,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Butuh Bantuan?',
       description:
           'Temukan mitra terpercaya untuk menyelesaikan pekerjaan Anda dengan cepat dan mudah.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Temukan Mitra Terpercaya',
       description:
           'Pilih mitra terbaik berdasarkan rating dan ulasan dari pengguna lain untuk hasil kerja yang memuaskan.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Selesai Lebih Cepat',
       description:
           'Lacak progres pekerjaan secara langsung dan bayar dengan mudah serta aman.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'images/icon.jpeg',
     ),
   ];
 

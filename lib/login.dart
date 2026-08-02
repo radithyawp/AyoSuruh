@@ -146,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     // --- LOGO & HEADER ---
                     Image.asset(
-                      'assets/images/splash_icon.png', // Sesuaikan dengan lokasi ikon logo Anda
+                      'images/icon.jpeg', // Sesuaikan dengan lokasi ikon logo Anda
                       height: 100,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.directions_run_rounded,

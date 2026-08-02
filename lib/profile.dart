@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'edit_profile.dart';
 import 'login.dart';
+import 'help_center.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -57,62 +58,28 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /* ---------- UPLOAD FOTO PROFIL ---------- */
-  Future<void> _pickAndUploadAvatar() async {
-  final picker = ImagePicker();
-  final image = await picker.pickImage(
-    source: ImageSource.gallery,
-    imageQuality: 70,
-  );
+  /* ---------- NAVIGASI ---------- */
+  
+  Future<void> _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfilePage(userRow: _userRow ?? {}),
+      ),
+    );
 
-  if (image == null) return;
-
-  try {
-    setState(() => _isLoading = true);
-    final user = _supabase.auth.currentUser;
-    if (user == null) return;
-
-    final bytes = await image.readAsBytes();
-    final fileExt = image.path.split('.').last;
-    
-    // 1. Cukup gunakan fileName sebagai path (JANGAN sertakan 'avatars/')
-    final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-
-    // 2. Upload file ke Supabase Storage (Bucket: avatars)
-    await _supabase.storage.from('avatars').uploadBinary(
-          fileName, // <-- PERBAIKAN: Gunakan fileName langsung
-          bytes,
-          fileOptions: FileOptions(contentType: 'image/$fileExt', upsert: true),
-        );
-
-    // 3. Ambil Public URL gambar
-    final imageUrl = _supabase.storage.from('avatars').getPublicUrl(fileName);
-
-    // 4. Update kolom 'avatar_url' di tabel 'users'
-    await _supabase
-        .from('users')
-        .update({'avatar_url': imageUrl})
-        .eq('id', user.id);
-
-    // 5. Muat ulang data profil terbaru
-    await _loadProfileData();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto profil berhasil diperbarui!')),
-      );
+    // Jika berhasil menyimpan di EditProfilePage, refresh data profil
+    if (result == true) {
+      _loadProfileData();
     }
-  } catch (e) {
-    debugPrint('Error upload avatar: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengunggah foto: $e')),
-      );
-    }
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
+
+  Future<void> _navigateTohelpCenter() async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HelpPage()),
+    );
+  }
 
   /* ---------- LOGOUT ---------- */
   Future<void> _logout(BuildContext context) async {
@@ -126,84 +93,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       debugPrint('Error logout: $e');
     }
-  }
-
-  /* ---------- MODAL EDIT PROFILE ---------- */
-  void _editProfileSheet(String displayName, String email) {
-    final nameController = TextEditingController(text: displayName);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 24,
-            right: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Edit Profil',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nama Lengkap',
-                  prefixIcon: const Icon(Icons.person_outline, color: _primaryOrange),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final newName = nameController.text.trim();
-                    if (newName.isEmpty) return;
-
-                    final user = _supabase.auth.currentUser;
-                    if (user != null) {
-                      await _supabase.from('users').update({'fullname': newName}).eq('id', user.id);
-                      await _supabase.auth.updateUser(UserAttributes(data: {'fullname': newName}));
-                      
-                      if (mounted) {
-                        setState(() => _userRow!['fullname'] = newName);
-                      }
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryOrange,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   /* ---------- BUILD METHOD ---------- */
@@ -231,7 +120,7 @@ class _ProfilePageState extends State<ProfilePage> {
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
         child: Column(
           children: [
-            // --- HEADER AVATAR & AKUN ---
+            // --- HEADER AVATAR & AKUN (Tampilan bersih tanpa tombol edit langsung) ---
             _buildProfileHeader(displayName, email, phone, avatarUrl, isMitra),
             const SizedBox(height: 24),
 
@@ -242,18 +131,18 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildSaldoCard(title: "PENDAPATAN MITRA", buttonText: "Cairkan"),
               const SizedBox(height: 16),
               _buildMenuCard(Icons.history, 'Riwayat Pekerjaan Mitra', () {}),
-              _buildMenuCard(Icons.edit_outlined, 'Edit Profil', () => _editProfileSheet(displayName, email)),
+              _buildMenuCard(Icons.edit_outlined, 'Edit Profil', _navigateToEditProfile),
               _buildMenuCard(Icons.account_balance_wallet_outlined, 'Rekening Bank', () {}),
             ] else ...[
               _buildSaldoCard(title: "SALDO AYOPAY", buttonText: "Isi Saldo"),
               const SizedBox(height: 16),
               _buildMenuCard(Icons.history, 'Riwayat Transaksi', () {}),
-              _buildMenuCard(Icons.person_outline, 'Edit Profil', () => _editProfileSheet(displayName, email)),
+              _buildMenuCard(Icons.person_outline, 'Edit Profil', _navigateToEditProfile),
               _buildPartnerBanner(),
             ],
 
             // --- MENU UMUM ---
-            _buildMenuCard(Icons.help_outline, 'Bantuan & Pusat Dukungan', () {}),
+            _buildMenuCard(Icons.help_outline, 'Bantuan & Pusat Dukungan', _navigateTohelpCenter),
             _buildMenuCard(Icons.settings_outlined, 'Pengaturan', () {}),
             const SizedBox(height: 24),
 
@@ -278,11 +167,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      title: Row(
+      title: const Row(
         children: [
           Icon(Icons.directions_run_rounded, color: _primaryOrange, size: 28),
-          const SizedBox(width: 8),
-          const Text(
+          SizedBox(width: 8),
+          Text(
             'Profil',
             style: TextStyle(color: _brownColor, fontWeight: FontWeight.bold, fontSize: 22),
           ),
@@ -300,40 +189,20 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildProfileHeader(String name, String email, String phone, String? avatarUrl, bool isMitra) {
     return Column(
       children: [
-        Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFBE4D4),
-              ),
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[200],
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                child: avatarUrl == null || avatarUrl.isEmpty
-                    ? const Icon(Icons.person, size: 55, color: Colors.grey)
-                    : null,
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: _pickAndUploadAvatar,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _brownColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 16),
-                ),
-              ),
-            ),
-          ],
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFFFBE4D4),
+          ),
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[200],
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null || avatarUrl.isEmpty
+                ? const Icon(Icons.person, size: 55, color: Colors.grey)
+                : null,
+          ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -367,7 +236,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Card Saldo AYOPAY (Meniru Mockup Desain)
   Widget _buildSaldoCard({required String title, required String buttonText}) {
     final saldo = _userRow?['saldo']?.toString() ?? '500.000';
 
@@ -427,7 +295,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Statisik Khusus Profil Mitra
   Widget _buildMitraStatsCard() {
     final pekerjaanSelesai = _userRow?['pekerjaan_selesai'] ?? 0;
     final rating = _userRow?['rating'] ?? 0.0;
@@ -472,14 +339,17 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Banner "Daftar Menjadi Mitra" (Meniru Mockup Desain)
-  Widget _buildPartnerBanner() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: _primaryOrange,
-        borderRadius: BorderRadius.circular(16),
-      ),
+Widget _buildPartnerBanner() {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: _primaryOrange,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Material( // 👈 Sisipkan Material di sini
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(
@@ -499,27 +369,30 @@ class _ProfilePageState extends State<ProfilePage> {
           style: TextStyle(fontSize: 12, color: Colors.black87),
         ),
         trailing: const Icon(Icons.arrow_forward_rounded, color: Colors.black87),
-        onTap: () {
-          // TODO: Navigasi ke pendaftaran Mitra
-        },
+        onTap: () {},
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildMenuCard(IconData icon, String title, VoidCallback onTap) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+Widget _buildMenuCard(IconData icon, String title, VoidCallback onTap) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.02),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Material( // 👈 Sisipkan Material di sini
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
@@ -533,8 +406,9 @@ class _ProfilePageState extends State<ProfilePage> {
         trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
         onTap: onTap,
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildLogoutButton() {
     return SizedBox(

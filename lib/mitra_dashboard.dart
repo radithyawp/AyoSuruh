@@ -31,12 +31,29 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
     _checkRoleAndFetchData();
   }
 
+  /* ---------------- HELPER FOTO PROFIL / AVATAR ---------------- */
+  String? _getValidAvatarUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return null;
+
+    // Jika sudah berupa URL lengkap
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+
+    // Jika berupa path relatif Supabase Storage (Ubah 'avatars' ke nama bucket Anda jika berbeda)
+    try {
+      return _supabase.storage.from('avatars').getPublicUrl(rawUrl);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /* ---------------- LOGIKA ROLE GUARD & FETCH DATA ---------------- */
   Future<void> _checkRoleAndFetchData() async {
     try {
       setState(() => _isLoading = true);
       final user = _supabase.auth.currentUser;
-      
+
       if (user == null) {
         if (mounted) Navigator.of(context).pop();
         return;
@@ -67,14 +84,14 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
           .from('jobs')
           .select()
           .eq('mitra_id', user.id)
-          .eq('status', 'in_progress')
+          .eq('status', 'on_progress')
           .maybeSingle();
 
       // 3. Fetch Pekerjaan Tersedia
       final availableRes = await _supabase
           .from('jobs')
           .select()
-          .eq('status', 'open')
+          .eq('status', 'posted')
           .order('created_at', ascending: false)
           .limit(5);
 
@@ -243,53 +260,88 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
   /* ---------------- WIDGET COMPONENTS ---------------- */
 
   Widget _buildHeader() {
-    // Mengambil nama dari kolom 'fullname' (atau 'full_name' sebagai alternatif)
-    final String name = _userProfile?['fullname'] ?? 
-                        _userProfile?['fullname'] ?? 
-                        'Mitra';
-    final String? avatarUrl = _userProfile?['avatar_url'];
+  // Mengambil nama langsung dari kolom 'fullname'
+  final String name = _userProfile?['fullname'] ?? 'Mitra';
 
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: Colors.grey[300],
-          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-              ? NetworkImage(avatarUrl)
-              : null,
-          child: avatarUrl == null || avatarUrl.isEmpty
-              ? const Icon(Icons.person, color: Colors.grey)
-              : null,
+  // Mengambil avatar_url langsung
+  final String? rawAvatar = _userProfile?['avatar_url'];
+  final String? avatarUrl = _getValidAvatarUrl(rawAvatar);
+  final bool hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
+
+  return Row(
+    children: [
+      // Ring Foto Profil Mitra
+      Container(
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: _primaryOrange, width: 1.5),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Halo, Selamat Datang!',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _primaryBrown,
+        child: ClipOval(
+          child: hasAvatar
+              ? Image.network(
+                  avatarUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: _primaryOrange,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.person, color: Colors.grey, size: 24),
+                    );
+                  },
+                )
+              : Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.person, color: Colors.grey, size: 24),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Halo, Selamat Datang!',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _primaryBrown,
               ),
-            ],
-          ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, color: _primaryBrown, size: 28),
-          onPressed: () {},
-        ),
-      ],
-    );
-  }
+      ),
+      IconButton(
+        icon: const Icon(Icons.notifications_none_rounded, color: _primaryBrown, size: 28),
+        onPressed: () {},
+      ),
+    ],
+  );
+}
 
   Widget _buildIncomeCard() {
     final num totalPendapatan = _userProfile?['total_pendapatan'] ?? 0;
