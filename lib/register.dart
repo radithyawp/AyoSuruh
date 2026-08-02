@@ -3,6 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
 import 'navbar.dart';
 
+// Konstanta Warna
+const Color kPrimaryColor = Color(0xFFF39C12); // Warna Orange Utama
+const Color kTitleColor = Color(0xFF8B5A2B); // Warna Cokelat Judul
+const Color kInputBgColor = Color(0xFFF7F3F0); // Background Textfield
+const Color kBackgroundColor = Color(0xFFFAF6F3); // Background Screen
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -38,62 +44,91 @@ class _RegisterPageState extends State<RegisterPage> {
 
   /* ---------- PROSES REGISTRASI ---------- */
   Future<void> _register() async {
+    // Jalankan validasi Form
     if (!_formKey.currentState!.validate()) return;
-
-    if (_passwordCtrl.text != _confirmPasswordCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konfirmasi password tidak cocok!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailCtrl.text.trim();
+      final fullName = _fullNameCtrl.text.trim();
+      final phone = _phoneCtrl.text.trim();
+      final password = _passwordCtrl.text;
+
+      // 1. Register ke Supabase Auth & simpan metadata
       final response = await _supabase.auth.signUp(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
+        email: email,
+        password: password,
         data: {
-          'fullname': _fullNameCtrl.text.trim(),
-          'phone': _phoneCtrl.text.trim(),
+          'fullname': fullName,
+          'phone': phone,
         },
       );
 
+      if (!mounted) return;
+
       if (response.user != null) {
-        // Simpan data tambahan ke tabel users jika diperlukan
-        await _supabase.from('users').upsert({
-          'id': response.user!.id,
-          'fullname': _fullNameCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
-          'phone': _phoneCtrl.text.trim(),
-        });
+        // 2. Cek apakah user langsung memiliki session (Email Confirmation OFF)
+        if (response.session != null) {
+          // Simpan/sinkronkan data tambahan ke tabel 'users' di database
+          try {
+            await _supabase.from('users').upsert({
+              'id': response.user!.id,
+              'fullname': fullName,
+              'email': email,
+              'phone': phone,
+            });
+          } catch (dbError) {
+            debugPrint('Gagal menyimpan ke tabel public.users: $dbError');
+          }
 
-        if (!mounted) return;
+          if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registrasi berhasil! Silakan masuk.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registrasi berhasil! Selamat datang.'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigation()),
-        );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainNavigation()),
+          );
+        } else {
+          // 3. Jika Supabase diatur memerlukan konfirmasi email (Confirm Email ON)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.',
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        }
       }
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registrasi gagal: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -106,26 +141,29 @@ class _RegisterPageState extends State<RegisterPage> {
         OAuthProvider.google,
         redirectTo: 'io.supabase.ayosuruh://login-callback/',
       );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal login Google: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal login Google: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal login Google: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFF39C12); // Warna Orange Utama
-    const titleColor = Color(0xFF8B5A2B); // Warna Cokelat Judul
-    const inputBgColor = Color(0xFFF7F3F0); // Background Textfield
-
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6F3),
+      backgroundColor: kBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -134,12 +172,12 @@ class _RegisterPageState extends State<RegisterPage> {
               children: [
                 // --- LOGO & HEADER ---
                 Image.asset(
-                  'assets/images/splash_icon.png', // Sesuaikan dengan asset logo kamu
+                  'images/icon.jpeg',
                   height: 90,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.directions_run_rounded,
                     size: 80,
-                    color: primaryColor,
+                    color: kPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -148,7 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: titleColor,
+                    color: kTitleColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -205,9 +243,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _fullNameCtrl,
                           hintText: 'Masukkan nama lengkap',
                           icon: Icons.person_outline_rounded,
-                          bgColor: inputBgColor,
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Nama tidak boleh kosong' : null,
+                          bgColor: kInputBgColor,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Nama tidak boleh kosong';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 14),
 
@@ -218,10 +260,21 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _emailCtrl,
                           hintText: 'contoh@email.com',
                           icon: Icons.email_outlined,
-                          bgColor: inputBgColor,
+                          bgColor: kInputBgColor,
                           keyboardType: TextInputType.emailAddress,
-                          validator: (val) =>
-                              val == null || !val.contains('@') ? 'Email tidak valid' : null,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Email tidak boleh kosong';
+                            }
+                            // Regex email asli milik Anda
+                            final emailRegExp = RegExp(
+                              r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+                            );
+                            if (!emailRegExp.hasMatch(val.trim())) {
+                              return 'Format email tidak valid';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 14),
 
@@ -232,10 +285,21 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _phoneCtrl,
                           hintText: 'Contoh: 08123456789',
                           icon: Icons.phone_outlined,
-                          bgColor: inputBgColor,
+                          bgColor: kInputBgColor,
                           keyboardType: TextInputType.phone,
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Nomor WA tidak boleh kosong' : null,
+                          validator: (val) {
+                            final trimmed = val?.trim() ?? '';
+                            if (trimmed.isEmpty) {
+                              return 'Nomor WA tidak boleh kosong';
+                            }
+                            if (!RegExp(r'^[0-9+]+$').hasMatch(trimmed)) {
+                              return 'Nomor WA hanya boleh berupa angka';
+                            }
+                            if (trimmed.length < 9) {
+                              return 'Nomor WA terlalu pendek (min. 9 digit)';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 14),
 
@@ -246,7 +310,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _passwordCtrl,
                           hintText: 'Min. 8 karakter',
                           icon: Icons.lock_outline_rounded,
-                          bgColor: inputBgColor,
+                          bgColor: kInputBgColor,
                           obscureText: _obscurePassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -257,11 +321,19 @@ class _RegisterPageState extends State<RegisterPage> {
                               size: 20,
                             ),
                             onPressed: () {
-                              setState(() => _obscurePassword = !_obscurePassword);
+                              setState(() =>
+                                  _obscurePassword = !_obscurePassword);
                             },
                           ),
-                          validator: (val) =>
-                              val == null || val.length < 8 ? 'Minimal 8 karakter' : null,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'Password wajib diisi';
+                            }
+                            if (val.length < 8) {
+                              return 'Minimal 8 karakter';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 14),
 
@@ -271,8 +343,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         _buildTextField(
                           controller: _confirmPasswordCtrl,
                           hintText: 'Ulangi password',
-                          icon: Icons.refresh_rounded,
-                          bgColor: inputBgColor,
+                          icon: Icons.lock_reset_rounded,
+                          bgColor: kInputBgColor,
                           obscureText: _obscureConfirmPassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -283,12 +355,19 @@ class _RegisterPageState extends State<RegisterPage> {
                               size: 20,
                             ),
                             onPressed: () {
-                              setState(() =>
-                                  _obscureConfirmPassword = !_obscureConfirmPassword);
+                              setState(() => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword);
                             },
                           ),
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Konfirmasi password wajib diisi' : null,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'Konfirmasi password wajib diisi';
+                            }
+                            if (val != _passwordCtrl.text) {
+                              return 'Konfirmasi password tidak cocok!';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 22),
 
@@ -299,7 +378,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _register,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
+                              backgroundColor: kPrimaryColor,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -331,7 +410,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           children: [
                             Expanded(child: Divider(color: Colors.grey[300])),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               child: Text(
                                 'atau',
                                 style: TextStyle(
@@ -350,7 +430,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           width: double.infinity,
                           height: 48,
                           child: OutlinedButton(
-                            onPressed: _googleSignUp,
+                            onPressed: _isLoading ? null : _googleSignUp,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: Colors.grey[300]!),
                               shape: RoundedRectangleBorder(
@@ -361,7 +441,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Image.network(
-                                  'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
+                                  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png',
                                   height: 18,
                                   errorBuilder: (_, __, ___) => const Icon(
                                     Icons.g_mobiledata,
@@ -404,7 +484,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       onTap: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const LoginPage()),
                         );
                       },
                       child: const Text(
@@ -412,7 +493,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: titleColor,
+                          color: kTitleColor,
                         ),
                       ),
                     ),
@@ -433,7 +514,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           text: 'Syarat & Ketentuan',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: titleColor,
+                            color: kTitleColor,
                           ),
                         ),
                         TextSpan(text: ' serta '),
@@ -441,7 +522,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           text: 'Kebijakan Privasi',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: titleColor,
+                            color: kTitleColor,
                           ),
                         ),
                         TextSpan(text: ' kami.'),
@@ -492,7 +573,8 @@ class _RegisterPageState extends State<RegisterPage> {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: bgColor,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 0.8),
@@ -503,7 +585,15 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFF39C12), width: 1.2),
+          borderSide: const BorderSide(color: kPrimaryColor, width: 1.2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 0.8),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1.2),
         ),
       ),
     );

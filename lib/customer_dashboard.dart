@@ -34,20 +34,20 @@ class _DashboardPageState extends State<DashboardPage> {
       final currentUser = supabase.auth.currentUser;
 
       if (currentUser != null) {
-        // 1. Ambil data profil dari tabel 'users' (termasuk kolom 'alamat')
+        // 1. Ambil data profil dari tabel 'users'
         final userData = await supabase
             .from('users')
             .select('fullname, alamat, avatar_url')
             .eq('id', currentUser.id)
             .maybeSingle();
 
-        // 2. Ambil data pekerjaan dari tabel 'jobs' (dengan try-catch terpisah agar aman)
+        // 2. Ambil data pekerjaan dari tabel 'jobs' (Disesuaikan dengan skema database)
         List<Map<String, dynamic>> jobsData = [];
         try {
           final res = await supabase
               .from('jobs')
-              .select('id, title, status, created_at, price, image_url, bids_count')
-              .eq('user_id', currentUser.id)
+              .select('id, title, status, created_at, budget') // Menggunakan 'budget', menghapus 'price'
+              .eq('customer_id', currentUser.id)               // Menggunakan 'customer_id', bukan 'user_id'
               .order('created_at', ascending: false)
               .limit(3);
           jobsData = List<Map<String, dynamic>>.from(res);
@@ -390,7 +390,11 @@ class _DashboardPageState extends State<DashboardPage> {
     final String title = job['title'] ?? 'Pekerjaan';
     final String status = job['status'] ?? 'Mencari Mitra';
     final String createdAt = job['created_at'] != null ? 'Terbaru' : '-';
-    final String price = job['price']?.toString() ?? 'Rp 0';
+    
+    // Menggunakan kolom 'budget' dari database
+    final String price = job['budget'] != null ? 'Rp ${job['budget']}' : 'Rp 0';
+    
+    // Nilai default untuk properti yang tidak ada di skema jobs saat ini
     final String? imageUrl = job['image_url'];
     final int bidsCount = job['bids_count'] ?? 0;
 
