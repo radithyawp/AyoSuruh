@@ -1,10 +1,8 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfilePage extends StatefulWidget {
-  final Map<String, dynamic> userRow;
+  final Map<String, dynamic> userRow; // 👈 Menambahkan parameter userRow
 
   const EditProfilePage({super.key, required this.userRow});
 
@@ -15,301 +13,53 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  late TextEditingController _nameController;
+  // Color Palette
+  final Color primaryBrown = const Color(0xFF8B5A2B);
+  final Color primaryOrange = const Color(0xFFFA9D18);
+  final Color bgGrey = const Color(0xFFFAF7F7);
+  final Color fieldBg = const Color(0xFFF7F2F4);
+  final Color infoBg = const Color(0xFFF2F5EE);
+
+  // Controller Form
+  late TextEditingController _fullnameController;
+  late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  late TextEditingController _addressController;
 
   bool _isLoading = false;
-  XFile? _selectedImage;
-  Uint8List? _imageBytes;
-  String? _currentAvatarUrl;
-  bool _isDeleted = false; // Flag untuk menandai jika pengguna memilih hapus foto
-
-  // Warna Tema Ayo Suruh
-  static const Color _primaryOrange = Color(0xFFF39C12);
-  static const Color _brownColor = Color(0xFF8B5A2B);
-  static const Color _bgGrey = Color(0xFFFAF6F3);
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.userRow['fullname'] ?? '');
-    _phoneController = TextEditingController(text: widget.userRow['phone'] ?? '');
-    _currentAvatarUrl = widget.userRow['avatar_url'];
+    // Inisialisasi Data dari widget.userRow
+    _fullnameController = TextEditingController(
+      text: widget.userRow['fullname'] ?? '',
+    );
+    _emailController = TextEditingController(
+      text: widget.userRow['email'] ?? '',
+    );
+    _phoneController = TextEditingController(
+      text: widget.userRow['phone'] ?? '',
+    );
+    _addressController = TextEditingController(
+      text: widget.userRow['alamat'] ?? '',
+    );
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _fullnameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
-  /* ---------- PILIH FOTO (KAMERA / GALERI) ---------- */
-  Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      imageQuality: 70,
-    );
-
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _selectedImage = image;
-        _imageBytes = bytes;
-        _isDeleted = false; // Reset status hapus foto
-      });
-    }
-  }
-
-  /* ---------- HAPUS FOTO PROFIL ---------- */
-  void _removeImage() {
-    setState(() {
-      _selectedImage = null;
-      _imageBytes = null;
-      _isDeleted = true; // Tandai foto dihapus
-    });
-  }
-
-  /* ---------- MODAL BOTTOM SHEET (PERSIS SEPERTI GAMBAR) ---------- */
-  void _showPhotoOptionsSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // --- HEADER BOTTOM SHEET ---
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: _brownColor),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Ubah Foto Profil',
-                        style: TextStyle(
-                          color: _brownColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // --- PRATINJAU FOTO PROFIL ---
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _primaryOrange, width: 3),
-                        ),
-                        child: CircleAvatar(
-                          radius: 55,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage: !_isDeleted && _imageBytes != null
-                              ? MemoryImage(_imageBytes!)
-                              : (!_isDeleted && _currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty
-                                  ? NetworkImage(_currentAvatarUrl!)
-                                  : null),
-                          child: _isDeleted ||
-                                  (_imageBytes == null &&
-                                      (_currentAvatarUrl == null || _currentAvatarUrl!.isEmpty))
-                              ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                              : null,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: _primaryOrange,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.edit, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Pratinjau Foto Profil Anda',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- OPTION 1: AMBIL FOTO (KAMERA) ---
-                  _buildOptionCard(
-                    icon: Icons.camera_alt_outlined,
-                    iconBgColor: const Color(0xFFE8F5E9),
-                    iconColor: const Color(0xFF4CAF50),
-                    title: 'Ambil Foto',
-                    subtitle: 'Gunakan kamera ponsel Anda',
-                    onTap: () async {
-                      await _pickImage(ImageSource.camera);
-                      setSheetState(() {}); // Refresh modal preview
-                    },
-                  ),
-                  const SizedBox(height: 12),
-
-                  // --- OPTION 2: PILIH DARI GALERI ---
-                  _buildOptionCard(
-                    icon: Icons.photo_library_outlined,
-                    iconBgColor: const Color(0xFFE8F5E9),
-                    iconColor: const Color(0xFF4CAF50),
-                    title: 'Pilih dari Galeri',
-                    subtitle: 'Pilih foto terbaik dari penyimpanan',
-                    onTap: () async {
-                      await _pickImage(ImageSource.gallery);
-                      setSheetState(() {}); // Refresh modal preview
-                    },
-                  ),
-                  const SizedBox(height: 12),
-
-                  // --- OPTION 3: HAPUS FOTO ---
-                  _buildOptionCard(
-                    icon: Icons.delete_outline,
-                    iconBgColor: const Color(0xFFFFEBEE),
-                    iconColor: Colors.red,
-                    cardBgColor: const Color(0xFFFFF5F5),
-                    title: 'Hapus Foto',
-                    subtitle: 'Kembali ke foto profil default',
-                    titleColor: Colors.red,
-                    subtitleColor: Colors.red.shade300,
-                    chevronColor: Colors.red.shade300,
-                    onTap: () {
-                      _removeImage();
-                      setSheetState(() {}); // Refresh modal preview
-                    },
-                  ),
-                  const SizedBox(height: 28),
-
-                  // --- TOMBOL SIMPAN PERUBAHAN & BATAL ---
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryOrange,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                      ),
-                      child: const Text(
-                        'Simpan Perubahan',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFA1A89F),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                      ),
-                      child: const Text(
-                        'Batal',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  /* ---------- WIDGET HELPER UNTUK KARTU PILIHAN ---------- */
-  Widget _buildOptionCard({
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color cardBgColor = const Color(0xFFF8F9FA),
-    Color titleColor = Colors.black87,
-    Color? subtitleColor,
-    Color? chevronColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: cardBgColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: titleColor,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: subtitleColor ?? Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: chevronColor ?? Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /* ---------- SIMPAN PERUBAHAN PROFIL & FOTO KE SUPABASE ---------- */
+  /* ---------- SIMPAN PERUBAHAN KE SUPABASE ---------- */
   Future<void> _saveProfile() async {
-    final newName = _nameController.text.trim();
+    final newName = _fullnameController.text.trim();
     final newPhone = _phoneController.text.trim();
+    final newAddress = _addressController.text.trim();
 
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,49 +81,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
         return;
       }
 
-      String? updatedAvatarUrl = _currentAvatarUrl;
-
-      // 1. Logika Hapus Foto vs Upload Foto Baru
-      // ✅ KODE BARU (Aman di Android, iOS, & Web)
-      if (_isDeleted) {
-        updatedAvatarUrl = null; 
-      } else if (_selectedImage != null && _imageBytes != null) {
-        // 1. Ambil ekstensi secara aman dari .name
-        String fileExt = 'jpg';
-        if (_selectedImage!.name.contains('.')) {
-          fileExt = _selectedImage!.name.split('.').last.toLowerCase();
-        }
-
-        // 2. Format Content Type yang valid
-        final String contentType = (fileExt == 'jpg' || fileExt == 'jpeg')
-            ? 'image/jpeg'
-            : 'image/$fileExt';
-
-        final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-
-        // 3. Upload Binary ke Bucket 'avatars'
-        await _supabase.storage.from('avatars').uploadBinary(
-              fileName,
-              _imageBytes!,
-              fileOptions: FileOptions(
-                contentType: contentType,
-                upsert: true,
-              ),
-            );
-
-        updatedAvatarUrl = _supabase.storage.from('avatars').getPublicUrl(fileName);
-      }
-
-      // 2. Update Database Supabase ('users')
+      // Update data pada tabel 'users' di Supabase
       final updates = {
         'fullname': newName,
         'phone': newPhone,
-        'avatar_url': updatedAvatarUrl,
+        'alamat': newAddress,
       };
 
       await _supabase.from('users').update(updates).eq('id', user.id);
 
-      // 3. Update Metadata User Supabase Auth
+      // Update metadata user di Supabase Auth
       await _supabase.auth.updateUser(
         UserAttributes(data: {'fullname': newName}),
       );
@@ -382,6 +99,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profil berhasil diperbarui!')),
         );
+        // Kembali ke halaman sebelumnya dengan membawa status 'true' agar data di-refresh
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -398,138 +116,295 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final String? avatarUrl = widget.userRow['avatar_url'];
+
     return Scaffold(
-      backgroundColor: _bgGrey,
+      backgroundColor: bgGrey,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: primaryBrown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profil',
-          style: TextStyle(color: _brownColor, fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(
+            color: primaryBrown,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
-        centerTitle: true,
+        titleSpacing: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // --- EDIT FOTO PROFIL ---
-            Center(
-              child: Stack(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFFBE4D4),
-                    ),
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: !_isDeleted && _imageBytes != null
-                          ? MemoryImage(_imageBytes!)
-                          : (!_isDeleted && _currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty
-                              ? NetworkImage(_currentAvatarUrl!)
-                              : null),
-                      child: _isDeleted ||
-                              (_imageBytes == null &&
-                                  (_currentAvatarUrl == null || _currentAvatarUrl!.isEmpty))
-                          ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                          : null,
-                    ),
+                  // Section Foto Profil
+                  _buildProfileAvatar(avatarUrl),
+                  const SizedBox(height: 24),
+
+                  // Input Nama Lengkap
+                  _buildInputField(
+                    label: 'Nama Lengkap',
+                    controller: _fullnameController,
+                    icon: Icons.person_outline_rounded,
                   ),
+                  const SizedBox(height: 16),
+
+                  // Input Email (Read-Only)
+                  _buildInputField(
+                    label: 'Email',
+                    controller: _emailController,
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    readOnly: true, // Email sebaiknya tidak diubah secara bebas
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Input Nomor HP
+                  _buildInputField(
+                    label: 'Nomor HP',
+                    controller: _phoneController,
+                    icon: Icons.smartphone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Input Alamat Lengkap
+                  _buildInputField(
+                    label: 'Alamat Lengkap',
+                    controller: _addressController,
+                    icon: Icons.location_on_outlined,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Info Box Catatan
+                  _buildInfoBanner(),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: _showPhotoOptionsSheet, // Panggil Bottom Sheet
-              icon: const Icon(Icons.photo_library_outlined, size: 18, color: _primaryOrange),
-              label: const Text(
-                'Ubah Foto Profil',
-                style: TextStyle(color: _primaryOrange, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 28),
+          ),
 
-            // --- FORM INPUT DATA ---
+          // Tombol Bottom "Simpan Perubahan"
+          _buildSaveButton(),
+        ],
+      ),
+    );
+  }
+
+  // Widget Avatar & Ubah Foto Profil
+  Widget _buildProfileAvatar(String? avatarUrl) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            // Lingkaran Foto Profil
             Container(
-              padding: const EdgeInsets.all(20),
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                shape: BoxShape.circle,
+                color: Colors.grey.shade300,
+                image: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? DecorationImage(
+                        image: NetworkImage(avatarUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                border: Border.all(color: Colors.white, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  // Field Nama Lengkap
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Nama Lengkap',
-                      prefixIcon: const Icon(Icons.person_outline, color: _primaryOrange),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _primaryOrange, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Field Nomor Telepon
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Nomor Telepon',
-                      prefixIcon: const Icon(Icons.phone_outlined, color: _primaryOrange),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _primaryOrange, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: (avatarUrl == null || avatarUrl.isEmpty)
+                  ? Icon(Icons.person, size: 50, color: Colors.grey.shade600)
+                  : null,
             ),
-            const SizedBox(height: 32),
 
-            // --- TOMBOL SIMPAN ---
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryOrange,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : const Text(
-                        'Simpan Perubahan',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+            // Badge Kamera Orange
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryOrange,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.camera_alt_rounded,
+                color: Colors.white,
+                size: 16,
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  // Helper Widget Input Field Custom
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    bool readOnly = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          readOnly: readOnly,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: readOnly ? Colors.grey.shade600 : Colors.black87,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: readOnly ? Colors.grey.shade200 : fieldBg,
+            prefixIcon: Icon(icon, color: Colors.black54, size: 20),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: primaryBrown.withOpacity(0.5),
+                width: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget Banner Informasi
+  Widget _buildInfoBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: infoBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_rounded,
+            color: Colors.grey.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Informasi ini digunakan untuk memudahkan mitra kami dalam proses penjemputan dan pengantaran pesanan Anda.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade800,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget Bottom Fixed Save Button
+  Widget _buildSaveButton() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _saveProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryOrange,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+            ),
+            icon: _isLoading
+                ? const SizedBox.shrink()
+                : const Icon(
+                    Icons.save_outlined,
+                    color: Color(0xFF4A2B00),
+                    size: 20,
+                  ),
+            label: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF4A2B00),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Simpan Perubahan',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A2B00),
+                    ),
+                  ),
+          ),
         ),
       ),
     );

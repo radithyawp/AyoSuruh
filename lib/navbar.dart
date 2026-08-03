@@ -25,6 +25,13 @@ class _MainNavigationState extends State<MainNavigation> {
   String _userRole = 'user'; // Default role
   bool _isLoadingRole = true;
 
+  // Palette Warna Navbar dari UI
+  static const Color _navBgColor = Color(0xFFFAF7F5);
+  static const Color _inactiveColor = Color(0xFF524538);
+  static const Color _activeColor = Color(0xFF4B613E);
+  static const Color _activePillBg = Color(0xFFF1F5ED);
+  static const Color _borderColor = Color(0xFFF0ECE6);
+
   @override
   void initState() {
     super.initState();
@@ -64,24 +71,6 @@ class _MainNavigationState extends State<MainNavigation> {
     }
   }
 
-  /* ---------- HALAMAN DINAMIS SESUAI ROLE ---------- */
-  List<Widget> get _pages {
-    // Tentukan Dashboard di Tab 0 berdasarkan Role
-    Widget activeDashboard;
-    if (_userRole == 'mitra') {
-      activeDashboard = MitraDashboardPage(key: ValueKey(_dashboardRefreshTick));
-    } else {
-      activeDashboard = DashboardPage(key: ValueKey(_dashboardRefreshTick));
-    }
-
-    return [
-      activeDashboard,        // Index 0: Dashboard (Mitra / Customer)
-      const JobPage(),        // Index 1: Pekerjaan
-      const ChatPage(),       // Index 2: Chat
-      const ProfilePage(),    // Index 3: Profil
-    ];
-  }
-
   void _changePage(int index) {
     setState(() {
       _currentIndex = index;
@@ -104,36 +93,63 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
+    // Tentukan Dashboard berdasarkan Role
+    final Widget activeDashboard = _userRole == 'mitra'
+        ? MitraDashboardPage(key: ValueKey(_dashboardRefreshTick))
+        : DashboardPage(key: ValueKey(_dashboardRefreshTick));
+
+    final List<Widget> pages = [
+      activeDashboard,        // Index 0: Dashboard (Mitra / Customer)
+      const JobPage(),        // Index 1: Pekerjaan
+      const ChatPage(),       // Index 2: Chat
+      const ProfilePage(),    // Index 3: Profil
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
-      // Body langsung menampilkan halaman aktif
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: pages,
       ),
 
-      // Fixed Navbar diletakkan di properti bottomNavigationBar
+      // Bottom Navigation Bar
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF2D3134),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, -2), // Bayangan mengarah ke atas
-            ),
-          ],
+        decoration: const BoxDecoration(
+          color: _navBgColor,
+          border: Border(
+            top: BorderSide(color: _borderColor, width: 1.0),
+          ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavButton(icon: Icons.home_rounded, index: 0),        // Beranda
-                _buildNavButton(icon: Icons.work_rounded, index: 1),        // Pekerjaan
-                _buildNavButton(icon: Icons.chat_bubble_rounded, index: 2), // Chat
-                _buildNavButton(icon: Icons.person_rounded, index: 3),      // Profil
+                _buildNavButton(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Home',
+                  index: 0,
+                ),
+                _buildNavButton(
+                  icon: Icons.work_outline_rounded,
+                  activeIcon: Icons.work_rounded,
+                  label: 'Jobs',
+                  index: 1,
+                ),
+                _buildNavButton(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  activeIcon: Icons.chat_bubble_rounded,
+                  label: 'Chat',
+                  index: 2,
+                ),
+                _buildNavButton(
+                  icon: Icons.person_outline_rounded,
+                  activeIcon: Icons.person_rounded,
+                  label: 'Profile',
+                  index: 3,
+                ),
               ],
             ),
           ),
@@ -142,19 +158,44 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  Widget _buildNavButton({required IconData icon, required int index}) {
+  Widget _buildNavButton({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+  }) {
     final isActive = _currentIndex == index;
 
     return GestureDetector(
       onTap: () => _changePage(index),
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        constraints: const BoxConstraints(minWidth: 72), // Menjaga lebar pill simetris
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFFA6623) : const Color(0xFF43494D),
-          shape: BoxShape.circle,
+          color: isActive ? _activePillBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: Icon(icon, color: Colors.white, size: 26),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive ? _activeColor : _inactiveColor,
+              size: 22,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? _activeColor : _inactiveColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
