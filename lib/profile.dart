@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Import Halaman Terkait
 import 'edit_profile.dart';
+import 'edit_poto_profile.dart'; // Inklusi khusus untuk edit foto profil
 import 'login.dart';
 import 'help_center.dart';
+import 'pengaturan.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,7 +21,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _userRow;
   bool _isLoading = true;
 
-  // Warna-warna Utama
+  // Warna-warna Utama Ayo Suruh
   static const Color _primaryOrange = Color(0xFFF39C12);
   static const Color _brownColor = Color(0xFF8B5A2B);
   static const Color _bgGrey = Color(0xFFFAF6F3);
@@ -45,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         setState(() {
-          _userRow = response ?? {};
+          _userRow = Map<String, dynamic>.from(response ?? {});
           _userRow!['email'] = _userRow!['email'] ?? user.email;
           _isLoading = false;
         });
@@ -60,6 +64,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /* ---------- NAVIGASI ---------- */
   
+  // Navigasi ke Edit Data Profil (Nama, Telepon, dsb)
   Future<void> _navigateToEditProfile() async {
     final result = await Navigator.push(
       context,
@@ -68,20 +73,74 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
 
-    // Jika berhasil menyimpan di EditProfilePage, refresh data profil
     if (result == true) {
       _loadProfileData();
     }
   }
 
-  Future<void> _navigateTohelpCenter() async {
+  // Navigasi Khusus ke Edit Foto Profil
+  Future<void> _navigateToEditPhoto() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditPhotoProfilePage(userRow: _userRow ?? {}),
+      ),
+    );
+
+    if (result == true) {
+      _loadProfileData();
+    }
+  }
+
+  Future<void> _navigateToHelpCenter() async {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const HelpPage()),
     );
   }
 
-  /* ---------- LOGOUT ---------- */
+  Future<void> _navigateToPengaturanPage() async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PengaturanPage()),
+    );
+  }
+
+  /* ---------- DIALOG & LOGOUT ---------- */
+  void _showLogoutConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Keluar Akun',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: Colors.grey[700])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _logout(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _logout(BuildContext context) async {
     try {
       await _supabase.auth.signOut();
@@ -120,7 +179,7 @@ class _ProfilePageState extends State<ProfilePage> {
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
         child: Column(
           children: [
-            // --- HEADER AVATAR & AKUN (Tampilan bersih tanpa tombol edit langsung) ---
+            // --- HEADER AVATAR & AKUN (Klik Avatar Untuk Ubah Foto) ---
             _buildProfileHeader(displayName, email, phone, avatarUrl, isMitra),
             const SizedBox(height: 24),
 
@@ -142,15 +201,15 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
 
             // --- MENU UMUM ---
-            _buildMenuCard(Icons.help_outline, 'Bantuan & Pusat Dukungan', _navigateTohelpCenter),
-            _buildMenuCard(Icons.settings_outlined, 'Pengaturan', () {}),
+            _buildMenuCard(Icons.help_outline, 'Bantuan & Pusat Dukungan', _navigateToHelpCenter),
+            _buildMenuCard(Icons.settings_outlined, 'Pengaturan', _navigateToPengaturanPage),
             const SizedBox(height: 24),
 
             // --- TOMBOL KELUAR SESI ---
             _buildLogoutButton(),
             const SizedBox(height: 20),
 
-            // --- VERSION FOOTER ---
+            // --- FOOTER VERSI ---
             Text(
               'Ayo Suruh v2.4.0',
               style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
@@ -186,22 +245,43 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileHeader(String name, String email, String phone, String? avatarUrl, bool isMitra) {
+  Widget _buildProfileHeader(
+      String name, String email, String phone, String? avatarUrl, bool isMitra) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0xFFFBE4D4),
-          ),
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[200],
-            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl == null || avatarUrl.isEmpty
-                ? const Icon(Icons.person, size: 55, color: Colors.grey)
-                : null,
+        // Avatar dengan Badge Kamera (Klik untuk ubah foto)
+        GestureDetector(
+          onTap: _navigateToEditPhoto,
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFFBE4D4),
+                ),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: avatarUrl == null || avatarUrl.isEmpty
+                      ? const Icon(Icons.person, size: 55, color: Colors.grey)
+                      : null,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: _primaryOrange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -339,86 +419,86 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-Widget _buildPartnerBanner() {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: _primaryOrange,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Material( // 👈 Sisipkan Material di sini
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildPartnerBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: _primaryOrange,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.work_outline, color: Colors.black87),
           ),
-          child: const Icon(Icons.work_outline, color: Colors.black87),
+          title: const Text(
+            'Daftar Menjadi Mitra',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          subtitle: const Text(
+            'Dapatkan penghasilan tambahan',
+            style: TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+          trailing: const Icon(Icons.arrow_forward_rounded, color: Colors.black87),
+          onTap: () {},
         ),
-        title: const Text(
-          'Daftar Menjadi Mitra',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        subtitle: const Text(
-          'Dapatkan penghasilan tambahan',
-          style: TextStyle(fontSize: 12, color: Colors.black87),
-        ),
-        trailing: const Icon(Icons.arrow_forward_rounded, color: Colors.black87),
-        onTap: () {},
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildMenuCard(IconData icon, String title, VoidCallback onTap) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.02),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Material( // 👈 Sisipkan Material di sini
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFF7F3F0),
-          child: Icon(icon, color: Colors.black87, size: 20),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-        ),
-        trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
-        onTap: onTap,
+  Widget _buildMenuCard(IconData icon, String title, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-    ),
-  );
-}
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: CircleAvatar(
+            backgroundColor: const Color(0xFFF7F3F0),
+            child: Icon(icon, color: Colors.black87, size: 20),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+          ),
+          trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
 
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: OutlinedButton.icon(
-        onPressed: () => _logout(context),
+        onPressed: _showLogoutConfirmationDialog,
         icon: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
         label: const Text(
-          'Keluar Sesi',
+          'Log out',
           style: TextStyle(color: Colors.red, fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: OutlinedButton.styleFrom(
