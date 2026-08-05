@@ -66,5 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Lokasi digunakan untuk memilih titik pekerjaan dan membantu mitra menemukan tujuan.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera digunakan untuk mengambil foto selfie dan dokumen pendaftaran mitra.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeri digunakan untuk memilih foto KTM, selfie, bukti pekerjaan, dan lampiran chat.</string>
 </dict>
 </plist>

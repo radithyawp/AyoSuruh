@@ -7,9 +7,23 @@ import 'edit_poto_profile.dart'; // Inklusi khusus untuk edit foto profil
 import 'login.dart';
 import 'help_center.dart';
 import 'pengaturan.dart';
+import 'jobs/job_service.dart';
+import 'jobs/mitra_job_history_page.dart';
+import 'notification.dart';
+import 'mitra/mitra_application_page.dart';
+import 'mitra/mitra_application_service.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    super.key,
+    this.activeMode = 'customer',
+    this.canUseMitraMode = false,
+    this.onModeChanged,
+  });
+
+  final String activeMode;
+  final bool canUseMitraMode;
+  final Future<void> Function(String mode)? onModeChanged;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -17,9 +31,13 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final JobService _jobService = JobService();
+  final MitraApplicationService _applicationService = MitraApplicationService();
 
   Map<String, dynamic>? _userRow;
+  Map<String, dynamic>? _mitraApplication;
   bool _isLoading = true;
+  bool _isSwitchingMode = false;
 
   // Warna-warna Utama Ayo Suruh
   static const Color _primaryOrange = Color(0xFFF39C12);
@@ -47,10 +65,32 @@ class _ProfilePageState extends State<ProfilePage> {
           .eq('id', user.id)
           .maybeSingle();
 
+      final Map<String, dynamic> profile =
+          Map<String, dynamic>.from(response ?? <String, dynamic>{});
+
+      Map<String, dynamic>? application;
+      if (widget.activeMode == 'mitra' && widget.canUseMitraMode) {
+        try {
+          final Map<String, dynamic> mitraStats =
+              await _jobService.fetchMitraDashboardProfile();
+          profile.addAll(mitraStats);
+        } catch (error) {
+          debugPrint('Statistik mitra belum dapat dimuat: $error');
+        }
+      } else if (!widget.canUseMitraMode) {
+        try {
+          application = await _applicationService.fetchMyApplication();
+        } catch (error) {
+          debugPrint('Status pengajuan mitra belum dapat dimuat: $error');
+        }
+      }
+
+      profile['email'] = profile['email'] ?? user.email;
+
       if (mounted) {
         setState(() {
-          _userRow = Map<String, dynamic>.from(response ?? {});
-          _userRow!['email'] = _userRow!['email'] ?? user.email;
+          _userRow = profile;
+          _mitraApplication = application;
           _isLoading = false;
         });
       }
@@ -104,6 +144,40 @@ class _ProfilePageState extends State<ProfilePage> {
       context,
       MaterialPageRoute(builder: (_) => const PengaturanPage()),
     );
+  }
+
+
+  Future<void> _navigateToMitraHistory() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const MitraJobHistoryPage(),
+      ),
+    );
+    if (mounted) await _loadProfileData();
+  }
+
+
+  Future<void> _navigateToMitraApplication() async {
+    final String status =
+        (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+
+    final Widget page;
+    if (_mitraApplication == null || status == 'rejected') {
+      page = MitraApplicationPage(
+        existingApplication: _mitraApplication,
+      );
+    } else {
+      page = MitraApplicationStatusPage(
+        initialApplication: _mitraApplication,
+      );
+    }
+
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    if (mounted) await _loadProfileData();
   }
 
   /* ---------- DIALOG & LOGOUT ---------- */
@@ -168,9 +242,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final String email = _userRow?['email'] ?? '-';
     final String phone = _userRow?['phone'] ?? '-';
     final String? avatarUrl = _userRow?['avatar_url'];
-    final String role = (_userRow?['role'] ?? 'customer').toString().toLowerCase();
-
-    final bool isMitra = role == 'mitra';
+    final bool isMitra =
+        widget.activeMode == 'mitra' && widget.canUseMitraMode;
 
     return Scaffold(
       backgroundColor: _bgGrey,
@@ -181,15 +254,24 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             // --- HEADER AVATAR & AKUN (Klik Avatar Untuk Ubah Foto) ---
             _buildProfileHeader(displayName, email, phone, avatarUrl, isMitra),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
+            if (widget.canUseMitraMode) ...[
+              _buildModeSwitcher(isMitra),
+              const SizedBox(height: 18),
+            ] else
+              const SizedBox(height: 6),
 
-            // --- TAMPILAN DINAMIS BERDASARKAN ROLE ---
+            // --- TAMPILAN DINAMIS BERDASARKAN MODE AKTIF ---
             if (isMitra) ...[
               _buildMitraStatsCard(),
               const SizedBox(height: 16),
               _buildSaldoCard(title: "PENDAPATAN MITRA", buttonText: "Cairkan"),
               const SizedBox(height: 16),
-              _buildMenuCard(Icons.history, 'Riwayat Pekerjaan Mitra', () {}),
+              _buildMenuCard(
+                Icons.history,
+                'Riwayat Pekerjaan Mitra',
+                _navigateToMitraHistory,
+              ),
               _buildMenuCard(Icons.edit_outlined, 'Edit Profil', _navigateToEditProfile),
               _buildMenuCard(Icons.account_balance_wallet_outlined, 'Rekening Bank', () {}),
             ] else ...[
@@ -197,7 +279,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 16),
               _buildMenuCard(Icons.history, 'Riwayat Transaksi', () {}),
               _buildMenuCard(Icons.person_outline, 'Edit Profil', _navigateToEditProfile),
-              _buildPartnerBanner(),
+              if (!widget.canUseMitraMode) _buildPartnerBanner(),
             ],
 
             // --- MENU UMUM ---
@@ -237,10 +319,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 26),
-          onPressed: () {},
-        ),
+        const NotificationBell(color: Colors.black87, size: 26),
       ],
     );
   }
@@ -292,20 +371,22 @@ class _ProfilePageState extends State<ProfilePage> {
               name,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
-            if (isMitra) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Mitra',
-                  style: TextStyle(color: Colors.green.shade800, fontSize: 11, fontWeight: FontWeight.bold),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: isMitra ? Colors.green.shade100 : const Color(0xFFFFE8C2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                isMitra ? 'Mode Mitra' : 'Mode Customer',
+                style: TextStyle(
+                  color: isMitra ? Colors.green.shade800 : _brownColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ]
+            ),
           ],
         ),
         const SizedBox(height: 2),
@@ -316,8 +397,132 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _switchMode(bool currentlyMitra) async {
+    final Future<void> Function(String mode)? callback = widget.onModeChanged;
+    if (callback == null || _isSwitchingMode) return;
+
+    final String targetMode = currentlyMitra ? 'customer' : 'mitra';
+    setState(() => _isSwitchingMode = true);
+    try {
+      await callback(targetMode);
+    } finally {
+      if (mounted) setState(() => _isSwitchingMode = false);
+    }
+  }
+
+  Widget _buildModeSwitcher(bool isMitra) {
+    final String activeLabel = isMitra ? 'Mode Mitra Aktif' : 'Mode Customer Aktif';
+    final String description = isMitra
+        ? 'Terima pekerjaan, kirim penawaran, dan perbarui progres.'
+        : 'Pasang pekerjaan, pilih mitra, dan kelola pesananmu.';
+    final String buttonLabel = isMitra ? 'Ke Customer' : 'Ke Mitra';
+    final IconData activeIcon =
+        isMitra ? Icons.engineering_rounded : Icons.person_rounded;
+    final IconData buttonIcon =
+        isMitra ? Icons.person_outline_rounded : Icons.engineering_outlined;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isMitra
+              ? const <Color>[Color(0xFFEAF3E4), Color(0xFFF7FAF5)]
+              : const <Color>[Color(0xFFFFE8C5), Color(0xFFFFF7EA)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isMitra ? const Color(0xFFCFE2C3) : const Color(0xFFF1D1A0),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              activeIcon,
+              color: isMitra ? const Color(0xFF4B613E) : _brownColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  activeLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.35,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: _isSwitchingMode ? null : () => _switchMode(isMitra),
+            icon: _isSwitchingMode
+                ? const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(buttonIcon, size: 17),
+            label: Text(buttonLabel),
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  isMitra ? const Color(0xFF4B613E) : _brownColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSaldoCard({required String title, required String buttonText}) {
-    final saldo = _userRow?['saldo']?.toString() ?? '500.000';
+    final bool isMitraIncome = title == 'PENDAPATAN MITRA';
+
+    // Hindari ambiguitas parser pada kombinasi operator ternary dan
+    // null-aware index access di beberapa versi Dart/Flutter.
+    final Map<String, dynamic>? userRow = _userRow;
+    final dynamic rawAmount;
+    if (userRow == null) {
+      rawAmount = null;
+    } else if (isMitraIncome) {
+      rawAmount = userRow['total_pendapatan'];
+    } else {
+      rawAmount = userRow['saldo'];
+    }
+
+    final num amount = rawAmount is num
+        ? rawAmount
+        : num.tryParse(rawAmount?.toString() ?? '') ?? 0;
+    final String saldo = _formatThousands(amount);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -420,10 +625,35 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildPartnerBanner() {
+    final String status =
+        (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+
+    String title = 'Daftar Menjadi Mitra';
+    String subtitle = 'Dapatkan penghasilan tambahan';
+    IconData icon = Icons.work_outline;
+    Color background = _primaryOrange;
+
+    if (status == 'applied') {
+      title = 'Pengajuan Mitra Diproses';
+      subtitle = 'Tekan untuk memeriksa status verifikasi';
+      icon = Icons.hourglass_top_rounded;
+      background = const Color(0xFFFFDCA8);
+    } else if (status == 'approved') {
+      title = 'Pengajuan Mitra Disetujui';
+      subtitle = 'Aktifkan dashboard mitramu sekarang';
+      icon = Icons.verified_outlined;
+      background = const Color(0xFFDDEED3);
+    } else if (status == 'rejected') {
+      title = 'Perbaiki Pengajuan Mitra';
+      subtitle = 'Periksa catatan verifikasi dan ajukan ulang';
+      icon = Icons.edit_note_rounded;
+      background = const Color(0xFFFFD8D8);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: _primaryOrange,
+        color: background,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Material(
@@ -435,21 +665,25 @@ class _ProfilePageState extends State<ProfilePage> {
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.work_outline, color: Colors.black87),
+            child: Icon(icon, color: Colors.black87),
           ),
-          title: const Text(
-            'Daftar Menjadi Mitra',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
-          subtitle: const Text(
-            'Dapatkan penghasilan tambahan',
-            style: TextStyle(fontSize: 12, color: Colors.black87),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
           ),
           trailing: const Icon(Icons.arrow_forward_rounded, color: Colors.black87),
-          onTap: () {},
+          onTap: _navigateToMitraApplication,
         ),
       ),
     );
@@ -488,6 +722,18 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  String _formatThousands(num value) {
+    final String digits = value.round().toString();
+    final StringBuffer result = StringBuffer();
+    for (int index = 0; index < digits.length; index++) {
+      if (index > 0 && (digits.length - index) % 3 == 0) {
+        result.write('.');
+      }
+      result.write(digits[index]);
+    }
+    return result.toString();
   }
 
   Widget _buildLogoutButton() {
