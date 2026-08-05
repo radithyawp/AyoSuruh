@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'jobs/create_job_page.dart';
+import 'jobs/customer_job_detail_page.dart';
+import 'jobs/job_helpers.dart';
+import 'jobs/job_service.dart';
+import 'jobs/job_widgets.dart';
 import 'notification.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -10,16 +15,14 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final Color primaryBrown = const Color(0xFF8B5A2B);
-  final Color primaryOrange = const Color(0xFFF39C12);
-  final Color bgGrey = const Color(0xFFFAFAFA);
+  final JobService _jobService = JobService();
 
-  // State Variables
   bool _isLoading = true;
+  String? _errorMessage;
   String _userName = 'Pengguna';
   String _userAddress = 'Alamat belum diatur';
   String? _avatarUrl;
-  List<Map<String, dynamic>> _recentJobs = [];
+  List<Map<String, dynamic>> _recentJobs = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -27,101 +30,113 @@ class _DashboardPageState extends State<DashboardPage> {
     _fetchDashboardData();
   }
 
-  // Fetch Data dari Supabase berdasarkan user yang sedang login
   Future<void> _fetchDashboardData() async {
-    try {
-      final supabase = Supabase.instance.client;
-      final currentUser = supabase.auth.currentUser;
-
-      if (currentUser != null) {
-        // 1. Ambil data profil dari tabel 'users'
-        final userData = await supabase
-            .from('users')
-            .select('fullname, alamat, avatar_url')
-            .eq('id', currentUser.id)
-            .maybeSingle();
-
-        // 2. Ambil data pekerjaan dari tabel 'jobs' (Disesuaikan dengan skema database)
-        List<Map<String, dynamic>> jobsData = [];
-        try {
-          final res = await supabase
-              .from('jobs')
-              .select('id, title, status, created_at, budget') // Menggunakan 'budget', menghapus 'price'
-              .eq('customer_id', currentUser.id)               // Menggunakan 'customer_id', bukan 'user_id'
-              .order('created_at', ascending: false)
-              .limit(3);
-          jobsData = List<Map<String, dynamic>>.from(res);
-        } catch (jobError) {
-          debugPrint('Info/Error pada tabel jobs: $jobError');
-        }
-
-        if (mounted) {
-          setState(() {
-            _userName = userData?['fullname'] ?? 'Pengguna';
-            _userAddress = userData?['alamat'] ?? 'Alamat belum diatur';
-            _avatarUrl = userData?['avatar_url'];
-            _recentJobs = jobsData;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching Supabase data: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
     }
+    try {
+      final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
+        _jobService.fetchMyProfile(),
+        _jobService.fetchCustomerJobs(),
+        _jobService.fetchMyAddresses(),
+      ]);
+      final Map<String, dynamic>? profile = result[0] as Map<String, dynamic>?;
+      final List<Map<String, dynamic>> jobs =
+          result[1] as List<Map<String, dynamic>>;
+      final List<Map<String, dynamic>> addresses =
+          result[2] as List<Map<String, dynamic>>;
+
+      if (!mounted) return;
+      setState(() {
+        _userName = (profile?['fullname'] ?? 'Pengguna').toString();
+        _avatarUrl = profile?['avatar_url']?.toString();
+        if (addresses.isNotEmpty) {
+          _userAddress = addresses.first['address'].toString();
+        } else {
+          _userAddress = (profile?['alamat'] ?? 'Alamat belum diatur').toString();
+        }
+        _recentJobs = jobs.take(3).toList();
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _openCreateJob() async {
+    final bool? created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(builder: (_) => const CreateJobPage()),
+    );
+    if (created == true) await _fetchDashboardData();
+  }
+
+  Future<void> _openJob(String jobId) async {
+    final bool? changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => CustomerJobDetailPage(jobId: jobId),
+      ),
+    );
+    if (changed == true) await _fetchDashboardData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgGrey,
+      backgroundColor: jobBackgroundColor,
       appBar: _buildAppBar(),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryOrange))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 130.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
+          : RefreshIndicator(
+              color: jobOrangeColor,
+              onRefresh: _fetchDashboardData,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
+                children: <Widget>[
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE0DD),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Sebagian data belum dapat dimuat: $_errorMessage',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
                   _buildHeader(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildSearchBar(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   _buildPromoBanner(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
                   _buildCategorySection(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
                   _buildRecentJobsSection(),
                 ],
               ),
             ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90.0),
+        padding: const EdgeInsets.only(bottom: 78),
         child: FloatingActionButton.extended(
-          onPressed: () {
-            // TODO: Navigasi ke halaman Buat Pekerjaan
-          },
-          backgroundColor: primaryOrange,
-          elevation: 4,
-          icon: const Icon(Icons.add, color: Colors.black87, size: 24),
+          onPressed: _openCreateJob,
+          backgroundColor: jobOrangeColor,
+          foregroundColor: const Color(0xFF553600),
+          icon: const Icon(Icons.add_rounded),
           label: const Text(
             'Buat Pekerjaan',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
-          tooltip: 'Buat Pekerjaan',
         ),
       ),
     );
@@ -129,69 +144,52 @@ class _DashboardPageState extends State<DashboardPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: bgGrey,
+      automaticallyImplyLeading: false,
+      backgroundColor: jobBackgroundColor,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
-      title: Row(
-        children: [
-          Icon(Icons.directions_run_rounded, color: primaryOrange, size: 30),
-          const SizedBox(width: 8),
-          Text(
-            "ayo suruh",
-            style: TextStyle(
-              color: primaryBrown,
-              fontWeight: FontWeight.w900,
-              fontSize: 24,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.black87, size: 26),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const notificationPage()),
-            );
-          },
+      title: const Text(
+        'ayo suruh',
+        style: TextStyle(
+          color: jobDarkBrownColor,
+          fontWeight: FontWeight.w900,
+          fontSize: 22,
         ),
+      ),
+      actions: <Widget>[
+        const NotificationBell(color: jobDarkBrownColor),
       ],
     );
   }
 
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
+      children: <Widget>[
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               Text(
-                "Halo, $_userName!",
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                'Halo, $_userName!',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF302A27),
+                ),
               ),
               const SizedBox(height: 4),
               Row(
-                children: [
-                  Icon(Icons.location_on, size: 16, color: primaryBrown),
+                children: <Widget>[
+                  const Icon(Icons.location_on, size: 14, color: jobBrownColor),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       _userAddress,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF6F645D)),
                     ),
                   ),
                 ],
@@ -199,23 +197,16 @@ class _DashboardPageState extends State<DashboardPage> {
             ],
           ),
         ),
-        const SizedBox(width: 16),
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: primaryOrange, width: 2),
-          ),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.orange.shade100,
-            backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
-                ? NetworkImage(_avatarUrl!)
-                : null,
-            child: _avatarUrl == null || _avatarUrl!.isEmpty
-                ? Icon(Icons.person, color: primaryBrown, size: 26)
-                : null,
-          ),
+        const SizedBox(width: 12),
+        CircleAvatar(
+          radius: 23,
+          backgroundColor: const Color(0xFFFFE4BD),
+          backgroundImage: _avatarUrl == null || _avatarUrl!.isEmpty
+              ? null
+              : NetworkImage(_avatarUrl!),
+          child: _avatarUrl == null || _avatarUrl!.isEmpty
+              ? const Icon(Icons.person, color: jobBrownColor)
+              : null,
         ),
       ],
     );
@@ -225,16 +216,17 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: jobBorderColor),
       ),
       child: const TextField(
+        enabled: false,
         decoration: InputDecoration(
-          prefixIcon: Icon(Icons.search, color: Colors.black54),
-          hintText: "Cari layanan...",
-          hintStyle: TextStyle(color: Colors.black38),
+          prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF746A64)),
+          hintText: 'Cari layanan...',
+          hintStyle: TextStyle(fontSize: 12, color: Color(0xFF9B918C)),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 14),
+          contentPadding: EdgeInsets.symmetric(vertical: 13),
         ),
       ),
     );
@@ -243,108 +235,87 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildPromoBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFD8EAD3),
-        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xFFDDEDCF),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        children: [
+        children: <Widget>[
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: <Widget>[
                 const Text(
-                  "Rumah bersih, hati\nsenang.",
+                  'Rumah bersih, hati\nsenang.',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                    height: 1.3,
+                    fontSize: 17,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBrown,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                const SizedBox(height: 13),
+                FilledButton(
+                  onPressed: _openCreateJob,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: jobBrownColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
-                  child: const Text(
-                    "Pesan Sekarang",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: const Text('Pesan Sekarang'),
                 ),
               ],
             ),
           ),
+          const Icon(Icons.cleaning_services_rounded, size: 72, color: jobGreenColor),
         ],
       ),
     );
   }
 
   Widget _buildCategorySection() {
+    final List<Map<String, dynamic>> categories = <Map<String, dynamic>>[
+      <String, dynamic>{'name': 'Kebersihan', 'icon': Icons.cleaning_services_rounded},
+      <String, dynamic>{'name': 'Kurir', 'icon': Icons.local_shipping_rounded},
+      <String, dynamic>{'name': 'Tukang', 'icon': Icons.handyman_rounded},
+      <String, dynamic>{'name': 'Lainnya', 'icon': Icons.grid_view_rounded},
+    ];
     return Column(
-      children: [
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Kategori Layanan',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 13),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "Kategori Layanan",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              "Lihat Semua",
-              style: TextStyle(
-                fontSize: 14,
-                color: primaryBrown,
-                fontWeight: FontWeight.bold,
+          children: categories.map((Map<String, dynamic> category) {
+            return GestureDetector(
+              onTap: _openCreateJob,
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: categoryBackground(category['name'].toString()),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      category['icon'] as IconData,
+                      color: jobDarkBrownColor,
+                      size: 25,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    category['name'].toString(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _categoryItem(Icons.cleaning_services, "Kebersihan",
-                const Color(0xFFFDE8CD), primaryOrange),
-            _categoryItem(Icons.local_shipping, "Kurir",
-                const Color(0xFFEAF5EA), Colors.green.shade700),
-            _categoryItem(Icons.build_rounded, "Tukang",
-                const Color(0xFFFDEAEA), Colors.red.shade400),
-            _categoryItem(Icons.grid_view_rounded, "Lainnya",
-                const Color(0xFFEFEFEF), Colors.black87),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _categoryItem(
-      IconData icon, String label, Color bgColor, Color iconColor) {
-    return Column(
-      children: [
-        Container(
-          width: 65,
-          height: 65,
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Icon(icon, color: iconColor, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -353,145 +324,34 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildRecentJobsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      children: <Widget>[
         const Text(
-          "Status Pekerjaan Saya",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          'Status Pekerjaan Saya',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         if (_recentJobs.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: const Center(
-              child: Text(
-                "Belum ada pekerjaan yang dibuat",
-                style: TextStyle(color: Colors.black54),
-              ),
-            ),
+          const EmptyJobState(
+            title: 'Belum ada pekerjaan',
+            description: 'Buat pekerjaan pertama dan mulai menerima penawaran dari mitra.',
           )
         else
-          ..._recentJobs.map((job) {
+          ..._recentJobs.map((Map<String, dynamic> job) {
+            final int bidCount = embeddedBids(job).where((bid) {
+              return bid['status'] == 'pending';
+            }).length;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _jobCard(job: job),
+              padding: const EdgeInsets.only(bottom: 11),
+              child: JobListCard(
+                job: job,
+                subtitle: bidCount > 0
+                    ? '$bidCount penawaran masuk'
+                    : '${formatJobDate(job['schedule_date'])} · ${formatJobTime(job['schedule_time'])}',
+                onTap: () => _openJob(job['id'].toString()),
+              ),
             );
           }),
       ],
-    );
-  }
-
-  Widget _jobCard({required Map<String, dynamic> job}) {
-    final String title = job['title'] ?? 'Pekerjaan';
-    final String status = job['status'] ?? 'Mencari Mitra';
-    final String createdAt = job['created_at'] != null ? 'Terbaru' : '-';
-    
-    // Menggunakan kolom 'budget' dari database
-    final String price = job['budget'] != null ? 'Rp ${job['budget']}' : 'Rp 0';
-    
-    // Nilai default untuk properti yang tidak ada di skema jobs saat ini
-    final String? imageUrl = job['image_url'];
-    final int bidsCount = job['bids_count'] ?? 0;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAF7F7),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.orange.shade100, width: 1.2),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              width: 80,
-              height: 80,
-              color: Colors.grey.shade300,
-              child: imageUrl != null && imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, fit: BoxFit.cover)
-                  : Icon(Icons.image, color: Colors.grey.shade600, size: 36),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: primaryOrange,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        status,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      createdAt,
-                      style: const TextStyle(fontSize: 12, color: Colors.black45),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  "$bidsCount Penawaran Masuk",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: primaryBrown,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: primaryBrown,
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: primaryBrown,
-                      size: 22,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

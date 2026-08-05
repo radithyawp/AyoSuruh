@@ -2,13 +2,17 @@ import 'package:ayosuruh/mitra_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'profile.dart';
-import 'job.dart';
 import 'chat.dart';
 import 'customer_dashboard.dart';
+import 'job.dart';
+import 'profile.dart';
 
 class MainNavigation extends StatefulWidget {
-  final String? initialRole; // Opsional: Bisa di-pass dari halaman Login
+  /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
+  ///
+  /// `mitra` hanya digunakan bila akun benar-benar mempunyai record aktif pada
+  /// tabel `public.mitras`.
+  final String? initialRole;
 
   const MainNavigation({super.key, this.initialRole});
 
@@ -21,11 +25,13 @@ class _MainNavigationState extends State<MainNavigation> {
 
   int _currentIndex = 0;
   int _dashboardRefreshTick = 0;
-  
-  String _userRole = 'user'; // Default role
-  bool _isLoadingRole = true;
+  int _jobsRefreshTick = 0;
+  int _profileRefreshTick = 0;
 
-  // Palette Warna Navbar dari UI
+  String _activeMode = 'customer';
+  bool _canUseMitraMode = false;
+  bool _isLoadingAccess = true;
+
   static const Color _navBgColor = Color(0xFFFAF7F5);
   static const Color _inactiveColor = Color(0xFF524538);
   static const Color _activeColor = Color(0xFF4B613E);
@@ -35,56 +41,142 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialRole != null && widget.initialRole!.isNotEmpty) {
-      _userRole = widget.initialRole!.toLowerCase();
-      _isLoadingRole = false;
-    } else {
-      _fetchUserRole();
+    _fetchUserAccess();
+  }
+
+  String? _normalizeMode(String? value) {
+    final String normalized = (value ?? '').trim().toLowerCase();
+    if (normalized == 'mitra') return 'mitra';
+    if (normalized == 'user' ||
+        normalized == 'customer' ||
+        normalized == 'pelanggan') {
+      return 'customer';
+    }
+    return null;
+  }
+
+  Future<void> _fetchUserAccess() async {
+    try {
+      final User? authUser = _supabase.auth.currentUser;
+      if (authUser == null) {
+        if (mounted) setState(() => _isLoadingAccess = false);
+        return;
+      }
+
+      final Map<String, dynamic>? userRow = await _supabase
+          .from('users')
+          .select('role')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+      final Map<String, dynamic>? mitraRow = await _supabase
+          .from('mitras')
+          .select('is_active')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+      final bool canUseMitraMode =
+          mitraRow != null && mitraRow['is_active'] == true;
+      final String databaseRole =
+          (userRow?['role'] ?? 'user').toString().toLowerCase();
+
+      final String? requestedMode = _normalizeMode(widget.initialRole);
+      final String? savedMode =
+          _normalizeMode(authUser.userMetadata?['active_mode']?.toString());
+
+      String resolvedMode;
+      if (requestedMode == 'mitra' && canUseMitraMode) {
+        resolvedMode = 'mitra';
+      } else if (requestedMode == 'customer') {
+        resolvedMode = 'customer';
+      } else if (savedMode == 'mitra' && canUseMitraMode) {
+        resolvedMode = 'mitra';
+      } else if (savedMode == 'customer') {
+        resolvedMode = 'customer';
+      } else if (databaseRole == 'mitra' && canUseMitraMode) {
+        // Menjaga perilaku lama untuk akun mitra yang belum pernah memilih mode.
+        resolvedMode = 'mitra';
+      } else {
+        resolvedMode = 'customer';
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _canUseMitraMode = canUseMitraMode;
+        _activeMode = resolvedMode;
+        _isLoadingAccess = false;
+      });
+    } catch (error) {
+      debugPrint('Error fetching account access in navbar: $error');
+      if (mounted) {
+        setState(() {
+          _activeMode = 'customer';
+          _canUseMitraMode = false;
+          _isLoadingAccess = false;
+        });
+      }
     }
   }
 
-  /* ---------- AMBIL ROLE DARI SUPABASE ---------- */
-  Future<void> _fetchUserRole() async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user != null) {
-        final res = await _supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
+  Future<void> _changeActiveMode(String requestedMode) async {
+    final String? normalizedMode = _normalizeMode(requestedMode);
+    if (normalizedMode == null || normalizedMode == _activeMode) return;
 
-        if (mounted && res != null) {
-          setState(() {
-            _userRole = (res['role'] ?? 'user').toString().toLowerCase();
-            _isLoadingRole = false;
-          });
-          return;
-        }
+    if (normalizedMode == 'mitra' && !_canUseMitraMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Akun belum terdaftar sebagai mitra aktif.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    } catch (e) {
-      debugPrint('Error fetching role in navbar: $e');
+      return;
     }
 
-    if (mounted) {
-      setState(() => _isLoadingRole = false);
+    setState(() {
+      _activeMode = normalizedMode;
+      _currentIndex = 0;
+      _dashboardRefreshTick++;
+      _jobsRefreshTick++;
+      _profileRefreshTick++;
+    });
+
+    // Simpan preferensi mode pada metadata Auth. Kegagalan penyimpanan tidak
+    // membatalkan perubahan mode pada sesi yang sedang berjalan.
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          data: <String, dynamic>{'active_mode': normalizedMode},
+        ),
+      );
+    } catch (error) {
+      debugPrint('Mode aktif belum tersimpan ke metadata Auth: $error');
     }
+
+    if (!mounted) return;
+    final String label = normalizedMode == 'mitra' ? 'Mitra' : 'Customer';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sekarang menggunakan Mode $label.'),
+        backgroundColor: const Color(0xFF4B613E),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _changePage(int index) {
     setState(() {
       _currentIndex = index;
-
-      if (index == 0) {
-        _dashboardRefreshTick++;
-      }
+      if (index == 0) _dashboardRefreshTick++;
+      if (index == 1) _jobsRefreshTick++;
+      if (index == 3) _profileRefreshTick++;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Tampilan Loading sejenak saat memeriksa role
-    if (_isLoadingRole) {
+    if (_isLoadingAccess) {
       return const Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -93,26 +185,28 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    // Tentukan Dashboard berdasarkan Role
-    final Widget activeDashboard = _userRole == 'mitra'
+    final Widget activeDashboard = _activeMode == 'mitra'
         ? MitraDashboardPage(key: ValueKey(_dashboardRefreshTick))
         : DashboardPage(key: ValueKey(_dashboardRefreshTick));
 
-    final List<Widget> pages = [
-      activeDashboard,        // Index 0: Dashboard (Mitra / Customer)
-      const JobPage(),        // Index 1: Pekerjaan
-      const ChatPage(),       // Index 2: Chat
-      const ProfilePage(),    // Index 3: Profil
+    final List<Widget> pages = <Widget>[
+      activeDashboard,
+      JobPage(
+        key: ValueKey('jobs-$_activeMode-$_jobsRefreshTick'),
+        role: _activeMode,
+      ),
+      const ChatPage(),
+      ProfilePage(
+        key: ValueKey('profile-$_activeMode-$_profileRefreshTick'),
+        activeMode: _activeMode,
+        canUseMitraMode: _canUseMitraMode,
+        onModeChanged: _changeActiveMode,
+      ),
     ];
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
-      ),
-
-      // Bottom Navigation Bar
+      body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: _navBgColor,
@@ -125,7 +219,7 @@ class _MainNavigationState extends State<MainNavigation> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
+              children: <Widget>[
                 _buildNavButton(
                   icon: Icons.home_outlined,
                   activeIcon: Icons.home_rounded,
@@ -164,7 +258,7 @@ class _MainNavigationState extends State<MainNavigation> {
     required String label,
     required int index,
   }) {
-    final isActive = _currentIndex == index;
+    final bool isActive = _currentIndex == index;
 
     return GestureDetector(
       onTap: () => _changePage(index),
@@ -172,14 +266,14 @@ class _MainNavigationState extends State<MainNavigation> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        constraints: const BoxConstraints(minWidth: 72), // Menjaga lebar pill simetris
+        constraints: const BoxConstraints(minWidth: 72),
         decoration: BoxDecoration(
           color: isActive ? _activePillBg : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
+          children: <Widget>[
             Icon(
               isActive ? activeIcon : icon,
               color: isActive ? _activeColor : _inactiveColor,
