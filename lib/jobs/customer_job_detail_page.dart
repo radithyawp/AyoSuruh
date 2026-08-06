@@ -7,6 +7,7 @@ import '../location/job_location_map.dart';
 import '../payments/job_payment_page.dart';
 import '../payments/job_payment_widgets.dart';
 import '../payments/payment_service.dart';
+import '../payments/payment_helpers.dart';
 import 'job_bids_page.dart';
 import 'job_helpers.dart';
 import 'job_rating_page.dart';
@@ -181,7 +182,21 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
     }
   }
 
+  bool _hasCancelableMidtransTransaction() {
+    final String orderId = (_payment?['order_id'] ?? '').toString().trim();
+    final String paymentStatus =
+        (_payment?['status'] ?? '').toString().toLowerCase();
+    return orderId.isNotEmpty &&
+        !<String>['failed', 'expired', 'cancelled', 'refunded']
+            .contains(paymentStatus);
+  }
+
   Future<void> _cancelJob() async {
+    if (_hasCancelableMidtransTransaction()) {
+      await _openPayment();
+      return;
+    }
+
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -368,8 +383,11 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           ],
           if (_payment != null &&
               job['mitra_id'] != null &&
-              (status == 'accepted' || _payment?['payment_required'] == true) &&
-              <String>['accepted', 'on_progress', 'completed'].contains(status)) ...<Widget>[
+              ((status == 'accepted' || _payment?['payment_required'] == true) &&
+                      <String>['accepted', 'on_progress', 'completed'].contains(status) ||
+                  <String>['refunded', 'cancelled'].contains(
+                    (_payment?['status'] ?? '').toString().toLowerCase(),
+                  ))) ...<Widget>[
             JobPaymentStatusCard(
               payment: _payment,
               isCustomer: true,
@@ -528,7 +546,13 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             TextButton.icon(
               onPressed: _isActionLoading ? null : _cancelJob,
               icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Batalkan Pekerjaan'),
+              label: Text(
+                _hasCancelableMidtransTransaction()
+                    ? isPaymentPaid(_payment)
+                        ? 'Ajukan Pembatalan & Refund'
+                        : 'Batalkan Transaksi & Pekerjaan'
+                    : 'Batalkan Pekerjaan',
+              ),
               style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
             ),
         ],

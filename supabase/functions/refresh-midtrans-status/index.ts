@@ -30,24 +30,34 @@ function json(body: unknown, status = 200) {
   });
 }
 
-type LocalStatus = 'pending' | 'paid' | 'failed' | 'expired';
+type LocalStatus =
+  | 'pending'
+  | 'paid'
+  | 'failed'
+  | 'expired'
+  | 'refunded'
+  | 'cancelled';
 
 function mapStatus(data: Record<string, unknown>, current: string): LocalStatus {
   const transaction = String(data.transaction_status ?? '').toLowerCase();
   const fraud = String(data.fraud_status ?? '').toLowerCase();
 
-  if (current === 'paid') return 'paid';
+  if (current === 'refunded') return 'refunded';
+  if (current === 'cancelled') return 'cancelled';
+  if (current === 'paid' && !['refund', 'partial_refund', 'cancel', 'chargeback', 'partial_chargeback'].includes(transaction)) {
+    return 'paid';
+  }
   if (transaction === 'settlement') return 'paid';
   if (transaction === 'capture' && (fraud === 'accept' || fraud === '')) {
     return 'paid';
   }
   if (transaction === 'expire') return 'expired';
-  if (['cancel', 'failure'].includes(transaction)) return 'failed';
+  if (transaction === 'cancel') return 'cancelled';
+  if (transaction === 'failure') return 'failed';
   // Satu Snap order dapat memiliki beberapa attempt. Deny tidak menutup order.
   if (transaction === 'deny') return 'pending';
-  if (['refund', 'partial_refund', 'chargeback'].includes(transaction)) {
-    return current === 'paid' ? 'paid' : 'failed';
-  }
+  if (['refund', 'partial_refund'].includes(transaction)) return 'refunded';
+  if (['chargeback', 'partial_chargeback'].includes(transaction)) return 'refunded';
   return 'pending';
 }
 
@@ -97,6 +107,34 @@ async function notifyTransition(
       p_job_id: job.id,
       p_data: { order_id: orderId },
     });
+  } else if (nextStatus === 'refunded') {
+    await admin.rpc('enqueue_notification', {
+      p_user_id: job.customer_id,
+      p_title: 'Refund Disetujui',
+      p_body: `Pengembalian dana pekerjaan ${job.title} telah disetujui Midtrans.`,
+      p_type: 'refund_success',
+      p_job_id: job.id,
+      p_data: { order_id: orderId },
+    });
+    if (job.mitra_id) {
+      await admin.rpc('enqueue_notification', {
+        p_user_id: job.mitra_id,
+        p_title: 'Pembayaran Direfund',
+        p_body: `Pembayaran pekerjaan ${job.title} telah direfund kepada customer.`,
+        p_type: 'refund_success',
+        p_job_id: job.id,
+        p_data: { order_id: orderId },
+      });
+    }
+  } else if (nextStatus === 'cancelled') {
+    await admin.rpc('enqueue_notification', {
+      p_user_id: job.customer_id,
+      p_title: 'Transaksi Dibatalkan',
+      p_body: `Transaksi pekerjaan ${job.title} telah dibatalkan.`,
+      p_type: 'payment_cancelled',
+      p_job_id: job.id,
+      p_data: { order_id: orderId },
+    });
   }
 }
 
@@ -140,7 +178,7 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const { data: job } = await admin
       .from('jobs')
-      .select('id, customer_id, mitra_id, title')
+      .select('id, customer_id, mitra_id, title, status')
       .eq('id', jobId)
       .maybeSingle();
     if (!job) return json({ error: 'Pekerjaan tidak ditemukan.' }, 404);
@@ -200,12 +238,35 @@ Deno.serve(async (req) => {
     }
 
     const previousStatus = String(payment.status);
+    const now = new Date().toISOString();
+    const transactionStatus = String(
+      statusData.transaction_status ?? payment.transaction_status ?? '',
+    ).toLowerCase();
+    const refundAmount = Number(
+      statusData.refund_amount ?? payment.refunded_amount ?? 0,
+    );
     const updatePayload = {
       status: mappedStatus,
+      payment_required:
+        mappedStatus === 'refunded' || mappedStatus === 'cancelled'
+          ? false
+          : payment.payment_required,
       paid_at:
         mappedStatus === 'paid'
-          ? payment.paid_at ?? new Date().toISOString()
+          ? payment.paid_at ?? now
           : payment.paid_at,
+      refunded_amount:
+        mappedStatus === 'refunded' && Number.isFinite(refundAmount)
+          ? refundAmount
+          : payment.refunded_amount,
+      refund_status:
+        mappedStatus === 'refunded'
+          ? transactionStatus || 'refund'
+          : payment.refund_status,
+      refunded_at:
+        mappedStatus === 'refunded'
+          ? payment.refunded_at ?? now
+          : payment.refunded_at,
       transaction_id: statusData.transaction_id ?? payment.transaction_id,
       transaction_status:
         statusData.transaction_status ?? payment.transaction_status,
@@ -233,6 +294,30 @@ Deno.serve(async (req) => {
         raw_response: statusData,
       })
       .eq('order_id', payment.order_id);
+
+    if (mappedStatus === 'refunded' || mappedStatus === 'cancelled') {
+      await admin
+        .from('refund_requests')
+        .update({
+          status: mappedStatus === 'refunded' ? 'refunded' : 'cancelled',
+          transaction_status: transactionStatus,
+          status_message:
+            statusData.status_message ??
+            (mappedStatus === 'refunded'
+              ? 'Refund telah diproses.'
+              : 'Transaksi telah dibatalkan.'),
+          processed_at: now,
+          raw_response: statusData,
+        })
+        .eq('payment_id', payment.id)
+        .in('status', ['requested', 'processing', 'manual_review']);
+
+      await admin
+        .from('jobs')
+        .update({ status: 'cancelled' })
+        .eq('id', job.id)
+        .eq('status', 'accepted');
+    }
 
     await notifyTransition(
       admin,

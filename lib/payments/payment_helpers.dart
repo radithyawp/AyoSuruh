@@ -8,60 +8,92 @@ const Color paymentBackground = Color(0xFFFFF9FC);
 const Color paymentBorder = Color(0xFFEAD8CB);
 
 String paymentStatusLabel(Map<String, dynamic>? payment) {
-  if (!isPaymentRequired(payment)) return 'Belum Diaktifkan';
+  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  if (!isPaymentRequired(payment) &&
+      !<String>['refunded', 'cancelled'].contains(status)) {
+    return 'Belum Diaktifkan';
+  }
 
-  switch ((payment?['status'] ?? 'pending').toString().toLowerCase()) {
+  switch (status) {
     case 'paid':
       return 'Sudah Dibayar';
     case 'failed':
       return 'Pembayaran Gagal';
     case 'expired':
       return 'Pembayaran Kedaluwarsa';
+    case 'refunded':
+      return 'Sudah Direfund';
+    case 'cancelled':
+      return 'Transaksi Dibatalkan';
     default:
       return 'Menunggu Pembayaran';
   }
 }
 
 Color paymentStatusColor(Map<String, dynamic>? payment) {
-  if (!isPaymentRequired(payment)) return const Color(0xFF8A7B72);
+  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  if (!isPaymentRequired(payment) &&
+      !<String>['refunded', 'cancelled'].contains(status)) {
+    return const Color(0xFF8A7B72);
+  }
 
-  switch ((payment?['status'] ?? 'pending').toString().toLowerCase()) {
+  switch (status) {
     case 'paid':
       return paymentGreen;
     case 'failed':
       return Colors.red.shade700;
     case 'expired':
       return const Color(0xFF9B5D00);
+    case 'refunded':
+      return const Color(0xFF3E6B7A);
+    case 'cancelled':
+      return const Color(0xFF7A6C65);
     default:
       return paymentOrange;
   }
 }
 
 Color paymentStatusBackground(Map<String, dynamic>? payment) {
-  if (!isPaymentRequired(payment)) return const Color(0xFFF1ECE8);
+  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  if (!isPaymentRequired(payment) &&
+      !<String>['refunded', 'cancelled'].contains(status)) {
+    return const Color(0xFFF1ECE8);
+  }
 
-  switch ((payment?['status'] ?? 'pending').toString().toLowerCase()) {
+  switch (status) {
     case 'paid':
       return const Color(0xFFE2F1D8);
     case 'failed':
       return const Color(0xFFFFE1DE);
     case 'expired':
       return const Color(0xFFFFEBCB);
+    case 'refunded':
+      return const Color(0xFFDCEEF3);
+    case 'cancelled':
+      return const Color(0xFFEDE7E3);
     default:
       return const Color(0xFFFFEED5);
   }
 }
 
 IconData paymentStatusIcon(Map<String, dynamic>? payment) {
-  if (!isPaymentRequired(payment)) return Icons.construction_rounded;
+  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  if (!isPaymentRequired(payment) &&
+      !<String>['refunded', 'cancelled'].contains(status)) {
+    return Icons.construction_rounded;
+  }
 
-  switch ((payment?['status'] ?? 'pending').toString().toLowerCase()) {
+  switch (status) {
     case 'paid':
       return Icons.check_circle_rounded;
     case 'failed':
       return Icons.error_rounded;
     case 'expired':
       return Icons.timer_off_rounded;
+    case 'refunded':
+      return Icons.currency_exchange_rounded;
+    case 'cancelled':
+      return Icons.cancel_rounded;
     default:
       return Icons.hourglass_top_rounded;
   }
@@ -85,6 +117,14 @@ num paymentTotalAmount(Map<String, dynamic>? payment) {
 
 bool isPaymentPaid(Map<String, dynamic>? payment) {
   return (payment?['status'] ?? '').toString().toLowerCase() == 'paid';
+}
+
+bool isPaymentRefunded(Map<String, dynamic>? payment) {
+  return (payment?['status'] ?? '').toString().toLowerCase() == 'refunded';
+}
+
+bool isPaymentCancelled(Map<String, dynamic>? payment) {
+  return (payment?['status'] ?? '').toString().toLowerCase() == 'cancelled';
 }
 
 bool isPaymentRequired(Map<String, dynamic>? payment) {

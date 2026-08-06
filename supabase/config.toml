@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.midtrans-payment-return]
 verify_jwt = false
+
+[functions.request-midtrans-refund]
+verify_jwt = true

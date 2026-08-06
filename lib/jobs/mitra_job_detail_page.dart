@@ -331,8 +331,11 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           ],
           if (assignedToMe &&
               _payment != null &&
-              (status == 'accepted' || _payment?['payment_required'] == true) &&
-              <String>['accepted', 'on_progress', 'completed'].contains(status)) ...<Widget>[
+              (((status == 'accepted' || _payment?['payment_required'] == true) &&
+                      <String>['accepted', 'on_progress', 'completed'].contains(status)) ||
+                  <String>['refunded', 'cancelled'].contains(
+                    (_payment?['status'] ?? '').toString().toLowerCase(),
+                  ))) ...<Widget>[
             const SizedBox(height: 14),
             JobPaymentStatusCard(
               payment: _payment,

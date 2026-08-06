@@ -13,6 +13,8 @@ import 'notification.dart';
 import 'mitra/mitra_application_page.dart';
 import 'mitra/mitra_application_service.dart';
 import 'payments/payment_history_page.dart';
+import 'wallet/mitra_wallet_page.dart';
+import 'wallet/wallet_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -34,6 +36,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final SupabaseClient _supabase = Supabase.instance.client;
   final JobService _jobService = JobService();
   final MitraApplicationService _applicationService = MitraApplicationService();
+  final WalletService _walletService = WalletService();
 
   Map<String, dynamic>? _userRow;
   Map<String, dynamic>? _mitraApplication;
@@ -72,9 +75,13 @@ class _ProfilePageState extends State<ProfilePage> {
       Map<String, dynamic>? application;
       if (widget.activeMode == 'mitra' && widget.canUseMitraMode) {
         try {
-          final Map<String, dynamic> mitraStats =
-              await _jobService.fetchMitraDashboardProfile();
-          profile.addAll(mitraStats);
+          final List<dynamic> mitraResult =
+              await Future.wait<dynamic>(<Future<dynamic>>[
+            _jobService.fetchMitraDashboardProfile(),
+            _walletService.fetchSummary(),
+          ]);
+          profile.addAll(mitraResult[0] as Map<String, dynamic>);
+          profile.addAll(mitraResult[1] as Map<String, dynamic>);
         } catch (error) {
           debugPrint('Statistik mitra belum dapat dimuat: $error');
         }
@@ -158,6 +165,16 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) await _loadProfileData();
   }
 
+
+  Future<void> _navigateToWallet() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const MitraWalletPage(),
+      ),
+    );
+    if (mounted) await _loadProfileData();
+  }
 
   Future<void> _navigateToMitraApplication() async {
     final String status =
@@ -266,7 +283,11 @@ class _ProfilePageState extends State<ProfilePage> {
             if (isMitra) ...[
               _buildMitraStatsCard(),
               const SizedBox(height: 16),
-              _buildSaldoCard(title: "PENDAPATAN MITRA", buttonText: "Cairkan"),
+              _buildSaldoCard(
+                title: "PENDAPATAN MITRA",
+                buttonText: "Cairkan",
+                onPressed: _navigateToWallet,
+              ),
               const SizedBox(height: 16),
               _buildMenuCard(
                 Icons.history,
@@ -274,7 +295,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 _navigateToMitraHistory,
               ),
               _buildMenuCard(Icons.edit_outlined, 'Edit Profil', _navigateToEditProfile),
-              _buildMenuCard(Icons.account_balance_wallet_outlined, 'Rekening Bank', () {}),
+              _buildMenuCard(
+                Icons.account_balance_wallet_outlined,
+                'Dompet & Rekening',
+                _navigateToWallet,
+              ),
             ] else ...[
               _buildSaldoCard(title: "SALDO AYOPAY", buttonText: "Isi Saldo"),
               const SizedBox(height: 16),
@@ -514,7 +539,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildSaldoCard({required String title, required String buttonText}) {
+  Widget _buildSaldoCard({
+    required String title,
+    required String buttonText,
+    VoidCallback? onPressed,
+  }) {
     final bool isMitraIncome = title == 'PENDAPATAN MITRA';
 
     // Hindari ambiguitas parser pada kombinasi operator ternary dan
@@ -524,7 +553,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (userRow == null) {
       rawAmount = null;
     } else if (isMitraIncome) {
-      rawAmount = userRow['total_pendapatan'];
+      rawAmount =
+          userRow['available_balance'] ?? userRow['total_pendapatan'];
     } else {
       rawAmount = userRow['saldo'];
     }
@@ -575,7 +605,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: onPressed,
             icon: const Icon(Icons.add_circle_outline, size: 16, color: Colors.white),
             label: Text(buttonText, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
