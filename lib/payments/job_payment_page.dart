@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../jobs/job_helpers.dart';
+import '../refunds/refund_helpers.dart';
+import '../refunds/refund_request_page.dart';
+import '../refunds/refund_service.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
 
@@ -25,12 +28,14 @@ class JobPaymentPage extends StatefulWidget {
 class _JobPaymentPageState extends State<JobPaymentPage>
     with WidgetsBindingObserver {
   final PaymentService _paymentService = PaymentService();
+  final RefundService _refundService = RefundService();
 
   bool _isLoading = true;
   bool _isCreating = false;
   bool _isRefreshing = false;
   String? _errorMessage;
   Map<String, dynamic>? _payment;
+  Map<String, dynamic>? _refund;
   List<Map<String, dynamic>> _attempts = <Map<String, dynamic>>[];
   Timer? _pollTimer;
   StreamSubscription<Map<String, dynamic>?>? _paymentSubscription;
@@ -78,11 +83,13 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
         _paymentService.fetchJobPayment(widget.jobId),
         _paymentService.fetchJobPaymentAttempts(widget.jobId),
+        _refundService.fetchJobRefund(widget.jobId),
       ]);
       if (!mounted) return;
       setState(() {
         _payment = result[0] as Map<String, dynamic>?;
         _attempts = result[1] as List<Map<String, dynamic>>;
+        _refund = result[2] as Map<String, dynamic>?;
         _errorMessage = null;
         _isLoading = false;
       });
@@ -98,8 +105,8 @@ class _JobPaymentPageState extends State<JobPaymentPage>
 
   Future<void> _loadAttempts() async {
     try {
-      final List<Map<String, dynamic>> attempts =
-          await _paymentService.fetchJobPaymentAttempts(widget.jobId);
+      final List<Map<String, dynamic>> attempts = await _paymentService
+          .fetchJobPaymentAttempts(widget.jobId);
       if (!mounted) return;
       setState(() => _attempts = attempts);
     } catch (error) {
@@ -143,8 +150,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
   void _configurePolling() {
     _pollTimer?.cancel();
     final String status = (_payment?['status'] ?? '').toString().toLowerCase();
-    final bool hasOrder =
-        (_payment?['order_id'] ?? '').toString().trim().isNotEmpty;
+    final bool hasOrder = (_payment?['order_id'] ?? '')
+        .toString()
+        .trim()
+        .isNotEmpty;
     if (!isPaymentRequired(_payment) || status != 'pending' || !hasOrder) {
       return;
     }
@@ -158,8 +167,8 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     if (_isCreating) return;
     setState(() => _isCreating = true);
     try {
-      final Map<String, dynamic> result =
-          await _paymentService.createSnapTransaction(widget.jobId);
+      final Map<String, dynamic> result = await _paymentService
+          .createSnapTransaction(widget.jobId);
       final dynamic rawPayment = result['payment'];
       final Map<String, dynamic>? payment = rawPayment is Map
           ? Map<String, dynamic>.from(rawPayment)
@@ -205,16 +214,37 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     }
   }
 
+  Future<void> _openRefund() async {
+    if (_payment == null) return;
+
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => RefundRequestPage(
+          jobId: widget.jobId,
+          jobTitle: widget.jobTitle,
+          payment: _payment!,
+          initialRefund: _refund,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    await _loadPayment();
+  }
+
   Future<void> _refreshStatus({bool silent = false}) async {
-    final bool hasOrder =
-        (_payment?['order_id'] ?? '').toString().trim().isNotEmpty;
+    final bool hasOrder = (_payment?['order_id'] ?? '')
+        .toString()
+        .trim()
+        .isNotEmpty;
     if (_isRefreshing || !hasOrder) return;
 
     _isRefreshing = true;
     if (!silent && mounted) setState(() {});
     try {
-      final Map<String, dynamic> result =
-          await _paymentService.refreshPaymentStatus(widget.jobId);
+      final Map<String, dynamic> result = await _paymentService
+          .refreshPaymentStatus(widget.jobId);
       final dynamic rawPayment = result['payment'];
       final Map<String, dynamic>? payment = rawPayment is Map
           ? Map<String, dynamic>.from(rawPayment)
@@ -243,21 +273,21 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     return Scaffold(
       backgroundColor: paymentBackground,
       appBar: AppBar(
-          backgroundColor: paymentBackground,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
-            icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
+        backgroundColor: paymentBackground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
+          icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
+        ),
+        title: const Text(
+          'Pembayaran Midtrans',
+          style: TextStyle(
+            color: paymentBrown,
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
           ),
-          title: const Text(
-            'Pembayaran Midtrans',
-            style: TextStyle(
-              color: paymentBrown,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
-          ),
+        ),
       ),
       body: _buildBody(),
     );
@@ -297,6 +327,8 @@ class _JobPaymentPageState extends State<JobPaymentPage>
 
     final bool required = isPaymentRequired(_payment);
     final bool paid = isPaymentPaid(_payment);
+    final bool ended =
+        isPaymentRefunded(_payment) || isPaymentCancelled(_payment);
     final bool activeLink = hasActiveMidtransCheckout(_payment);
     final String status = (_payment?['status'] ?? '').toString().toLowerCase();
     final num baseAmount = paymentBaseAmount(_payment);
@@ -326,10 +358,35 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             const SizedBox(height: 16),
             _attemptHistoryCard(),
           ],
+          if (_refund != null) ...<Widget>[
+            const SizedBox(height: 16),
+            _refundStatusCard(),
+          ],
           const SizedBox(height: 16),
           _securityInfoCard(),
           const SizedBox(height: 22),
-          if (paid)
+          if (paid) ...<Widget>[
+            SizedBox(
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: _openRefund,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  side: BorderSide(color: Colors.red.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                icon: const Icon(Icons.currency_exchange_rounded),
+                label: Text(
+                  _refund == null
+                      ? 'Ajukan Pembatalan & Refund'
+                      : 'Lihat Status Refund',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             SizedBox(
               height: 52,
               child: FilledButton.icon(
@@ -346,16 +403,43 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-            )
-          else ...<Widget>[
+            ),
+          ] else if (ended) ...<Widget>[
+            SizedBox(
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: _openRefund,
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text(
+                  'Lihat Rincian Refund',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(context, false),
+                style: FilledButton.styleFrom(
+                  backgroundColor: paymentBrown,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('Kembali ke Detail Pekerjaan'),
+              ),
+            ),
+          ] else ...<Widget>[
             SizedBox(
               height: 52,
               child: FilledButton.icon(
                 onPressed: _isCreating
                     ? null
                     : activeLink
-                        ? _openCheckout
-                        : _createTransaction,
+                    ? _openCheckout
+                    : _createTransaction,
                 style: FilledButton.styleFrom(
                   backgroundColor: paymentOrange,
                   foregroundColor: paymentDarkBrown,
@@ -381,15 +465,42 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   activeLink
                       ? 'Lanjutkan Pembayaran'
                       : !required
-                          ? 'Bayar Sekarang'
-                          : status == 'failed' || status == 'expired'
-                              ? 'Buat Pembayaran Baru'
-                              : 'Bayar Sekarang',
+                      ? 'Bayar Sekarang'
+                      : status == 'failed' || status == 'expired'
+                      ? 'Buat Pembayaran Baru'
+                      : 'Bayar Sekarang',
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
-            if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+            if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty &&
+                status == 'pending') ...<Widget>[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: _openRefund,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _refund == null
+                        ? 'Batalkan Transaksi & Pekerjaan'
+                        : 'Lihat Permintaan Pembatalan',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+            if ((_payment?['order_id'] ?? '')
+                .toString()
+                .trim()
+                .isNotEmpty) ...<Widget>[
               const SizedBox(height: 10),
               SizedBox(
                 height: 48,
@@ -431,7 +542,12 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     final String status = (_payment?['status'] ?? '').toString().toLowerCase();
 
     String description;
-    if (!required) {
+    if (status == 'refunded') {
+      description =
+          'Dana transaksi telah dikembalikan atau sedang dikonfirmasi oleh Midtrans.';
+    } else if (status == 'cancelled') {
+      description = 'Transaksi dan pekerjaan telah dibatalkan.';
+    } else if (!required) {
       description =
           'Pembayaran belum dibuat. Tekan Bayar Sekarang untuk membuka checkout Midtrans.';
     } else if (paid) {
@@ -514,12 +630,11 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(height: 1),
           ),
-          _priceRow(
-            'Total Pembayaran',
-            formatRupiah(total),
-            emphasized: true,
-          ),
-          if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+          _priceRow('Total Pembayaran', formatRupiah(total), emphasized: true),
+          if ((_payment?['order_id'] ?? '')
+              .toString()
+              .trim()
+              .isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             _detailRow('Order ID', _payment!['order_id'].toString()),
           ],
@@ -529,10 +644,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           ],
           if (_payment?['expires_at'] != null) ...<Widget>[
             const SizedBox(height: 7),
-            _detailRow(
-              'Berlaku sampai',
-              _formatDate(_payment!['expires_at']),
-            ),
+            _detailRow('Berlaku sampai', _formatDate(_payment!['expires_at'])),
           ],
           if (_payment?['paid_at'] != null) ...<Widget>[
             const SizedBox(height: 7),
@@ -617,10 +729,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               ),
               Text(
                 '${_attempts.length} percobaan',
-                style: const TextStyle(
-                  color: Color(0xFF8A7B72),
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Color(0xFF8A7B72), fontSize: 11),
               ),
             ],
           ),
@@ -688,6 +797,57 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               color: paymentBrown,
               fontSize: 11,
               fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _refundStatusCard() {
+    final Map<String, dynamic> refund = _refund!;
+    final Color color = refundStatusColor(refund['status']);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: refundStatusBackground(refund['status']),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(refundStatusIcon(refund['status']), color: color, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  refundStatusLabel(refund['status']),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  (refund['status_message'] ??
+                          'Status refund akan diperbarui otomatis.')
+                      .toString(),
+                  style: const TextStyle(fontSize: 11.5, height: 1.4),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _openRefund,
+                  style: TextButton.styleFrom(
+                    foregroundColor: color,
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 17),
+                  label: const Text('Buka rincian'),
+                ),
+              ],
             ),
           ),
         ],

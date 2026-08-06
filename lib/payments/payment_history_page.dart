@@ -211,6 +211,8 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
       <String, String>{'value': 'paid', 'label': 'Berhasil'},
       <String, String>{'value': 'failed', 'label': 'Gagal'},
       <String, String>{'value': 'expired', 'label': 'Kedaluwarsa'},
+      <String, String>{'value': 'refunded', 'label': 'Refund'},
+      <String, String>{'value': 'cancelled', 'label': 'Dibatalkan'},
     ];
 
     return SingleChildScrollView(

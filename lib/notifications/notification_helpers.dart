@@ -62,6 +62,54 @@ NotificationVisual notificationVisual(String? type) {
         background: Color(0xFFFFE7C2),
         foreground: Color(0xFF9A5B00),
       );
+    case 'refund_success':
+      return const NotificationVisual(
+        icon: Icons.currency_exchange_rounded,
+        background: Color(0xFFDCEEF3),
+        foreground: Color(0xFF3E6B7A),
+      );
+    case 'refund_manual_review':
+      return const NotificationVisual(
+        icon: Icons.manage_search_rounded,
+        background: Color(0xFFFFE7C2),
+        foreground: Color(0xFF9A5B00),
+      );
+    case 'refund_failed':
+      return const NotificationVisual(
+        icon: Icons.error_outline_rounded,
+        background: Color(0xFFFFE0DE),
+        foreground: Color(0xFFB5473D),
+      );
+    case 'payment_cancelled':
+      return const NotificationVisual(
+        icon: Icons.cancel_outlined,
+        background: Color(0xFFEDE8E4),
+        foreground: Color(0xFF6A5D55),
+      );
+    case 'payout_requested':
+      return const NotificationVisual(
+        icon: Icons.schedule_send_outlined,
+        background: Color(0xFFFFE7C2),
+        foreground: Color(0xFF9A5B00),
+      );
+    case 'payout_cancelled':
+      return const NotificationVisual(
+        icon: Icons.undo_rounded,
+        background: Color(0xFFEDE8E4),
+        foreground: Color(0xFF6A5D55),
+      );
+    case 'payout_paid':
+      return const NotificationVisual(
+        icon: Icons.account_balance_rounded,
+        background: Color(0xFFDDF0CF),
+        foreground: Color(0xFF4F6B3E),
+      );
+    case 'payout_rejected':
+      return const NotificationVisual(
+        icon: Icons.money_off_csred_outlined,
+        background: Color(0xFFFFE0DE),
+        foreground: Color(0xFFB5473D),
+      );
     case 'mitra_application_submitted':
       return const NotificationVisual(
         icon: Icons.hourglass_top_rounded,
