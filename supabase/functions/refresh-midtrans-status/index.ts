@@ -42,11 +42,62 @@ function mapStatus(data: Record<string, unknown>, current: string): LocalStatus 
     return 'paid';
   }
   if (transaction === 'expire') return 'expired';
-  if (['deny', 'cancel', 'failure'].includes(transaction)) return 'failed';
+  if (['cancel', 'failure'].includes(transaction)) return 'failed';
+  // Satu Snap order dapat memiliki beberapa attempt. Deny tidak menutup order.
+  if (transaction === 'deny') return 'pending';
   if (['refund', 'partial_refund', 'chargeback'].includes(transaction)) {
     return current === 'paid' ? 'paid' : 'failed';
   }
   return 'pending';
+}
+
+async function notifyTransition(
+  admin: ReturnType<typeof createClient>,
+  job: Record<string, any>,
+  previousStatus: string,
+  nextStatus: LocalStatus,
+  orderId: string,
+) {
+  if (previousStatus === nextStatus) return;
+
+  if (nextStatus === 'paid') {
+    await admin.rpc('enqueue_notification', {
+      p_user_id: job.customer_id,
+      p_title: 'Pembayaran Berhasil',
+      p_body: `Pembayaran pekerjaan ${job.title} sudah terverifikasi.`,
+      p_type: 'payment_paid',
+      p_job_id: job.id,
+      p_data: { order_id: orderId },
+    });
+    if (job.mitra_id) {
+      await admin.rpc('enqueue_notification', {
+        p_user_id: job.mitra_id,
+        p_title: 'Customer Sudah Membayar',
+        p_body: `Pembayaran pekerjaan ${job.title} sudah diterima. Pekerjaan dapat dimulai.`,
+        p_type: 'payment_paid',
+        p_job_id: job.id,
+        p_data: { order_id: orderId },
+      });
+    }
+  } else if (nextStatus === 'expired') {
+    await admin.rpc('enqueue_notification', {
+      p_user_id: job.customer_id,
+      p_title: 'Pembayaran Kedaluwarsa',
+      p_body: `Waktu pembayaran pekerjaan ${job.title} telah berakhir. Buat pembayaran baru untuk melanjutkan.`,
+      p_type: 'payment_expired',
+      p_job_id: job.id,
+      p_data: { order_id: orderId },
+    });
+  } else if (nextStatus === 'failed') {
+    await admin.rpc('enqueue_notification', {
+      p_user_id: job.customer_id,
+      p_title: 'Pembayaran Gagal',
+      p_body: `Pembayaran pekerjaan ${job.title} belum berhasil. Silakan coba kembali.`,
+      p_type: 'payment_failed',
+      p_job_id: job.id,
+      p_data: { order_id: orderId },
+    });
+  }
 }
 
 Deno.serve(async (req) => {
@@ -122,15 +173,23 @@ Deno.serve(async (req) => {
       },
     );
     const statusData = await statusResponse.json().catch(() => ({}));
+
     if (!statusResponse.ok) {
-      return json(
-        {
-          error:
-            statusData?.status_message ??
-            'Status transaksi belum dapat dibaca dari Midtrans.',
-        },
-        statusResponse.status === 404 ? 404 : 502,
-      );
+      const locallyExpired =
+        payment.expires_at && new Date(payment.expires_at).getTime() <= Date.now();
+      if (statusResponse.status === 404 && locallyExpired) {
+        statusData.transaction_status = 'expire';
+        statusData.status_message = 'Waktu pembayaran telah berakhir.';
+      } else {
+        return json(
+          {
+            error:
+              statusData?.status_message ??
+              'Status transaksi belum dapat dibaca dari Midtrans.',
+          },
+          statusResponse.status === 404 ? 404 : 502,
+        );
+      }
     }
 
     const mappedStatus = mapStatus(statusData, String(payment.status));
@@ -140,24 +199,26 @@ Deno.serve(async (req) => {
       return json({ error: 'Nominal transaksi Midtrans tidak sesuai.' }, 409);
     }
 
-    const wasPaid = payment.status === 'paid';
+    const previousStatus = String(payment.status);
+    const updatePayload = {
+      status: mappedStatus,
+      paid_at:
+        mappedStatus === 'paid'
+          ? payment.paid_at ?? new Date().toISOString()
+          : payment.paid_at,
+      transaction_id: statusData.transaction_id ?? payment.transaction_id,
+      transaction_status:
+        statusData.transaction_status ?? payment.transaction_status,
+      fraud_status: statusData.fraud_status ?? payment.fraud_status,
+      payment_type: statusData.payment_type ?? payment.payment_type,
+      status_code: statusData.status_code ?? payment.status_code,
+      status_message: statusData.status_message ?? payment.status_message,
+      raw_response: statusData,
+    };
+
     const { data: updated, error: updateError } = await admin
       .from('payments')
-      .update({
-        status: mappedStatus,
-        paid_at:
-          mappedStatus === 'paid'
-            ? payment.paid_at ?? new Date().toISOString()
-            : payment.paid_at,
-        transaction_id: statusData.transaction_id ?? payment.transaction_id,
-        transaction_status:
-          statusData.transaction_status ?? payment.transaction_status,
-        fraud_status: statusData.fraud_status ?? payment.fraud_status,
-        payment_type: statusData.payment_type ?? payment.payment_type,
-        status_code: statusData.status_code ?? payment.status_code,
-        status_message: statusData.status_message ?? payment.status_message,
-        raw_response: statusData,
-      })
+      .update(updatePayload)
       .eq('id', payment.id)
       .select('*')
       .single();
@@ -165,26 +226,21 @@ Deno.serve(async (req) => {
       return json({ error: 'Status pembayaran gagal disimpan.' }, 500);
     }
 
-    if (!wasPaid && mappedStatus === 'paid') {
-      await admin.rpc('enqueue_notification', {
-        p_user_id: job.customer_id,
-        p_title: 'Pembayaran Berhasil',
-        p_body: `Pembayaran pekerjaan ${job.title} sudah terverifikasi.`,
-        p_type: 'payment_paid',
-        p_job_id: job.id,
-        p_data: { order_id: payment.order_id },
-      });
-      if (job.mitra_id) {
-        await admin.rpc('enqueue_notification', {
-          p_user_id: job.mitra_id,
-          p_title: 'Customer Sudah Membayar',
-          p_body: `Pembayaran pekerjaan ${job.title} sudah diterima. Pekerjaan dapat dimulai.`,
-          p_type: 'payment_paid',
-          p_job_id: job.id,
-          p_data: { order_id: payment.order_id },
-        });
-      }
-    }
+    await admin
+      .from('payment_attempts')
+      .update({
+        ...updatePayload,
+        raw_response: statusData,
+      })
+      .eq('order_id', payment.order_id);
+
+    await notifyTransition(
+      admin,
+      job,
+      previousStatus,
+      mappedStatus,
+      payment.order_id,
+    );
 
     return json({ success: true, payment: updated });
   } catch (error) {

@@ -46,6 +46,11 @@ function normalizePhone(value: unknown): string | undefined {
   return digits.startsWith('8') ? `+62${digits}` : `+${digits}`;
 }
 
+function formatWib(date: Date): string {
+  const shifted = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  return `${shifted.toISOString().slice(0, 19).replace('T', ' ')} +0700`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -66,10 +71,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Konfigurasi Supabase Edge Function belum lengkap.' }, 500);
     }
     if (!serverKey) {
-      return json({
-        error:
-          'MIDTRANS_SERVER_KEY belum diatur. Gunakan Server Key Sandbox setelah akun Midtrans tersedia.',
-      }, 503);
+      return json({ error: 'MIDTRANS_SERVER_KEY belum diatur.' }, 503);
     }
 
     const authorization = req.headers.get('Authorization') ?? '';
@@ -135,13 +137,44 @@ Deno.serve(async (req) => {
     if (existing?.status === 'paid') {
       return json({ success: true, reused: true, payment: existing });
     }
-    if (
+
+    const existingExpiry = existing?.expires_at
+      ? new Date(existing.expires_at)
+      : null;
+    const existingActive =
       existing?.payment_required === true &&
       existing?.status === 'pending' &&
       existing?.redirect_url &&
-      existing?.snap_token
-    ) {
+      existing?.snap_token &&
+      (!existingExpiry || existingExpiry.getTime() > Date.now());
+
+    if (existingActive) {
       return json({ success: true, reused: true, payment: existing });
+    }
+
+    if (
+      existing?.status === 'pending' &&
+      existingExpiry &&
+      existingExpiry.getTime() <= Date.now()
+    ) {
+      await admin
+        .from('payments')
+        .update({
+          status: 'expired',
+          transaction_status: 'expire',
+          status_message: 'Waktu pembayaran telah berakhir.',
+        })
+        .eq('id', existing.id);
+      if (existing.order_id) {
+        await admin
+          .from('payment_attempts')
+          .update({
+            status: 'expired',
+            transaction_status: 'expire',
+            status_message: 'Waktu pembayaran telah berakhir.',
+          })
+          .eq('order_id', existing.order_id);
+      }
     }
 
     const baseAmount = Math.round(Number(bid.price ?? job.budget ?? 0));
@@ -158,6 +191,8 @@ Deno.serve(async (req) => {
     const grossAmount = baseAmount + serviceFee;
     const compactJobId = jobId.replace(/-/g, '').slice(0, 14);
     const orderId = `AYO-${compactJobId}-${Date.now()}`.slice(0, 50);
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + 30 * 60 * 1000);
 
     const itemDetails: Record<string, unknown>[] = [
       {
@@ -192,6 +227,15 @@ Deno.serve(async (req) => {
       item_details: itemDetails,
       customer_details: customerDetails,
       credit_card: { secure: true },
+      expiry: {
+        start_time: formatWib(createdAt),
+        unit: 'minutes',
+        duration: 30,
+      },
+      page_expiry: {
+        unit: 'minutes',
+        duration: 30,
+      },
       custom_field1: jobId,
       custom_field2: String(job.mitra_id),
     };
@@ -247,9 +291,10 @@ Deno.serve(async (req) => {
       fraud_status: null,
       payment_type: null,
       status_code: null,
-      status_message: null,
-      expires_at: null,
+      status_message: 'Menunggu pembayaran customer.',
+      expires_at: expiresAt.toISOString(),
       raw_response: midtransData,
+      raw_notification: null,
     };
 
     const { data: payment, error: paymentError } = await admin
@@ -260,6 +305,29 @@ Deno.serve(async (req) => {
     if (paymentError) {
       console.error('Payment upsert failed', paymentError);
       return json({ error: 'Snap Token dibuat, tetapi transaksi gagal disimpan.' }, 500);
+    }
+
+    const { error: attemptError } = await admin
+      .from('payment_attempts')
+      .upsert(
+        {
+          payment_id: payment.id,
+          job_id: jobId,
+          order_id: orderId,
+          snap_token: snapToken,
+          redirect_url: redirectUrl,
+          amount: baseAmount,
+          service_fee: serviceFee,
+          status: 'pending',
+          transaction_status: 'pending',
+          status_message: 'Menunggu pembayaran customer.',
+          expires_at: expiresAt.toISOString(),
+          raw_response: midtransData,
+        },
+        { onConflict: 'order_id' },
+      );
+    if (attemptError) {
+      console.error('Payment attempt insert failed', attemptError);
     }
 
     return json({ success: true, reused: false, payment }, 201);

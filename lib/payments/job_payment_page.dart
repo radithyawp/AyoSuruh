@@ -31,12 +31,16 @@ class _JobPaymentPageState extends State<JobPaymentPage>
   bool _isRefreshing = false;
   String? _errorMessage;
   Map<String, dynamic>? _payment;
+  List<Map<String, dynamic>> _attempts = <Map<String, dynamic>>[];
   Timer? _pollTimer;
+  StreamSubscription<Map<String, dynamic>?>? _paymentSubscription;
+  bool _successMessageShown = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _subscribeToPayment();
     _loadPayment();
   }
 
@@ -44,6 +48,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
+    _paymentSubscription?.cancel();
     super.dispose();
   }
 
@@ -54,13 +59,30 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     }
   }
 
+  void _subscribeToPayment() {
+    _paymentSubscription = _paymentService
+        .watchJobPayment(widget.jobId)
+        .listen(
+          (Map<String, dynamic>? payment) {
+            if (payment == null || !mounted) return;
+            _applyPayment(payment, fromRealtime: true);
+          },
+          onError: (Object error) {
+            debugPrint('Realtime pembayaran tidak tersedia: $error');
+          },
+        );
+  }
+
   Future<void> _loadPayment() async {
     try {
-      final Map<String, dynamic>? payment =
-          await _paymentService.fetchJobPayment(widget.jobId);
+      final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
+        _paymentService.fetchJobPayment(widget.jobId),
+        _paymentService.fetchJobPaymentAttempts(widget.jobId),
+      ]);
       if (!mounted) return;
       setState(() {
-        _payment = payment;
+        _payment = result[0] as Map<String, dynamic>?;
+        _attempts = result[1] as List<Map<String, dynamic>>;
         _errorMessage = null;
         _isLoading = false;
       });
@@ -74,6 +96,50 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     }
   }
 
+  Future<void> _loadAttempts() async {
+    try {
+      final List<Map<String, dynamic>> attempts =
+          await _paymentService.fetchJobPaymentAttempts(widget.jobId);
+      if (!mounted) return;
+      setState(() => _attempts = attempts);
+    } catch (error) {
+      debugPrint('Riwayat percobaan pembayaran gagal dimuat: $error');
+    }
+  }
+
+  void _applyPayment(
+    Map<String, dynamic> payment, {
+    bool fromRealtime = false,
+  }) {
+    final bool wasPaid = isPaymentPaid(_payment);
+    final bool nowPaid = isPaymentPaid(payment);
+    if (!mounted) return;
+
+    setState(() {
+      _payment = payment;
+      _errorMessage = null;
+      _isLoading = false;
+    });
+    _configurePolling();
+
+    if (fromRealtime) {
+      _loadAttempts();
+    }
+
+    if (!wasPaid && nowPaid && !_successMessageShown) {
+      _successMessageShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pembayaran berhasil diverifikasi.'),
+            backgroundColor: paymentGreen,
+          ),
+        );
+      });
+    }
+  }
+
   void _configurePolling() {
     _pollTimer?.cancel();
     final String status = (_payment?['status'] ?? '').toString().toLowerCase();
@@ -83,7 +149,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       return;
     }
 
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       _refreshStatus(silent: true);
     });
   }
@@ -95,14 +161,13 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       final Map<String, dynamic> result =
           await _paymentService.createSnapTransaction(widget.jobId);
       final dynamic rawPayment = result['payment'];
-      if (rawPayment is Map) {
-        _payment = Map<String, dynamic>.from(rawPayment);
-      } else {
-        _payment = await _paymentService.fetchJobPayment(widget.jobId);
+      final Map<String, dynamic>? payment = rawPayment is Map
+          ? Map<String, dynamic>.from(rawPayment)
+          : await _paymentService.fetchJobPayment(widget.jobId);
+      if (payment != null) {
+        _applyPayment(payment);
       }
-      if (!mounted) return;
-      setState(() => _errorMessage = null);
-      _configurePolling();
+      await _loadAttempts();
       await _openCheckout();
     } catch (error) {
       if (!mounted) return;
@@ -154,12 +219,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       final Map<String, dynamic>? payment = rawPayment is Map
           ? Map<String, dynamic>.from(rawPayment)
           : await _paymentService.fetchJobPayment(widget.jobId);
-      if (!mounted) return;
-      setState(() {
-        _payment = payment;
-        _errorMessage = null;
-      });
-      _configurePolling();
+      if (payment != null) {
+        _applyPayment(payment);
+      }
+      await _loadAttempts();
     } catch (error) {
       if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,21 +243,21 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     return Scaffold(
       backgroundColor: paymentBackground,
       appBar: AppBar(
-        backgroundColor: paymentBackground,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
-          icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
-        ),
-        title: const Text(
-          'Pembayaran Midtrans',
-          style: TextStyle(
-            color: paymentBrown,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
+          backgroundColor: paymentBackground,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
+            icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
           ),
-        ),
+          title: const Text(
+            'Pembayaran Midtrans',
+            style: TextStyle(
+              color: paymentBrown,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
       ),
       body: _buildBody(),
     );
@@ -222,7 +285,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               const SizedBox(height: 12),
               Text(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _loadPayment, child: const Text('Coba Lagi')),
+              FilledButton(
+                onPressed: _loadPayment,
+                child: const Text('Coba Lagi'),
+              ),
             ],
           ),
         ),
@@ -232,6 +298,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     final bool required = isPaymentRequired(_payment);
     final bool paid = isPaymentPaid(_payment);
     final bool activeLink = hasActiveMidtransCheckout(_payment);
+    final String status = (_payment?['status'] ?? '').toString().toLowerCase();
     final num baseAmount = paymentBaseAmount(_payment);
     final num serviceFee = paymentServiceFee(_payment);
     final num total = paymentTotalAmount(_payment);
@@ -255,8 +322,12 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             serviceFee: serviceFee,
             total: total,
           ),
+          if (_attempts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            _attemptHistoryCard(),
+          ],
           const SizedBox(height: 16),
-          _stageInfoCard(),
+          _securityInfoCard(),
           const SizedBox(height: 22),
           if (paid)
             SizedBox(
@@ -309,9 +380,11 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                 label: Text(
                   activeLink
                       ? 'Lanjutkan Pembayaran'
-                      : required
-                          ? 'Buat Ulang Pembayaran'
-                          : 'Aktifkan Pembayaran Midtrans',
+                      : !required
+                          ? 'Bayar Sekarang'
+                          : status == 'failed' || status == 'expired'
+                              ? 'Buat Pembayaran Baru'
+                              : 'Bayar Sekarang',
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
@@ -355,17 +428,24 @@ class _JobPaymentPageState extends State<JobPaymentPage>
   Widget _statusCard() {
     final bool required = isPaymentRequired(_payment);
     final bool paid = isPaymentPaid(_payment);
+    final String status = (_payment?['status'] ?? '').toString().toLowerCase();
 
     String description;
     if (!required) {
       description =
-          'Fondasi pembayaran sudah terpasang. Tombol di bawah baru akan berhasil setelah Server Key Sandbox Midtrans disimpan dan Edge Function di-deploy.';
+          'Pembayaran belum dibuat. Tekan Bayar Sekarang untuk membuka checkout Midtrans.';
     } else if (paid) {
       description =
           'Pembayaran terverifikasi. Mitra sekarang dapat memulai pekerjaan.';
+    } else if (status == 'expired') {
+      description =
+          'Waktu pembayaran telah habis. Buat pembayaran baru untuk memperoleh kode atau QR baru.';
+    } else if (status == 'failed') {
+      description =
+          'Percobaan pembayaran sebelumnya gagal. Kamu dapat membuat pembayaran baru.';
     } else {
       description =
-          'Selesaikan transaksi melalui halaman aman Midtrans. Status akan diperbarui melalui webhook atau tombol cek status.';
+          'Selesaikan transaksi melalui halaman aman Midtrans. Status diperbarui otomatis melalui webhook.';
     }
 
     return Container(
@@ -406,6 +486,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     required num serviceFee,
     required num total,
   }) {
+    final String method = paymentMethodLabel(_payment?['payment_type']);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -421,7 +502,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
-          Text(widget.jobTitle, style: const TextStyle(color: Color(0xFF6D6059))),
+          Text(
+            widget.jobTitle,
+            style: const TextStyle(color: Color(0xFF6D6059)),
+          ),
           const SizedBox(height: 18),
           _priceRow('Harga jasa mitra', formatRupiah(baseAmount)),
           const SizedBox(height: 10),
@@ -437,17 +521,22 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           ),
           if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
-            Text(
-              'Order ID: ${_payment!['order_id']}',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF8A7B72)),
-            ),
+            _detailRow('Order ID', _payment!['order_id'].toString()),
+          ],
+          if (method.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 7),
+            _detailRow('Metode', method),
           ],
           if (_payment?['expires_at'] != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              'Berlaku sampai ${_formatExpiry(_payment!['expires_at'])}',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF8A7B72)),
+            const SizedBox(height: 7),
+            _detailRow(
+              'Berlaku sampai',
+              _formatDate(_payment!['expires_at']),
             ),
+          ],
+          if (_payment?['paid_at'] != null) ...<Widget>[
+            const SizedBox(height: 7),
+            _detailRow('Dibayar pada', _formatDate(_payment!['paid_at'])),
           ],
         ],
       ),
@@ -479,7 +568,134 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     );
   }
 
-  Widget _stageInfoCard() {
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7B72)),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF655A53),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _attemptHistoryCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: paymentBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.history_rounded, color: paymentBrown),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Riwayat Percobaan',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                '${_attempts.length} percobaan',
+                style: const TextStyle(
+                  color: Color(0xFF8A7B72),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._attempts.take(5).map(_attemptTile),
+        ],
+      ),
+    );
+  }
+
+  Widget _attemptTile(Map<String, dynamic> attempt) {
+    final Map<String, dynamic> statusMap = <String, dynamic>{
+      'payment_required': true,
+      'status': attempt['status'],
+    };
+    final String method = paymentMethodLabel(attempt['payment_type']);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: paymentStatusBackground(statusMap),
+            child: Icon(
+              paymentStatusIcon(statusMap),
+              color: paymentStatusColor(statusMap),
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  paymentStatusLabel(statusMap),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  method.isEmpty
+                      ? _formatDate(attempt['created_at'])
+                      : '$method • ${_formatDate(attempt['created_at'])}',
+                  style: const TextStyle(
+                    color: Color(0xFF8A7B72),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            formatRupiah(
+              _asNum(attempt['amount']) + _asNum(attempt['service_fee']),
+            ),
+            style: const TextStyle(
+              color: paymentBrown,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _securityInfoCard() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -493,7 +709,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Server Key Midtrans tidak disimpan di Flutter. Pembuatan Snap Token, pengecekan status, dan webhook diproses melalui Supabase Edge Functions.',
+              'Pembayaran diproses oleh Midtrans. AyoSuruh tidak menyimpan PIN, nomor kartu, atau kredensial e-wallet kamu.',
               style: TextStyle(
                 fontSize: 11,
                 height: 1.45,
@@ -506,9 +722,14 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     );
   }
 
-  String _formatExpiry(Object? rawValue) {
+  String _formatDate(Object? rawValue) {
     final DateTime? value = DateTime.tryParse(rawValue?.toString() ?? '');
     if (value == null) return '-';
     return DateFormat('dd MMM yyyy, HH:mm').format(value.toLocal());
+  }
+
+  num _asNum(Object? value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

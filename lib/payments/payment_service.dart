@@ -60,6 +60,51 @@ class PaymentService {
     }
   }
 
+  Stream<Map<String, dynamic>?> watchJobPayment(String jobId) {
+    return _client
+        .from('payments')
+        .stream(primaryKey: <String>['id'])
+        .eq('job_id', jobId)
+        .map((List<Map<String, dynamic>> rows) {
+          if (rows.isEmpty) return null;
+          return Map<String, dynamic>.from(rows.first);
+        });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchJobPaymentAttempts(
+    String jobId,
+  ) async {
+    try {
+      final dynamic response = await _client.rpc(
+        'get_job_payment_attempts',
+        params: <String, dynamic>{'p_job_id': jobId},
+      );
+      if (response is! List) return <Map<String, dynamic>>[];
+      return response
+          .whereType<Map>()
+          .map((Map row) => Map<String, dynamic>.from(row))
+          .toList();
+    } on PostgrestException catch (error) {
+      final String message = error.message.toLowerCase();
+      final bool functionMissing = message.contains('get_job_payment_attempts') &&
+          (message.contains('not find') ||
+              message.contains('does not exist') ||
+              error.code == 'PGRST202');
+      if (!functionMissing) rethrow;
+      debugPrint('Migration payment stage 2 belum dijalankan: $error');
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchMyPaymentHistory() async {
+    final dynamic response = await _client.rpc('get_my_payment_history');
+    if (response is! List) return <Map<String, dynamic>>[];
+    return response
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<Map<String, dynamic>> createSnapTransaction(String jobId) async {
     final FunctionResponse response = await _client.functions.invoke(
       'create-midtrans-snap',

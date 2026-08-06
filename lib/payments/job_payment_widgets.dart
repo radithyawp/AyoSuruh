@@ -24,8 +24,8 @@ class JobPaymentStatusCard extends StatelessWidget {
     String description;
     if (!required) {
       description = isCustomer
-          ? 'Fondasi Midtrans sudah disiapkan. Pembayaran belum diwajibkan sampai akun Sandbox/Production siap.'
-          : 'Pembayaran Midtrans belum diwajibkan pada tahap integrasi ini. Pekerjaan tetap dapat dimulai.';
+          ? 'Pembayaran belum dibuat. Buka halaman pembayaran untuk melanjutkan melalui Midtrans.'
+          : 'Customer belum membuat transaksi pembayaran Midtrans.';
     } else if (paid) {
       description = 'Pembayaran sudah terverifikasi. Pekerjaan dapat dilanjutkan.';
     } else {

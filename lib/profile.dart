@@ -12,6 +12,7 @@ import 'jobs/mitra_job_history_page.dart';
 import 'notification.dart';
 import 'mitra/mitra_application_page.dart';
 import 'mitra/mitra_application_service.dart';
+import 'payments/payment_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -277,7 +278,16 @@ class _ProfilePageState extends State<ProfilePage> {
             ] else ...[
               _buildSaldoCard(title: "SALDO AYOPAY", buttonText: "Isi Saldo"),
               const SizedBox(height: 16),
-              _buildMenuCard(Icons.history, 'Riwayat Transaksi', () {}),
+              _buildMenuCard(
+                Icons.history,
+                'Riwayat Transaksi',
+                () => Navigator.push<void>(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PaymentHistoryPage(),
+                  ),
+                ),
+              ),
               _buildMenuCard(Icons.person_outline, 'Edit Profil', _navigateToEditProfile),
               if (!widget.canUseMitraMode) _buildPartnerBanner(),
             ],

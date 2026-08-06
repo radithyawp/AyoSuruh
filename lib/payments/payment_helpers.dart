@@ -107,3 +107,37 @@ bool hasActiveMidtransCheckout(Map<String, dynamic>? payment) {
   );
   return expiresAt == null || expiresAt.isAfter(DateTime.now().toUtc());
 }
+
+String paymentMethodLabel(Object? rawValue) {
+  final String value = (rawValue ?? '').toString().trim().toLowerCase();
+  switch (value) {
+    case 'qris':
+      return 'QRIS';
+    case 'gopay':
+      return 'GoPay';
+    case 'shopeepay':
+      return 'ShopeePay';
+    case 'bank_transfer':
+      return 'Transfer Bank';
+    case 'echannel':
+      return 'Mandiri Bill';
+    case 'bca_va':
+      return 'BCA Virtual Account';
+    case 'bni_va':
+      return 'BNI Virtual Account';
+    case 'bri_va':
+      return 'BRI Virtual Account';
+    case 'permata_va':
+      return 'Permata Virtual Account';
+    case 'cstore':
+      return 'Gerai Retail';
+    case 'credit_card':
+      return 'Kartu Kredit';
+    case 'akulaku':
+      return 'Akulaku';
+    case 'kredivo':
+      return 'Kredivo';
+    default:
+      return value.isEmpty ? '' : value.replaceAll('_', ' ');
+  }
+}
