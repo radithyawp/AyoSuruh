@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'auth/auth_service.dart';
 import 'login.dart';
 import 'navbar.dart';
 
@@ -31,9 +35,28 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isNavigating = false;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = _supabase.auth.onAuthStateChange.listen(
+      (AuthState state) {
+        final String provider =
+            state.session?.user.appMetadata['provider']?.toString() ?? '';
+        if (state.event == AuthChangeEvent.signedIn &&
+            state.session != null &&
+            provider == 'google') {
+          unawaited(_completeGoogleRegistration());
+        }
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _fullNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
@@ -42,121 +65,133 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  Future<void> _goToApp({required String message}) async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    try {
+      await AuthService.syncCurrentUserProfile();
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+        (route) => false,
+      );
+    } catch (error) {
+      _isNavigating = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Akun dibuat, tetapi profil gagal disiapkan: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _completeGoogleRegistration() async {
+    await _goToApp(
+      message: 'Akun Google berhasil digunakan. Selamat datang!',
+    );
+  }
+
   /* ---------- PROSES REGISTRASI ---------- */
   Future<void> _register() async {
-    // Jalankan validasi Form
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
-      final email = _emailCtrl.text.trim();
-      final fullName = _fullNameCtrl.text.trim();
-      final phone = _phoneCtrl.text.trim();
-      final password = _passwordCtrl.text;
+      final String email = _emailCtrl.text.trim();
+      final String fullName = _fullNameCtrl.text.trim();
+      final String phone = _phoneCtrl.text.trim();
 
-      // 1. Register ke Supabase Auth & simpan metadata
-      final response = await _supabase.auth.signUp(
+      final AuthResponse response = await _supabase.auth.signUp(
         email: email,
-        password: password,
-        data: {
+        password: _passwordCtrl.text,
+        data: <String, dynamic>{
           'fullname': fullName,
+          'full_name': fullName,
           'phone': phone,
         },
       );
 
       if (!mounted) return;
-
-      if (response.user != null) {
-        // 2. Cek apakah user langsung memiliki session (Email Confirmation OFF)
-        if (response.session != null) {
-          // Simpan/sinkronkan data tambahan ke tabel 'users' di database
-          try {
-            await _supabase.from('users').upsert({
-              'id': response.user!.id,
-              'fullname': fullName,
-              'email': email,
-              'phone': phone,
-            });
-          } catch (dbError) {
-            debugPrint('Gagal menyimpan ke tabel public.users: $dbError');
-          }
-
-          if (!mounted) return;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Registrasi berhasil! Selamat datang.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-          );
-        } else {
-          // 3. Jika Supabase diatur memerlukan konfirmasi email (Confirm Email ON)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.',
-              ),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 5),
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-          );
-        }
+      if (response.user == null) {
+        throw const AuthException('Supabase tidak mengembalikan data pengguna.');
       }
-    } on AuthException catch (e) {
+
+      if (response.session != null) {
+        await _goToApp(message: 'Registrasi berhasil! Selamat datang.');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Registrasi berhasil! Silakan cek email untuk verifikasi akun.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      }
+    } on AuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(error.message), backgroundColor: Colors.red),
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
+          content: Text('Terjadi kesalahan: $error'),
           backgroundColor: Colors.red,
         ),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
   }
 
-  /* ---------- GOOGLE SIGN UP ---------- */
+  /* ---------- GOOGLE REGISTRATION / LOGIN ---------- */
   Future<void> _googleSignUp() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
     try {
-      await _supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.ayosuruh://login-callback/',
-      );
-    } on AuthException catch (e) {
+      final bool launched = await AuthService.signInWithGoogle();
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Halaman Google tidak dapat dibuka.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } on AuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal login Google: ${e.message}'),
+          content: Text('Gagal mendaftar dengan Google: ${error.message}'),
           backgroundColor: Colors.red,
         ),
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal login Google: $e'),
+          content: Text('Gagal mendaftar dengan Google: $error'),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
   }
 

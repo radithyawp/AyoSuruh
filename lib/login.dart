@@ -1,8 +1,11 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'register.dart';
+
+import 'auth/auth_service.dart';
 import 'navbar.dart';
+import 'register.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,12 +25,61 @@ class _LoginPageState extends State<LoginPage> {
   /* ---------- STATE ---------- */
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _isNavigating = false;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = _supabase.auth.onAuthStateChange.listen(
+      (AuthState state) {
+        if (state.event == AuthChangeEvent.signedIn && state.session != null) {
+          unawaited(_completeLogin(showMessage: false));
+        }
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _completeLogin({required bool showMessage}) async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    try {
+      await AuthService.syncCurrentUserProfile();
+      if (!mounted) return;
+
+      if (showMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Berhasil masuk! Selamat datang.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+        (route) => false,
+      );
+    } catch (error) {
+      _isNavigating = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Akun berhasil masuk, tetapi profil gagal disiapkan: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /* ---------- PROSES LOGIN ---------- */
@@ -37,78 +89,69 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _supabase.auth.signInWithPassword(
+      final AuthResponse response = await _supabase.auth.signInWithPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
 
-      if (response.user != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Berhasil masuk! Selamat datang.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigation()),
-          (route) => false,
-        );
+      if (response.user != null) {
+        await _completeLogin(showMessage: true);
       }
-    } on AuthException catch (e) {
-      String message = e.message;
-
-      if (e.message.toLowerCase().contains('invalid login credentials')) {
+    } on AuthException catch (error) {
+      String message = error.message;
+      if (message.toLowerCase().contains('invalid login credentials')) {
         message = 'Email atau password salah. Silakan periksa kembali.';
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login gagal: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login gagal: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
   }
 
-  /* ---------- GOOGLE LOGIN ---------- */
+  /* ---------- GOOGLE LOGIN / REGISTRASI ---------- */
   Future<void> _googleLogin() async {
-    try {
-      if (kIsWeb) {
-        await _supabase.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: Uri.base.origin,
-        );
-        return;
-      }
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
 
-      await _supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.ayosuruh://login-callback/',
-      );
-    } catch (e) {
-      if (mounted) {
+    try {
+      final bool launched = await AuthService.signInWithGoogle();
+      if (!launched && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal login Google: $e'),
+          const SnackBar(
+            content: Text('Halaman Google tidak dapat dibuka.'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal masuk dengan Google: ${error.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal masuk dengan Google: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
   }
 
