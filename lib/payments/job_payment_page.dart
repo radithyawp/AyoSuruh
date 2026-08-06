@@ -1,0 +1,735 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../jobs/job_helpers.dart';
+import 'payment_helpers.dart';
+import 'payment_service.dart';
+
+class JobPaymentPage extends StatefulWidget {
+  const JobPaymentPage({
+    super.key,
+    required this.jobId,
+    required this.jobTitle,
+  });
+
+  final String jobId;
+  final String jobTitle;
+
+  @override
+  State<JobPaymentPage> createState() => _JobPaymentPageState();
+}
+
+class _JobPaymentPageState extends State<JobPaymentPage>
+    with WidgetsBindingObserver {
+  final PaymentService _paymentService = PaymentService();
+
+  bool _isLoading = true;
+  bool _isCreating = false;
+  bool _isRefreshing = false;
+  String? _errorMessage;
+  Map<String, dynamic>? _payment;
+  List<Map<String, dynamic>> _attempts = <Map<String, dynamic>>[];
+  Timer? _pollTimer;
+  StreamSubscription<Map<String, dynamic>?>? _paymentSubscription;
+  bool _successMessageShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _subscribeToPayment();
+    _loadPayment();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
+    _paymentSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isPaymentRequired(_payment)) {
+      _refreshStatus(silent: true);
+    }
+  }
+
+  void _subscribeToPayment() {
+    _paymentSubscription = _paymentService
+        .watchJobPayment(widget.jobId)
+        .listen(
+          (Map<String, dynamic>? payment) {
+            if (payment == null || !mounted) return;
+            _applyPayment(payment, fromRealtime: true);
+          },
+          onError: (Object error) {
+            debugPrint('Realtime pembayaran tidak tersedia: $error');
+          },
+        );
+  }
+
+  Future<void> _loadPayment() async {
+    try {
+      final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
+        _paymentService.fetchJobPayment(widget.jobId),
+        _paymentService.fetchJobPaymentAttempts(widget.jobId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _payment = result[0] as Map<String, dynamic>?;
+        _attempts = result[1] as List<Map<String, dynamic>>;
+        _errorMessage = null;
+        _isLoading = false;
+      });
+      _configurePolling();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadAttempts() async {
+    try {
+      final List<Map<String, dynamic>> attempts =
+          await _paymentService.fetchJobPaymentAttempts(widget.jobId);
+      if (!mounted) return;
+      setState(() => _attempts = attempts);
+    } catch (error) {
+      debugPrint('Riwayat percobaan pembayaran gagal dimuat: $error');
+    }
+  }
+
+  void _applyPayment(
+    Map<String, dynamic> payment, {
+    bool fromRealtime = false,
+  }) {
+    final bool wasPaid = isPaymentPaid(_payment);
+    final bool nowPaid = isPaymentPaid(payment);
+    if (!mounted) return;
+
+    setState(() {
+      _payment = payment;
+      _errorMessage = null;
+      _isLoading = false;
+    });
+    _configurePolling();
+
+    if (fromRealtime) {
+      _loadAttempts();
+    }
+
+    if (!wasPaid && nowPaid && !_successMessageShown) {
+      _successMessageShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pembayaran berhasil diverifikasi.'),
+            backgroundColor: paymentGreen,
+          ),
+        );
+      });
+    }
+  }
+
+  void _configurePolling() {
+    _pollTimer?.cancel();
+    final String status = (_payment?['status'] ?? '').toString().toLowerCase();
+    final bool hasOrder =
+        (_payment?['order_id'] ?? '').toString().trim().isNotEmpty;
+    if (!isPaymentRequired(_payment) || status != 'pending' || !hasOrder) {
+      return;
+    }
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      _refreshStatus(silent: true);
+    });
+  }
+
+  Future<void> _createTransaction() async {
+    if (_isCreating) return;
+    setState(() => _isCreating = true);
+    try {
+      final Map<String, dynamic> result =
+          await _paymentService.createSnapTransaction(widget.jobId);
+      final dynamic rawPayment = result['payment'];
+      final Map<String, dynamic>? payment = rawPayment is Map
+          ? Map<String, dynamic>.from(rawPayment)
+          : await _paymentService.fetchJobPayment(widget.jobId);
+      if (payment != null) {
+        _applyPayment(payment);
+      }
+      await _loadAttempts();
+      await _openCheckout();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Transaksi Midtrans belum dapat dibuat: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
+    }
+  }
+
+  Future<void> _openCheckout() async {
+    final String rawUrl = (_payment?['redirect_url'] ?? '').toString();
+    final Uri? uri = Uri.tryParse(rawUrl);
+    if (uri == null || !uri.hasScheme) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tautan pembayaran belum tersedia.')),
+      );
+      return;
+    }
+
+    final bool opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Halaman Midtrans tidak dapat dibuka.')),
+      );
+    }
+  }
+
+  Future<void> _refreshStatus({bool silent = false}) async {
+    final bool hasOrder =
+        (_payment?['order_id'] ?? '').toString().trim().isNotEmpty;
+    if (_isRefreshing || !hasOrder) return;
+
+    _isRefreshing = true;
+    if (!silent && mounted) setState(() {});
+    try {
+      final Map<String, dynamic> result =
+          await _paymentService.refreshPaymentStatus(widget.jobId);
+      final dynamic rawPayment = result['payment'];
+      final Map<String, dynamic>? payment = rawPayment is Map
+          ? Map<String, dynamic>.from(rawPayment)
+          : await _paymentService.fetchJobPayment(widget.jobId);
+      if (payment != null) {
+        _applyPayment(payment);
+      }
+      await _loadAttempts();
+    } catch (error) {
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status belum dapat diperbarui: $error'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      _isRefreshing = false;
+      if (!silent && mounted) setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: paymentBackground,
+      appBar: AppBar(
+          backgroundColor: paymentBackground,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
+            icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
+          ),
+          title: const Text(
+            'Pembayaran Midtrans',
+            style: TextStyle(
+              color: paymentBrown,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: paymentOrange),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 54,
+                color: paymentBrown,
+              ),
+              const SizedBox(height: 12),
+              Text(_errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _loadPayment,
+                child: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final bool required = isPaymentRequired(_payment);
+    final bool paid = isPaymentPaid(_payment);
+    final bool activeLink = hasActiveMidtransCheckout(_payment);
+    final String status = (_payment?['status'] ?? '').toString().toLowerCase();
+    final num baseAmount = paymentBaseAmount(_payment);
+    final num serviceFee = paymentServiceFee(_payment);
+    final num total = paymentTotalAmount(_payment);
+
+    return RefreshIndicator(
+      color: paymentOrange,
+      onRefresh: () async {
+        if ((_payment?['order_id'] ?? '').toString().trim().isEmpty) {
+          await _loadPayment();
+        } else {
+          await _refreshStatus(silent: false);
+        }
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
+        children: <Widget>[
+          _statusCard(),
+          const SizedBox(height: 16),
+          _summaryCard(
+            baseAmount: baseAmount,
+            serviceFee: serviceFee,
+            total: total,
+          ),
+          if (_attempts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            _attemptHistoryCard(),
+          ],
+          const SizedBox(height: 16),
+          _securityInfoCard(),
+          const SizedBox(height: 22),
+          if (paid)
+            SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: paymentGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text(
+                  'Kembali ke Detail Pekerjaan',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            )
+          else ...<Widget>[
+            SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _isCreating
+                    ? null
+                    : activeLink
+                        ? _openCheckout
+                        : _createTransaction,
+                style: FilledButton.styleFrom(
+                  backgroundColor: paymentOrange,
+                  foregroundColor: paymentDarkBrown,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                icon: _isCreating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: paymentDarkBrown,
+                        ),
+                      )
+                    : Icon(
+                        activeLink
+                            ? Icons.open_in_new_rounded
+                            : Icons.payments_outlined,
+                      ),
+                label: Text(
+                  activeLink
+                      ? 'Lanjutkan Pembayaran'
+                      : !required
+                          ? 'Bayar Sekarang'
+                          : status == 'failed' || status == 'expired'
+                              ? 'Buat Pembayaran Baru'
+                              : 'Bayar Sekarang',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: _isRefreshing ? null : () => _refreshStatus(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: paymentBrown,
+                    side: const BorderSide(color: paymentOrange),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  icon: _isRefreshing
+                      ? const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: paymentBrown,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  label: const Text(
+                    'Cek Status Pembayaran',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _statusCard() {
+    final bool required = isPaymentRequired(_payment);
+    final bool paid = isPaymentPaid(_payment);
+    final String status = (_payment?['status'] ?? '').toString().toLowerCase();
+
+    String description;
+    if (!required) {
+      description =
+          'Pembayaran belum dibuat. Tekan Bayar Sekarang untuk membuka checkout Midtrans.';
+    } else if (paid) {
+      description =
+          'Pembayaran terverifikasi. Mitra sekarang dapat memulai pekerjaan.';
+    } else if (status == 'expired') {
+      description =
+          'Waktu pembayaran telah habis. Buat pembayaran baru untuk memperoleh kode atau QR baru.';
+    } else if (status == 'failed') {
+      description =
+          'Percobaan pembayaran sebelumnya gagal. Kamu dapat membuat pembayaran baru.';
+    } else {
+      description =
+          'Selesaikan transaksi melalui halaman aman Midtrans. Status diperbarui otomatis melalui webhook.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: paymentStatusBackground(_payment),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        children: <Widget>[
+          Icon(
+            paymentStatusIcon(_payment),
+            color: paymentStatusColor(_payment),
+            size: 38,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            paymentStatusLabel(_payment),
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: Color(0xFF6D6059),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryCard({
+    required num baseAmount,
+    required num serviceFee,
+    required num total,
+  }) {
+    final String method = paymentMethodLabel(_payment?['payment_type']);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: paymentBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'Rincian Pembayaran',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            widget.jobTitle,
+            style: const TextStyle(color: Color(0xFF6D6059)),
+          ),
+          const SizedBox(height: 18),
+          _priceRow('Harga jasa mitra', formatRupiah(baseAmount)),
+          const SizedBox(height: 10),
+          _priceRow('Biaya layanan', formatRupiah(serviceFee)),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1),
+          ),
+          _priceRow(
+            'Total Pembayaran',
+            formatRupiah(total),
+            emphasized: true,
+          ),
+          if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            _detailRow('Order ID', _payment!['order_id'].toString()),
+          ],
+          if (method.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 7),
+            _detailRow('Metode', method),
+          ],
+          if (_payment?['expires_at'] != null) ...<Widget>[
+            const SizedBox(height: 7),
+            _detailRow(
+              'Berlaku sampai',
+              _formatDate(_payment!['expires_at']),
+            ),
+          ],
+          if (_payment?['paid_at'] != null) ...<Widget>[
+            const SizedBox(height: 7),
+            _detailRow('Dibayar pada', _formatDate(_payment!['paid_at'])),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, {bool emphasized = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: emphasized ? Colors.black87 : const Color(0xFF6D6059),
+              fontWeight: emphasized ? FontWeight.w800 : FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: emphasized ? paymentBrown : Colors.black87,
+            fontSize: emphasized ? 20 : 14,
+            fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7B72)),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF655A53),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _attemptHistoryCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: paymentBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.history_rounded, color: paymentBrown),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Riwayat Percobaan',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                '${_attempts.length} percobaan',
+                style: const TextStyle(
+                  color: Color(0xFF8A7B72),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._attempts.take(5).map(_attemptTile),
+        ],
+      ),
+    );
+  }
+
+  Widget _attemptTile(Map<String, dynamic> attempt) {
+    final Map<String, dynamic> statusMap = <String, dynamic>{
+      'payment_required': true,
+      'status': attempt['status'],
+    };
+    final String method = paymentMethodLabel(attempt['payment_type']);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: paymentStatusBackground(statusMap),
+            child: Icon(
+              paymentStatusIcon(statusMap),
+              color: paymentStatusColor(statusMap),
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  paymentStatusLabel(statusMap),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  method.isEmpty
+                      ? _formatDate(attempt['created_at'])
+                      : '$method • ${_formatDate(attempt['created_at'])}',
+                  style: const TextStyle(
+                    color: Color(0xFF8A7B72),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            formatRupiah(
+              _asNum(attempt['amount']) + _asNum(attempt['service_fee']),
+            ),
+            style: const TextStyle(
+              color: paymentBrown,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _securityInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F6EC),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.verified_user_outlined, color: paymentGreen),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Pembayaran diproses oleh Midtrans. AyoSuruh tidak menyimpan PIN, nomor kartu, atau kredensial e-wallet kamu.',
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.45,
+                color: Color(0xFF526347),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(Object? rawValue) {
+    final DateTime? value = DateTime.tryParse(rawValue?.toString() ?? '');
+    if (value == null) return '-';
+    return DateFormat('dd MMM yyyy, HH:mm').format(value.toLocal());
+  }
+
+  num _asNum(Object? value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}

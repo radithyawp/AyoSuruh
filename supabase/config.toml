@@ -1,0 +1,11 @@
+[functions.create-midtrans-snap]
+verify_jwt = true
+
+[functions.refresh-midtrans-status]
+verify_jwt = true
+
+[functions.midtrans-payment-webhook]
+verify_jwt = false
+
+[functions.midtrans-payment-return]
+verify_jwt = false

@@ -4,6 +4,9 @@ import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
 import '../notifications/notification_service.dart';
 import '../location/job_location_map.dart';
+import '../payments/job_payment_widgets.dart';
+import '../payments/payment_helpers.dart';
+import '../payments/payment_service.dart';
 import 'job_helpers.dart';
 import 'job_progress_widgets.dart';
 import 'job_review_widgets.dart';
@@ -25,6 +28,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
   final JobService _jobService = JobService();
   final ChatService _chatService = ChatService();
   final NotificationService _notificationService = NotificationService();
+  final PaymentService _paymentService = PaymentService();
   bool _isLoading = true;
   bool _isStarting = false;
   bool _isOpeningChat = false;
@@ -32,6 +36,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
   Map<String, dynamic>? _myBid;
   Map<String, dynamic>? _review;
   Map<String, dynamic>? _jobAccess;
+  Map<String, dynamic>? _payment;
   String? _errorMessage;
 
   @override
@@ -49,12 +54,28 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
         _jobService.fetchJobReview(widget.jobId),
         _jobService.fetchMyJobAccess(widget.jobId),
       ]);
+      final Map<String, dynamic> loadedJob =
+          result[0] as Map<String, dynamic>;
+      final Map<String, dynamic>? loadedBid =
+          result[1] as Map<String, dynamic>?;
+      final Map<String, dynamic>? loadedAccess =
+          result[3] as Map<String, dynamic>?;
+      final bool selectedMitra =
+          (loadedJob['mitra_id'] ?? '').toString() == _jobService.currentUserId ||
+          loadedAccess?['is_selected_mitra'] == true ||
+          (loadedAccess?['my_bid_status'] ?? loadedBid?['status'])?.toString() ==
+              'accepted';
+      final Map<String, dynamic>? loadedPayment = selectedMitra
+          ? await _paymentService.fetchJobPayment(widget.jobId)
+          : null;
+
       if (!mounted) return;
       setState(() {
-        _job = result[0] as Map<String, dynamic>;
-        _myBid = result[1] as Map<String, dynamic>?;
+        _job = loadedJob;
+        _myBid = loadedBid;
         _review = result[2] as Map<String, dynamic>?;
-        _jobAccess = result[3] as Map<String, dynamic>?;
+        _jobAccess = loadedAccess;
+        _payment = loadedPayment;
         _errorMessage = null;
         _isLoading = false;
       });
@@ -196,6 +217,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
         (_jobAccess?['my_bid_status'] ?? _myBid?['status'])?.toString() == 'accepted';
     final bool assignedToMe =
         assignedFromJob || assignedFromAccess || assignedFromAcceptedBid;
+    final bool paymentAllowsStart = canMitraStartJob(_payment);
 
     return RefreshIndicator(
       color: jobOrangeColor,
@@ -307,6 +329,16 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             const SizedBox(height: 14),
             _buildMyBid(_myBid!),
           ],
+          if (assignedToMe &&
+              _payment != null &&
+              (status == 'accepted' || _payment?['payment_required'] == true) &&
+              <String>['accepted', 'on_progress', 'completed'].contains(status)) ...<Widget>[
+            const SizedBox(height: 14),
+            JobPaymentStatusCard(
+              payment: _payment,
+              isCustomer: false,
+            ),
+          ],
           if (assignedToMe && status == 'on_progress') ...<Widget>[
             const SizedBox(height: 14),
             _card(
@@ -372,7 +404,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             SizedBox(
               height: 52,
               child: FilledButton.icon(
-                onPressed: _isStarting ? null : _startJob,
+                onPressed: _isStarting || !paymentAllowsStart ? null : _startJob,
                 style: FilledButton.styleFrom(
                   backgroundColor: jobBrownColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
@@ -384,9 +416,11 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.play_arrow_rounded),
-                label: const Text(
-                  'Mulai Pekerjaan',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                label: Text(
+                  paymentAllowsStart
+                      ? 'Mulai Pekerjaan'
+                      : 'Menunggu Pembayaran Customer',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),

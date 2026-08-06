@@ -4,6 +4,9 @@ import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
 import '../notifications/notification_service.dart';
 import '../location/job_location_map.dart';
+import '../payments/job_payment_page.dart';
+import '../payments/job_payment_widgets.dart';
+import '../payments/payment_service.dart';
 import 'job_bids_page.dart';
 import 'job_helpers.dart';
 import 'job_rating_page.dart';
@@ -25,12 +28,14 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
   final JobService _jobService = JobService();
   final ChatService _chatService = ChatService();
   final NotificationService _notificationService = NotificationService();
+  final PaymentService _paymentService = PaymentService();
   bool _isLoading = true;
   bool _isActionLoading = false;
   bool _isOpeningChat = false;
   String? _errorMessage;
   Map<String, dynamic>? _job;
   Map<String, dynamic>? _review;
+  Map<String, dynamic>? _payment;
   List<Map<String, dynamic>> _timelines = <Map<String, dynamic>>[];
 
   @override
@@ -46,12 +51,14 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
         _jobService.fetchJob(widget.jobId),
         _jobService.fetchJobTimelines(widget.jobId),
         _jobService.fetchJobReview(widget.jobId),
+        _paymentService.fetchJobPayment(widget.jobId),
       ]);
       if (!mounted) return;
       setState(() {
         _job = result[0] as Map<String, dynamic>;
         _timelines = result[1] as List<Map<String, dynamic>>;
         _review = result[2] as Map<String, dynamic>?;
+        _payment = result[3] as Map<String, dynamic>?;
         _errorMessage = null;
         _isLoading = false;
       });
@@ -82,6 +89,20 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       ),
     );
     if (reviewed == true) await _loadJob();
+  }
+
+  Future<void> _openPayment() async {
+    if (_job == null) return;
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => JobPaymentPage(
+          jobId: widget.jobId,
+          jobTitle: (_job!['title'] ?? 'Pekerjaan').toString(),
+        ),
+      ),
+    );
+    if (mounted) await _loadJob();
   }
 
   Future<void> _openChat() async {
@@ -342,6 +363,17 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (_payment != null &&
+              job['mitra_id'] != null &&
+              (status == 'accepted' || _payment?['payment_required'] == true) &&
+              <String>['accepted', 'on_progress', 'completed'].contains(status)) ...<Widget>[
+            JobPaymentStatusCard(
+              payment: _payment,
+              isCustomer: true,
+              onPressed: _openPayment,
             ),
             const SizedBox(height: 14),
           ],
