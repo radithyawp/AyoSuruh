@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'job_helpers.dart';
 import 'job_review_widgets.dart';
 import 'job_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class JobRatingPage extends StatefulWidget {
   const JobRatingPage({super.key, required this.jobId});
@@ -141,6 +142,8 @@ class _JobRatingPageState extends State<JobRatingPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

@@ -44,6 +44,8 @@ dependencies:
   flutter_map: ^8.3.1
   latlong2: ^0.10.1
   geolocator: ^14.0.3
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +65,8 @@ dev_dependencies:
 flutter:
   assets:
     - assets/.env
+    - assets/images/
+    - assets/images/ayos/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

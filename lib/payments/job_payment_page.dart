@@ -10,6 +10,7 @@ import '../refunds/refund_request_page.dart';
 import '../refunds/refund_service.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class JobPaymentPage extends StatefulWidget {
   const JobPaymentPage({
@@ -288,6 +289,9 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             fontSize: 18,
           ),
         ),
+        actions: const <Widget>[
+          HomeShortcutButton(),
+        ],
       ),
       body: _buildBody(),
     );

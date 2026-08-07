@@ -4,6 +4,18 @@ import 'package:latlong2/latlong.dart';
 
 import '../jobs/job_helpers.dart';
 import 'location_service.dart';
+import 'osm_geocoding_service.dart';
+import '../widgets/home_shortcut_button.dart';
+
+class PickedLocation {
+  const PickedLocation({
+    required this.point,
+    required this.addressLabel,
+  });
+
+  final LatLng point;
+  final String addressLabel;
+}
 
 class LocationPickerPage extends StatefulWidget {
   const LocationPickerPage({
@@ -24,14 +36,27 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
+  final OsmGeocodingService _geocodingService = OsmGeocodingService();
+  late final TextEditingController _searchController;
 
   LatLng? _selectedPoint;
+  String _selectedAddressLabel = '';
   bool _isLocating = false;
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _selectedPoint = widget.initialPoint;
+    _selectedAddressLabel = (widget.addressLabel ?? '').trim();
+    _searchController = TextEditingController(text: _selectedAddressLabel);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _geocodingService.dispose();
+    super.dispose();
   }
 
   Future<void> _useCurrentLocation() async {
@@ -62,18 +87,110 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
+  Future<void> _searchAddress() async {
+    final String query = _searchController.text.trim();
+    if (query.length < 3 || _isSearching) {
+      if (query.length < 3) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ketik minimal 3 karakter alamat.')),
+        );
+      }
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() => _isSearching = true);
+    try {
+      final List<OsmGeocodingResult> results =
+          await _geocodingService.search(query);
+      if (!mounted) return;
+      if (results.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Alamat belum ditemukan. Coba tambah nama kota/kecamatan.'),
+            backgroundColor: jobBrownColor,
+          ),
+        );
+        return;
+      }
+
+      OsmGeocodingResult? selected;
+      if (results.length == 1) {
+        selected = results.first;
+      } else {
+        selected = await showModalBottomSheet<OsmGeocodingResult>(
+          context: context,
+          showDragHandle: true,
+          builder: (BuildContext sheetContext) {
+            return SafeArea(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 22),
+                itemCount: results.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (BuildContext context, int index) {
+                  final OsmGeocodingResult result = results[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    leading: const Icon(
+                      Icons.location_on_outlined,
+                      color: jobOrangeColor,
+                    ),
+                    title: Text(
+                      result.displayName,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5, height: 1.3),
+                    ),
+                    onTap: () => Navigator.pop(sheetContext, result),
+                  );
+                },
+              ),
+            );
+          },
+        );
+      }
+
+      if (selected == null || !mounted) return;
+      setState(() {
+        _selectedPoint = selected!.point;
+        _selectedAddressLabel = selected.displayName;
+        _searchController.text = selected.displayName;
+      });
+      _mapController.move(selected.point, 17);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pencarian alamat gagal: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
   void _confirmPoint() {
     final LatLng? point = _selectedPoint;
     if (point == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ketuk peta atau gunakan lokasi saat ini terlebih dahulu.'),
+          content: Text('Cari alamat, ketuk peta, atau gunakan lokasi saat ini.'),
           backgroundColor: jobBrownColor,
         ),
       );
       return;
     }
-    Navigator.pop<LatLng>(context, point);
+    Navigator.pop<PickedLocation>(
+      context,
+      PickedLocation(
+        point: point,
+        addressLabel: _selectedAddressLabel.trim().isEmpty
+            ? _searchController.text.trim()
+            : _selectedAddressLabel.trim(),
+      ),
+    );
   }
 
   @override
@@ -97,33 +214,74 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             fontSize: 18,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: Column(
         children: <Widget>[
-          if ((widget.addressLabel ?? '').trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _searchAddress(),
+              decoration: InputDecoration(
+                hintText: 'Cari alamat, contoh: UPI Kampus Cibiru',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: IconButton(
+                  tooltip: 'Cari alamat',
+                  onPressed: _isSearching ? null : _searchAddress,
+                  icon: _isSearching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: jobOrangeColor,
+                          ),
+                        )
+                      : const Icon(Icons.arrow_forward_rounded),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: jobBorderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: jobOrangeColor, width: 1.4),
+                ),
+              ),
+            ),
+          ),
+          if (_selectedAddressLabel.isNotEmpty)
             Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: jobBorderColor),
+                color: const Color(0xFFFFF2DE),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: <Widget>[
                   const Icon(
-                    Icons.location_on_outlined,
+                    Icons.pin_drop_outlined,
                     color: jobBrownColor,
-                    size: 20,
+                    size: 18,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
-                      widget.addressLabel!.trim(),
+                      _selectedAddressLabel,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, height: 1.35),
+                      style: const TextStyle(fontSize: 11, height: 1.3),
                     ),
                   ),
                 ],
@@ -140,6 +298,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                     minZoom: 4,
                     maxZoom: 19,
                     onTap: (_, LatLng point) {
+                      FocusScope.of(context).unfocus();
                       setState(() => _selectedPoint = point);
                     },
                   ),
@@ -237,7 +396,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Geser peta lalu ketuk lokasi yang tepat. Titik ini akan membantu mitra menemukan tujuan pekerjaan.',
+                  'Cari alamat atau ketuk peta untuk mengoreksi titik. Pencarian menggunakan data OpenStreetMap.',
                   style: TextStyle(
                     color: Color(0xFF7B7069),
                     fontSize: 11,

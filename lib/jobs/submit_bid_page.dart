@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'job_helpers.dart';
 import 'job_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class SubmitBidPage extends StatefulWidget {
   const SubmitBidPage({
@@ -27,6 +28,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
   final TextEditingController _estimatedController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   bool _isSubmitting = false;
+  num _platformFeePercent = 6;
 
   @override
   void initState() {
@@ -35,10 +37,31 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
         ? widget.initialBudget as num
         : num.tryParse(widget.initialBudget?.toString() ?? '') ?? 0;
     if (budget > 0) _priceController.text = budget.round().toString();
+    _priceController.addListener(_refreshEconomics);
+    _loadPlatformFee();
   }
+
+  void _refreshEconomics() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadPlatformFee() async {
+    final num value = await _jobService.fetchPlatformFeePercent();
+    if (!mounted) return;
+    setState(() => _platformFeePercent = value);
+  }
+
+  num get _currentOffer => num.tryParse(_priceController.text) ?? 0;
+
+  num get _platformFeeAmount =>
+      (_currentOffer * _platformFeePercent / 100).round();
+
+  num get _estimatedNetAmount =>
+      (_currentOffer - _platformFeeAmount).clamp(0, double.infinity);
 
   @override
   void dispose() {
+    _priceController.removeListener(_refreshEconomics);
     _priceController.dispose();
     _estimatedController.dispose();
     _messageController.dispose();
@@ -123,6 +146,8 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: SafeArea(
         top: false,
@@ -176,6 +201,43 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                   return null;
                 },
                 decoration: _inputDecoration('0', prefixText: 'Rp '),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4E3),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFFD99C)),
+                ),
+                child: Column(
+                  children: <Widget>[
+                    _economicsRow(
+                      'Harga penawaran',
+                      formatRupiah(_currentOffer),
+                    ),
+                    const SizedBox(height: 7),
+                    _economicsRow(
+                      'Komisi Ayo Suruh ${_platformFeePercent.toStringAsFixed(_platformFeePercent % 1 == 0 ? 0 : 1)}%',
+                      '-${formatRupiah(_platformFeeAmount)}',
+                    ),
+                    const Divider(height: 18),
+                    _economicsRow(
+                      'Estimasi masuk dompet',
+                      formatRupiah(_estimatedNetAmount),
+                      emphasize: true,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 7),
+              const Text(
+                'Komisi platform disnapshot saat transaksi dibuat. Biaya pencairan, jika ada, ditampilkan terpisah ketika withdraw.',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  height: 1.35,
+                  color: Color(0xFF7A6A5F),
+                ),
               ),
               const SizedBox(height: 18),
               _label('Estimasi Waktu Pengerjaan'),
@@ -248,6 +310,35 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _economicsRow(
+    String label,
+    String value, {
+    bool emphasize = false,
+  }) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: emphasize ? 12 : 11,
+              fontWeight: emphasize ? FontWeight.w800 : FontWeight.w500,
+              color: const Color(0xFF66584F),
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: emphasize ? 13 : 11.5,
+            fontWeight: FontWeight.w800,
+            color: emphasize ? jobGreenColor : jobDarkBrownColor,
+          ),
+        ),
+      ],
     );
   }
 

@@ -26,12 +26,48 @@ class JobService {
     return (result?['role'] ?? 'user').toString().toLowerCase();
   }
 
+  Future<num> fetchPlatformFeePercent() async {
+    try {
+      final dynamic result = await _client.rpc('get_business_settings');
+      if (result is List && result.isNotEmpty && result.first is Map) {
+        final dynamic value = (result.first as Map)['platform_fee_percent'];
+        return value is num
+            ? value
+            : num.tryParse(value?.toString() ?? '') ?? 6;
+      }
+      if (result is Map) {
+        final dynamic value = result['platform_fee_percent'];
+        return value is num
+            ? value
+            : num.tryParse(value?.toString() ?? '') ?? 6;
+      }
+    } catch (error) {
+      debugPrint('Business settings belum tersedia, gunakan fee 6%: $error');
+    }
+    return 6;
+  }
+
   Future<List<Map<String, dynamic>>> fetchCategories() async {
-    final dynamic result = await _client
-        .from('categories')
-        .select('id, name, icon')
-        .order('name');
-    return List<Map<String, dynamic>>.from(result as List);
+    try {
+      final dynamic result = await _client
+          .from('categories')
+          .select('id, name, icon, is_active, sort_order')
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('name');
+      return List<Map<String, dynamic>>.from(result as List);
+    } on PostgrestException catch (error) {
+      final String message = error.message.toLowerCase();
+      final bool catalogMigrationMissing =
+          message.contains('is_active') || message.contains('sort_order');
+      if (!catalogMigrationMissing) rethrow;
+      debugPrint('Migration katalog baru belum dijalankan: $error');
+      final dynamic fallback = await _client
+          .from('categories')
+          .select('id, name, icon')
+          .order('name');
+      return List<Map<String, dynamic>>.from(fallback as List);
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchMyAddresses() async {
@@ -63,6 +99,7 @@ class JobService {
     String? newAddress,
     double? latitude,
     double? longitude,
+    String? preferredMitraId,
   }) async {
     String? finalAddressId = addressId;
 
@@ -103,6 +140,8 @@ class JobService {
           'schedule_date': dateValue,
           'schedule_time': scheduleTime,
           'status': 'posted',
+          if (preferredMitraId != null && preferredMitraId.trim().isNotEmpty)
+            'preferred_mitra_id': preferredMitraId.trim(),
         })
         .select('id')
         .single();
@@ -122,7 +161,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id,
+          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           mitra:users!jobs_mitra_id_fkey(id, fullname, avatar_url),
@@ -140,7 +179,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id,
+          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
@@ -148,6 +187,7 @@ class JobService {
         ''')
         .inFilter('status', <String>['posted', 'waiting_bid'])
         .neq('customer_id', currentUserId)
+        .or('preferred_mitra_id.is.null,preferred_mitra_id.eq.$currentUserId')
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(result as List);
   }
@@ -185,7 +225,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id,
+          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
@@ -203,7 +243,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id,
+          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url)
@@ -240,7 +280,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id,
+          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url, phone),

@@ -15,6 +15,7 @@ import 'job_review_widgets.dart';
 import 'job_progress_widgets.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class CustomerJobDetailPage extends StatefulWidget {
   const CustomerJobDetailPage({super.key, required this.jobId});
@@ -262,6 +263,8 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             fontSize: 18,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

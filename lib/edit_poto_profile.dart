@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class EditPhotoProfilePage extends StatefulWidget {
   final Map<String, dynamic> userRow;
@@ -367,6 +368,8 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
           ),
         ),
         centerTitle: true,
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),

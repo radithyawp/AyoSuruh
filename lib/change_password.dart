@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class ChangePassword extends StatefulWidget {
   const ChangePassword({super.key});
@@ -113,6 +114,8 @@ class _ChangePasswordPageState extends State<ChangePassword> {
           ),
         ),
         titleSpacing: 0,
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),

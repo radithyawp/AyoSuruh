@@ -6,9 +6,25 @@ import '../location/job_location_map.dart';
 import '../location/location_picker_page.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class CreateJobPage extends StatefulWidget {
-  const CreateJobPage({super.key});
+  const CreateJobPage({
+    super.key,
+    this.initialCategoryName,
+    this.initialTitle,
+    this.initialDescription,
+    this.initialBudget,
+    this.preferredMitraId,
+    this.preferredMitraName,
+  });
+
+  final String? initialCategoryName;
+  final String? initialTitle;
+  final String? initialDescription;
+  final num? initialBudget;
+  final String? preferredMitraId;
+  final String? preferredMitraName;
 
   @override
   State<CreateJobPage> createState() => _CreateJobPageState();
@@ -36,6 +52,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
   @override
   void initState() {
     super.initState();
+    _titleController.text = widget.initialTitle?.trim() ?? '';
+    _descriptionController.text = widget.initialDescription?.trim() ?? '';
+    final num? initialBudget = widget.initialBudget;
+    if (initialBudget != null && initialBudget > 0) {
+      _budgetController.text = initialBudget.round().toString();
+    }
     _loadInitialData();
   }
 
@@ -66,7 +88,18 @@ class _CreateJobPageState extends State<CreateJobPage> {
         _categories = categories;
         _addresses = addresses;
         if (categories.isNotEmpty) {
-          _selectedCategoryId = categories.first['id'].toString();
+          final String initialName = (widget.initialCategoryName ?? '').trim().toLowerCase();
+          Map<String, dynamic>? initialCategory;
+          if (initialName.isNotEmpty) {
+            for (final Map<String, dynamic> category in categories) {
+              if ((category['name'] ?? '').toString().trim().toLowerCase() == initialName) {
+                initialCategory = category;
+                break;
+              }
+            }
+          }
+          _selectedCategoryId =
+              (initialCategory ?? categories.first)['id'].toString();
         }
         if (addresses.isNotEmpty) {
           _selectedAddressId = addresses.first['id'].toString();
@@ -138,19 +171,68 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return (_selectedAddress()?['address'] ?? 'Lokasi pekerjaan').toString();
   }
 
+  String _selectedCategoryName() {
+    final String? selectedId = _selectedCategoryId;
+    if (selectedId == null) return 'Lainnya';
+    for (final Map<String, dynamic> category in _categories) {
+      if (category['id'].toString() == selectedId) {
+        return (category['name'] ?? 'Lainnya').toString();
+      }
+    }
+    return 'Lainnya';
+  }
+
+  String _titleHintForCategory() {
+    switch (_selectedCategoryName().trim().toLowerCase()) {
+      case 'elektronik':
+        return 'Contoh: Perbaiki laptop yang tidak mau menyala';
+      case 'antar-jemput':
+        return 'Contoh: Antar saya dari kampus ke stasiun';
+      case 'jasa titip':
+        return 'Contoh: Titip beli makanan di minimarket';
+      case 'survey & informasi kost':
+        return 'Contoh: Survey kost dekat kampus';
+      case 'administrasi':
+        return 'Contoh: Bantu urus berkas administrasi';
+      case 'design & coding':
+        return 'Contoh: Buat desain poster acara';
+      case 'rumah tangga':
+        return 'Contoh: Bersihkan kamar atau bongkar pasang lemari';
+      case 'otomotif':
+        return 'Contoh: Bantu ganti aki motor';
+      case 'kurir':
+        return 'Contoh: Antar paket ke alamat tujuan';
+      case 'tukang':
+        return 'Contoh: Pasang rak dinding';
+      default:
+        return 'Contoh: Jelaskan bantuan yang kamu butuhkan';
+    }
+  }
+
   Future<void> _pickLocationOnMap() async {
     FocusScope.of(context).unfocus();
-    final LatLng? point = await Navigator.push<LatLng>(
+    final PickedLocation? location = await Navigator.push<PickedLocation>(
       context,
-      MaterialPageRoute<LatLng>(
+      MaterialPageRoute<PickedLocation>(
         builder: (_) => LocationPickerPage(
           initialPoint: _selectedPoint,
           addressLabel: _currentAddressLabel(),
         ),
       ),
     );
-    if (point != null && mounted) {
-      setState(() => _selectedPoint = point);
+    if (location != null && mounted) {
+      setState(() {
+        _selectedPoint = location.point;
+        final String resolvedAddress = location.addressLabel.trim();
+        if (resolvedAddress.isNotEmpty &&
+            resolvedAddress != _currentAddressLabel().trim()) {
+          // Hasil pencarian OSM dianggap tujuan pekerjaan baru agar label alamat
+          // dan koordinat tidak menunjuk dua tempat yang berbeda.
+          _useNewAddress = true;
+          _selectedAddressId = null;
+          _addressController.text = resolvedAddress;
+        }
+      });
     }
   }
 
@@ -208,6 +290,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         newAddress: _useNewAddress ? _addressController.text : null,
         latitude: _selectedPoint!.latitude,
         longitude: _selectedPoint!.longitude,
+        preferredMitraId: widget.preferredMitraId,
       );
 
       if (!mounted) return;
@@ -227,8 +310,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: const Text(
-              'Pekerjaanmu sudah tampil untuk mitra. Penawaran yang masuk dapat dilihat dari halaman Pekerjaan.',
+            content: Text(
+              widget.preferredMitraId == null
+                  ? 'Pekerjaanmu sudah tampil untuk mitra. Penawaran yang masuk dapat dilihat dari halaman Pekerjaan.'
+                  : 'Permintaan ini ditujukan ke ${widget.preferredMitraName ?? 'mitra pilihanmu'}. Mitra tersebut tetap mengirim penawaran melalui alur pekerjaan Ayo Suruh.',
               textAlign: TextAlign.center,
             ),
             actionsAlignment: MainAxisAlignment.center,
@@ -281,6 +366,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
             fontSize: 18,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
@@ -291,6 +378,38 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                   children: <Widget>[
+                    if (widget.preferredMitraId != null) ...<Widget>[
+                      Container(
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF3E4),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: const Color(0xFFC9DEC0)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Icon(
+                              Icons.verified_outlined,
+                              color: jobGreenColor,
+                              size: 21,
+                            ),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Text(
+                                'Permintaan jasa untuk ${widget.preferredMitraName ?? 'Mitra pilihan'}. Job ini akan ditampilkan kepada mitra tersebut dan tetap memakai sistem penawaran Ayo Suruh.',
+                                style: const TextStyle(
+                                  fontSize: 10.8,
+                                  height: 1.4,
+                                  color: Color(0xFF526046),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                    ],
                     _sectionLabel('Kategori Layanan'),
                     const SizedBox(height: 8),
                     _buildCategoryPicker(),
@@ -299,7 +418,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _titleController,
-                      hintText: 'Contoh: Bersihkan taman belakang',
+                      hintText: _titleHintForCategory(),
                       textInputAction: TextInputAction.next,
                       validator: (String? value) {
                         if (value == null || value.trim().length < 5) {
@@ -357,7 +476,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _budgetController,
-                      hintText: 'Rp 0',
+                      hintText: '0',
                       prefixText: 'Rp ',
                       keyboardType: TextInputType.number,
                       inputFormatters: <TextInputFormatter>[

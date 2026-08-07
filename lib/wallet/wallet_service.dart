@@ -8,17 +8,38 @@ class WalletService {
 
   Future<Map<String, dynamic>> fetchSummary() async {
     final dynamic response = await _client.rpc('get_mitra_wallet_summary');
+    Map<String, dynamic> summary;
     if (response is List && response.isNotEmpty && response.first is Map) {
-      return Map<String, dynamic>.from(response.first as Map);
+      summary = Map<String, dynamic>.from(response.first as Map);
+    } else if (response is Map) {
+      summary = Map<String, dynamic>.from(response);
+    } else {
+      summary = <String, dynamic>{
+        'pending_balance': 0,
+        'available_balance': 0,
+        'held_balance': 0,
+        'withdrawn_total': 0,
+        'minimum_payout': 10000,
+      };
     }
-    if (response is Map) return Map<String, dynamic>.from(response);
-    return <String, dynamic>{
-      'pending_balance': 0,
-      'available_balance': 0,
-      'held_balance': 0,
-      'withdrawn_total': 0,
-      'minimum_payout': 10000,
-    };
+
+    try {
+      final dynamic settingsResponse = await _client.rpc('get_business_settings');
+      if (settingsResponse is List &&
+          settingsResponse.isNotEmpty &&
+          settingsResponse.first is Map) {
+        summary.addAll(
+          Map<String, dynamic>.from(settingsResponse.first as Map),
+        );
+      } else if (settingsResponse is Map) {
+        summary.addAll(Map<String, dynamic>.from(settingsResponse));
+      }
+    } catch (_) {
+      // Migration economics belum dijalankan; UI tetap dapat memakai default MVP.
+      summary['platform_fee_percent'] ??= 6;
+    }
+    summary['platform_fee_percent'] ??= 6;
+    return summary;
   }
 
   Future<List<Map<String, dynamic>>> fetchLedger({int limit = 50}) async {

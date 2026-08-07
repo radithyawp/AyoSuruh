@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:ayosuruh/auth/auth_preferences.dart';
 import 'package:ayosuruh/auth/auth_service.dart';
+import 'package:ayosuruh/auth/reset_password_page.dart';
 import 'package:ayosuruh/login.dart';
 import 'package:ayosuruh/navbar.dart';
 import 'package:flutter/material.dart';
@@ -13,32 +17,81 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _recoveryDetected = false;
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (AuthState state) {
+        if (state.event == AuthChangeEvent.passwordRecovery &&
+            state.session != null) {
+          _recoveryDetected = true;
+          unawaited(_openPasswordRecovery());
+        }
+      },
+    );
     _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _openPasswordRecovery() async {
+    if (!mounted || _hasNavigated) return;
+    _hasNavigated = true;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const ResetPasswordPage()),
+    );
   }
 
   Future<void> _startTimer() async {
     await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
+    if (!mounted || _hasNavigated || _recoveryDetected) return;
 
-    final Session? session = Supabase.instance.client.auth.currentSession;
+    final SupabaseClient supabase = Supabase.instance.client;
+    final Session? session = supabase.auth.currentSession;
     if (session != null) {
-      try {
-        await AuthService.syncCurrentUserProfile();
-      } catch (_) {
-        // Profil dapat dicoba disinkronkan kembali setelah halaman utama terbuka.
+      final bool rememberSession =
+          await AuthPreferences.shouldRememberSession();
+      if (!rememberSession) {
+        // Checkbox Remember Me mengontrol pemulihan sesi pada cold start.
+        // Password tidak pernah disimpan oleh Ayo Suruh.
+        await supabase.auth.signOut();
+        if (!mounted || _hasNavigated) return;
+        _hasNavigated = true;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+        );
+        return;
+      } else {
+        try {
+          await AuthService.syncCurrentUserProfile();
+        } catch (_) {
+          // Profil dapat dicoba disinkronkan kembali setelah halaman utama terbuka.
+        }
+        if (!mounted || _hasNavigated) return;
+        _hasNavigated = true;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const MainNavigation()),
+        );
+        return;
       }
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-      );
-      return;
     }
 
+    if (!mounted || _hasNavigated) return;
+    final bool onboardingSeen = await AuthPreferences.hasSeenOnboarding();
+    if (!mounted || _hasNavigated) return;
+    _hasNavigated = true;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => onboardingSeen ? const LoginPage() : const OnboardingScreen(),
+      ),
     );
   }
 
@@ -62,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const Spacer(),
               // Ilustrasi / Logo Splash
               Image.asset(
-                'images/logo.jpeg', // Sesuaikan path gambar kamu
+                'assets/images/logo.jpeg', // Sesuaikan path gambar kamu
                 width: 480,
                 height: 480,
                 errorBuilder: (_, __, ___) => const Icon(
@@ -129,25 +182,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Butuh Bantuan?',
       description:
           'Temukan mitra terpercaya untuk menyelesaikan pekerjaan Anda dengan cepat dan mudah.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Temukan Mitra Terpercaya',
       description:
           'Pilih mitra terbaik berdasarkan rating dan ulasan dari pengguna lain untuk hasil kerja yang memuaskan.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
     OnboardingModel(
       title: 'Selesai Lebih Cepat',
       description:
           'Lacak progres pekerjaan secara langsung dan bayar dengan mudah serta aman.',
-      imagePath: 'images/icon.jpeg',
+      imagePath: 'assets/images/icon.jpeg',
     ),
   ];
 
-  void _finishOnboarding() {
+  Future<void> _finishOnboarding() async {
+    await AuthPreferences.markOnboardingSeen();
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
     );
   }
 

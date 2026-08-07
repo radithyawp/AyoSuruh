@@ -14,6 +14,7 @@ import 'job_service.dart';
 import 'job_widgets.dart';
 import 'submit_bid_page.dart';
 import 'update_job_status_page.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class MitraJobDetailPage extends StatefulWidget {
   const MitraJobDetailPage({super.key, required this.jobId});
@@ -184,6 +185,8 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

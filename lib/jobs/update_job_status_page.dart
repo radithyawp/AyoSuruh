@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'job_helpers.dart';
 import 'job_progress_widgets.dart';
 import 'job_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class UpdateJobStatusPage extends StatefulWidget {
   const UpdateJobStatusPage({super.key, required this.jobId});
@@ -236,6 +237,8 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

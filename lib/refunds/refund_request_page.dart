@@ -5,6 +5,7 @@ import '../jobs/job_helpers.dart';
 import '../payments/payment_helpers.dart';
 import 'refund_helpers.dart';
 import 'refund_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class RefundRequestPage extends StatefulWidget {
   const RefundRequestPage({
@@ -149,6 +150,8 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
             fontSize: 18,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: refundOrange))

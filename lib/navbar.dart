@@ -6,6 +6,7 @@ import 'chat.dart';
 import 'customer_dashboard.dart';
 import 'job.dart';
 import 'profile.dart';
+import 'tutorial/ayos_tutorial.dart';
 
 class MainNavigation extends StatefulWidget {
   /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
@@ -106,6 +107,11 @@ class _MainNavigationState extends State<MainNavigation> {
         _activeMode = resolvedMode;
         _isLoadingAccess = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          AyosTutorial.showIfNeeded(context, mode: resolvedMode);
+        }
+      });
     } catch (error) {
       debugPrint('Error fetching account access in navbar: $error');
       if (mounted) {
@@ -163,6 +169,7 @@ class _MainNavigationState extends State<MainNavigation> {
         duration: const Duration(seconds: 2),
       ),
     );
+    await AyosTutorial.showIfNeeded(context, mode: normalizedMode);
   }
 
   void _changePage(int index) {

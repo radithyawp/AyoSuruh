@@ -4,6 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'syarat_ketentuan.dart';
 import 'change_password.dart';
 import 'tentang_ayosuruh.dart';
+import 'security_settings_page.dart';
+import 'notification_settings_page.dart';
+import 'tutorial/ayos_tutorial.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class PengaturanPage extends StatefulWidget {
   const PengaturanPage({super.key});
@@ -86,6 +90,14 @@ class _PengaturanPageState extends State<PengaturanPage> {
         MaterialPageRoute(builder: (_) => const KebijakanPage()));
     }
 
+  Future<void> _showTutorialAgain() async {
+    final String mode = (Supabase.instance.client.auth.currentUser
+                ?.userMetadata?['active_mode'] ??
+            'customer')
+        .toString();
+    await AyosTutorial.show(context, mode: mode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,6 +118,8 @@ class _PengaturanPageState extends State<PengaturanPage> {
           ),
         ),
         titleSpacing: 0,
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryBrown))
@@ -125,9 +139,12 @@ class _PengaturanPageState extends State<PengaturanPage> {
                     _buildSettingTile(
                       icon: Icons.shield_outlined,
                       title: 'Keamanan Akun',
-                      onTap: () {
-                        // TODO: Navigasi Keamanan Akun
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SecuritySettingsPage(),
+                        ),
+                      ),
                     ),
                     _buildDivider(),
                     _buildSettingTile(
@@ -146,9 +163,18 @@ class _PengaturanPageState extends State<PengaturanPage> {
                     _buildSettingTile(
                       icon: Icons.notifications_none_outlined,
                       title: 'Pengaturan Notifikasi',
-                      onTap: () {
-                        // TODO: Navigasi Pengaturan Notifikasi
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const NotificationSettingsPage(),
+                        ),
+                      ),
+                    ),
+                    _buildDivider(),
+                    _buildSettingTile(
+                      icon: Icons.auto_awesome_outlined,
+                      title: 'Tutorial Aplikasi',
+                      onTap: _showTutorialAgain,
                     ),
                   ]),
                   const SizedBox(height: 20),
@@ -185,7 +211,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
                   // Version Footer
                   Center(
                     child: Text(
-                      'Versi 2.4.1 (Build 108)',
+                      'Versi 1.0.0 (Build 1)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
