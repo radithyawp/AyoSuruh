@@ -1,5 +1,8 @@
+import 'package:ayosuruh/auth/auth_service.dart';
 import 'package:ayosuruh/login.dart';
+import 'package:ayosuruh/navbar.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 1. SPLASH SCREEN
 class SplashScreen extends StatefulWidget {
@@ -16,10 +19,23 @@ class _SplashScreenState extends State<SplashScreen> {
     _startTimer();
   }
 
-  void _startTimer() async {
-
-    await Future.delayed(const Duration(seconds: 3));
+  Future<void> _startTimer() async {
+    await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
+    final Session? session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      try {
+        await AuthService.syncCurrentUserProfile();
+      } catch (_) {
+        // Profil dapat dicoba disinkronkan kembali setelah halaman utama terbuka.
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+      );
+      return;
+    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const OnboardingScreen()),
