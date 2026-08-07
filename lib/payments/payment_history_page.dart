@@ -5,6 +5,7 @@ import '../jobs/job_helpers.dart';
 import 'job_payment_page.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class PaymentHistoryPage extends StatefulWidget {
   const PaymentHistoryPage({super.key});
@@ -86,6 +87,8 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
             fontWeight: FontWeight.w900,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

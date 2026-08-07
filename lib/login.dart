@@ -1,14 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'auth/auth_preferences.dart';
 import 'auth/auth_service.dart';
+import 'auth/forgot_password_page.dart';
+import 'auth/reset_password_page.dart';
 import 'navbar.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({
+    super.key,
+    this.initialEmail,
+    this.noticeMessage,
+  });
+
+  final String? initialEmail;
+  final String? noticeMessage;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -26,17 +37,57 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _isNavigating = false;
+  bool _rememberMe = true;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
+    _emailCtrl.text = widget.initialEmail?.trim() ?? '';
+    unawaited(_loadRememberPreference());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showNoticeMessage());
+
     _authSubscription = _supabase.auth.onAuthStateChange.listen(
       (AuthState state) {
+        if (state.event == AuthChangeEvent.passwordRecovery &&
+            state.session != null) {
+          unawaited(_openPasswordRecovery());
+          return;
+        }
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           unawaited(_completeLogin(showMessage: false));
         }
       },
+    );
+  }
+
+  Future<void> _loadRememberPreference() async {
+    final bool remember = await AuthPreferences.shouldRememberSession();
+    final String? rememberedEmail = await AuthPreferences.rememberedEmail();
+    if (!mounted) return;
+    setState(() {
+      _rememberMe = remember;
+      if (_emailCtrl.text.trim().isEmpty && rememberedEmail != null) {
+        _emailCtrl.text = rememberedEmail;
+      }
+    });
+  }
+
+  void _showNoticeMessage() {
+    final String message = widget.noticeMessage?.trim() ?? '';
+    if (!mounted || message.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  Future<void> _openPasswordRecovery() async {
+    if (_isNavigating || !mounted) return;
+    _isNavigating = true;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const ResetPasswordPage()),
+      (Route<dynamic> route) => false,
     );
   }
 
@@ -95,6 +146,13 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.user != null) {
+        await AuthPreferences.saveLoginPreference(
+          rememberMe: _rememberMe,
+          email: _emailCtrl.text.trim(),
+        );
+        // Password tidak disimpan oleh aplikasi. Android/iOS credential manager
+        // dapat menawarkan penyimpanan aman berdasarkan autofillHints field login.
+        TextInput.finishAutofillContext(shouldSave: _rememberMe);
         await _completeLogin(showMessage: true);
       }
     } on AuthException catch (error) {
@@ -125,6 +183,10 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      await AuthPreferences.saveLoginPreference(
+        rememberMe: _rememberMe,
+        email: _emailCtrl.text.trim(),
+      );
       final bool launched = await AuthService.signInWithGoogle();
       if (!launched && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -189,7 +251,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     // --- LOGO & HEADER ---
                     Image.asset(
-                      'images/icon.jpeg', // Sesuaikan dengan lokasi ikon logo Anda
+                      'assets/images/icon.jpeg', // Sesuaikan dengan lokasi ikon logo Anda
                       height: 100,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.directions_run_rounded,
@@ -257,6 +319,10 @@ class _LoginPageState extends State<LoginPage> {
                               icon: Icons.email_outlined,
                               bgColor: inputBgColor,
                               keyboardType: TextInputType.emailAddress,
+                              autofillHints: const <String>[
+                                AutofillHints.username,
+                                AutofillHints.email,
+                              ],
                               validator: (val) =>
                                   val == null || !val.contains('@')
                                       ? 'Email tidak valid'
@@ -270,19 +336,24 @@ class _LoginPageState extends State<LoginPage> {
                               children: [
                                 _buildLabel('Password'),
                                 GestureDetector(
-                                  onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Silakan hubungi admin untuk reset password.'),
-                                      ),
-                                    );
-                                  },
+                                  onTap: _isLoading
+                                      ? null
+                                      : () {
+                                          Navigator.push<void>(
+                                            context,
+                                            MaterialPageRoute<void>(
+                                              builder: (_) => ForgotPasswordPage(
+                                                initialEmail: _emailCtrl.text.trim(),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                   child: const Text(
                                     'Lupa Password?',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
                                       color: titleColor,
                                     ),
                                   ),
@@ -296,6 +367,7 @@ class _LoginPageState extends State<LoginPage> {
                               icon: Icons.lock_outline_rounded,
                               bgColor: inputBgColor,
                               obscureText: _obscurePassword,
+                              autofillHints: const <String>[AutofillHints.password],
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -313,7 +385,35 @@ class _LoginPageState extends State<LoginPage> {
                                   ? 'Password tidak boleh kosong'
                                   : null,
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: <Widget>[
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    activeColor: primaryColor,
+                                    onChanged: _isLoading
+                                        ? null
+                                        : (bool? value) {
+                                            setState(() => _rememberMe = value ?? false);
+                                          },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'Ingat saya di perangkat ini',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF655A53),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
 
                             // Tombol Masuk
                             SizedBox(
@@ -487,12 +587,14 @@ class _LoginPageState extends State<LoginPage> {
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
+    Iterable<String>? autofillHints,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      autofillHints: autofillHints,
       validator: validator,
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(

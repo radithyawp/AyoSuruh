@@ -1,244 +1,231 @@
 import 'package:flutter/material.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class SyaratKetentuanPage extends StatelessWidget {
   const SyaratKetentuanPage({super.key});
 
-  final Color primaryBrown = const Color(0xFF8B5A2B);
-  final Color primaryOrange = const Color(0xFFF39C12);
-  final Color bgGrey = const Color(0xFFFAF7F7);
+  static const Color _brown = Color(0xFF8B5A2B);
+  static const Color _orange = Color(0xFFF39C12);
+  static const Color _bg = Color(0xFFFAF6F3);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgGrey,
+      backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: primaryBrown),
+          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
+        title: const Text(
           'Syarat & Ketentuan',
           style: TextStyle(
-            color: primaryBrown,
+            color: _brown,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        titleSpacing: 0,
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Banner Header
-            _buildHeaderBanner(),
-            const SizedBox(height: 24),
-
-            // Poin 1
-            _buildTermItem(
-              number: 1,
-              title: 'Pendahuluan',
-              description:
-                  'Selamat datang di Ayo Suruh. Dengan mengakses dan menggunakan aplikasi kami, Anda dianggap telah membaca, memahami, dan menyetujui seluruh isi dalam Syarat & Ketentuan ini. Ayo Suruh adalah platform teknologi yang menghubungkan Pengguna dengan Mitra (Penyedia Jasa) untuk membantu berbagai kebutuhan harian Anda secara efisien.',
-            ),
-
-            // Poin 2
-            _buildTermItem(
-              number: 2,
-              title: 'Akun Pengguna',
-              description:
-                  'Untuk menggunakan layanan penuh kami, Anda wajib membuat akun dengan data yang valid, akurat, dan terbaru. Anda bertanggung jawab penuh atas kerahasiaan kata sandi dan aktivitas yang terjadi di bawah akun Anda.',
-            ),
-
-            // Poin 3
-            _buildTermItem(
-              number: 3,
-              title: 'Layanan Ayo Suruh',
-              description:
-                  'Ayo Suruh bertindak sebagai perantara digital. Transaksi layanan dilakukan langsung antara Pengguna dan Mitra. Kami berupaya memastikan kualitas Mitra melalui sistem verifikasi dan rating.',
-              calloutQuote:
-                  '"Kami berkomitmen untuk memberikan bantuan tercepat dan terandal melalui fitur suruhan kustom kami."',
-            ),
-
-            // Poin 4
-            _buildTermItem(
-              number: 4,
-              title: 'Biaya dan Pembayaran',
-              description:
-                  'Semua harga yang tertera dalam aplikasi adalah harga final termasuk biaya layanan aplikasi. Pembayaran dapat dilakukan melalui metode yang tersedia.',
-            ),
-
-            // Poin 5
-            _buildTermItem(
-              number: 5,
-              title: 'Pembatalan & Pengembalian',
-              description:
-                  'Pembatalan pesanan dapat dilakukan sebelum Mitra memulai tugas. Jika pembatalan dilakukan saat tugas sedang berjalan, biaya pembatalan atau biaya parsial mungkin akan dikenakan kepada Pengguna.',
-            ),
-
-            // Poin 6
-            _buildTermItem(
-              number: 6,
-              title: 'Batasan Tanggung Jawab',
-              description:
-                  'Data Pribadi Anda aman bersama kami. Kami menggunakan data lokasi dan identitas hanya untuk keperluan operasional layanan Ayo Suruh sesuai dengan peraturan perundang-undangan yang berlaku di Indonesia.',
-            ),
-
-            // Poin 7
-            _buildTermItem(
-              number: 7,
-              title: 'Perubahan Ketentuan',
-              description:
-                  'Ayo Suruh tidak bertanggung jawab atas kerugian tidak langsung, insidental, atau konsekuensial yang timbul dari penggunaan layanan kami, kecuali dalam kasus kelalaian berat yang terbukti secara hukum.',
-              isLast: true,
-            ),
-
-            const SizedBox(height: 30),
-          ],
-        ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+        children: const <Widget>[
+          _TermsHeader(),
+          SizedBox(height: 20),
+          _TermsSection(
+            number: '1',
+            title: 'Penerimaan Ketentuan',
+            body:
+                'Dengan membuat akun atau menggunakan Ayo Suruh, pengguna menyatakan telah membaca dan menyetujui ketentuan layanan serta kebijakan privasi yang berlaku. Pada tahap MVP, layanan dikembangkan sebagai proyek kewirausahaan dan terus disempurnakan sebelum peluncuran komersial penuh.',
+          ),
+          _TermsSection(
+            number: '2',
+            title: 'Akun dan Keamanan',
+            body:
+                'Pengguna wajib memberikan informasi yang benar, menjaga akses akun dan perangkat, serta tidak menyalahgunakan identitas pihak lain. Ayo Suruh dapat menyediakan login email/password dan penyedia identitas pihak ketiga seperti Google.',
+          ),
+          _TermsSection(
+            number: '3',
+            title: 'Peran Customer',
+            body:
+                'Customer bertanggung jawab menjelaskan kebutuhan pekerjaan secara wajar, memilih kategori, lokasi dan jadwal yang tepat, menilai penawaran mitra, melakukan pembayaran sesuai alur aplikasi, serta memberikan konfirmasi pekerjaan secara jujur.',
+          ),
+          _TermsSection(
+            number: '4',
+            title: 'Peran Mitra',
+            body:
+                'Mitra wajib memberikan informasi pendaftaran yang benar, mematuhi proses verifikasi dan perjanjian kemitraan yang berlaku, hanya mengambil pekerjaan yang dapat ditangani, menjaga komunikasi profesional, serta menyelesaikan pekerjaan sesuai kesepakatan dengan customer.',
+          ),
+          _TermsSection(
+            number: '5',
+            title: 'Harga dan Penawaran',
+            body:
+                'Ayo Suruh menggunakan pendekatan competitive bidding. Customer menetapkan estimasi awal dan mitra dapat mengirim penawaran. Harga jasa final mengikuti penawaran yang dipilih customer dan tercatat pada transaksi.',
+          ),
+          _TermsSection(
+            number: '6',
+            title: 'Komisi Platform 6%',
+            body:
+                'Pada model bisnis MVP, Ayo Suruh mengambil komisi platform sebesar 6% dari nilai jasa pada transaksi berhasil. Komisi ini merupakan pendapatan platform dan berbeda dari biaya payment gateway atau biaya pencairan. Nilai komisi disnapshot pada transaksi agar histori tetap konsisten.',
+            highlight: true,
+          ),
+          _TermsSection(
+            number: '7',
+            title: 'Pembayaran dan Biaya Pemrosesan',
+            body:
+                'Pembayaran yang menggunakan payment gateway diproses melalui penyedia yang terintegrasi. Biaya pemrosesan dapat berbeda menurut metode pembayaran dan dapat ditampilkan terpisah dari nilai jasa. Status yang tercatat pada penyedia pembayaran menjadi salah satu acuan penyelesaian transaksi.',
+          ),
+          _TermsSection(
+            number: '8',
+            title: 'Dompet Mitra dan Pencairan',
+            body:
+                'Pendapatan mitra dihitung dari nilai jasa setelah komisi platform dan dicatat pada ledger. Saldo dapat melalui masa hold sebelum tersedia. Pencairan mensyaratkan rekening yang valid dan dapat dikenakan biaya transfer atau ketentuan minimum pencairan sesuai mekanisme yang digunakan Ayo Suruh.',
+          ),
+          _TermsSection(
+            number: '9',
+            title: 'Pembatalan dan Refund',
+            body:
+                'Pembatalan atau refund hanya diproses pada kondisi yang memenuhi kebijakan transaksi dan status pembayaran. Refund dapat menimbulkan penyesuaian pada pendapatan mitra atau saldo ledger apabila dana sebelumnya telah dikreditkan.',
+          ),
+          _TermsSection(
+            number: '10',
+            title: 'Perilaku yang Dilarang',
+            body:
+                'Pengguna dilarang menggunakan Ayo Suruh untuk penipuan, ancaman, pelecehan, aktivitas melanggar hukum, pekerjaan yang membahayakan pihak lain, manipulasi transaksi/rating, penyalahgunaan data pribadi, atau tindakan lain yang merusak keamanan dan kepercayaan ekosistem.',
+          ),
+          _TermsSection(
+            number: '11',
+            title: 'Penangguhan dan Penghapusan Akun',
+            body:
+                'Ayo Suruh dapat membatasi akun yang terindikasi melanggar ketentuan. Permintaan penghapusan akun dapat memerlukan penyelesaian pekerjaan aktif, transaksi, saldo, refund, atau kewajiban kemitraan terlebih dahulu. Alasan penghapusan dapat dikumpulkan sebagai evaluasi produk apabila pengguna bersedia memberikannya.',
+          ),
+          _TermsSection(
+            number: '12',
+            title: 'Perubahan Layanan',
+            body:
+                'Fitur, biaya, ketentuan, atau integrasi layanan dapat diperbarui seiring perkembangan Ayo Suruh. Perubahan material akan diinformasikan melalui aplikasi atau kanal resmi sebelum diterapkan apabila diperlukan.',
+          ),
+          _TermsSection(
+            number: '13',
+            title: 'Batasan Tahap MVP',
+            body:
+                'Beberapa fitur pada build akademik dapat menggunakan sandbox, simulasi, atau proses operasional manual. Ayo Suruh tidak menyatakan fitur tersebut sebagai layanan finansial production-ready sampai integrasi, perizinan, pengujian, dan proses komersialisasi selesai.',
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Pembaruan: 7 Agustus 2026. Dokumen ini perlu ditinjau secara legal kembali sebelum peluncuran komersial penuh.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF7C716A)),
+          ),
+        ],
       ),
     );
   }
+}
 
-  // Banner Header Atas
-  Widget _buildHeaderBanner() {
+class _TermsHeader extends StatelessWidget {
+  const _TermsHeader();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDE8CD).withOpacity(0.6),
+        gradient: const LinearGradient(
+          colors: <Color>[Color(0xFFFFE5B8), Color(0xFFFFF2DD)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.handshake_outlined, color: SyaratKetentuanPage._brown, size: 30),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Ketentuan ini menjelaskan aturan penggunaan Ayo Suruh untuk customer, mitra, transaksi, dan fitur pendukungnya.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF654327),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsSection extends StatelessWidget {
+  const _TermsSection({
+    required this.number,
+    required this.title,
+    required this.body,
+    this.highlight = false,
+  });
+
+  final String number;
+  final String title;
+  final String body;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: highlight ? const Color(0xFFFFF0D7) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: highlight ? SyaratKetentuanPage._orange : const Color(0xFFEFE5DE),
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            '$number.',
+            style: const TextStyle(
+              color: SyaratKetentuanPage._brown,
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: <Widget>[
                 Text(
-                  'Persetujuan Layanan',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: primaryBrown,
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF40352F),
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Terakhir diperbarui: 24 Mei 2024',
-                  style: TextStyle(
+                const SizedBox(height: 5),
+                Text(
+                  body,
+                  textAlign: TextAlign.justify,
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                    color: Color(0xFF6B605A),
                   ),
                 ),
               ],
             ),
           ),
-          Icon(
-            Icons.description_outlined,
-            size: 38,
-            color: primaryBrown.withOpacity(0.25),
-          ),
         ],
       ),
-    );
-  }
-
-  // Widget Item Poin Syarat & Ketentuan
-  Widget _buildTermItem({
-    required int number,
-    required String title,
-    required String description,
-    String? calloutQuote,
-    bool isLast = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Judul dengan Badge Nomor
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: primaryOrange,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  '$number',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        // Deskripsi Poin (Rata Kiri-Kanan / Justify)
-        Text(
-          description,
-          textAlign: TextAlign.justify,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black87,
-            height: 1.5,
-          ),
-        ),
-
-        // Kotak Kutipan/Callout khusus jika ada
-        if (calloutQuote != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F2F2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: primaryBrown, width: 4),
-              ),
-            ),
-            child: Text(
-              calloutQuote,
-              textAlign: TextAlign.justify,
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.black87.withOpacity(0.8),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-
-        // Garis Pemisah Antar Poin
-        if (!isLast) ...[
-          const SizedBox(height: 20),
-          Divider(color: Colors.grey.shade300, height: 1),
-          const SizedBox(height: 20),
-        ],
-      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
 import 'wallet_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 const Color _walletBrown = Color(0xFF8A5300);
 const Color _walletOrange = Color(0xFFFF9800);
@@ -64,6 +65,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   Future<void> _openPayoutForm() async {
     final num available = _number(_summary['available_balance']);
     final num minimum = _number(_summary['minimum_payout']);
+
     if (available < minimum) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -93,14 +95,15 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         initialBankName: (_summary['bank_name'] ?? '').toString(),
         initialAccountNumber: (_summary['account_number'] ?? '').toString(),
         initialAccountHolder: (_summary['account_holder'] ?? '').toString(),
-        onSubmit: (num amount, String bank, String number, String holder) async {
-          await _service.requestPayout(
-            amount: amount,
-            bankName: bank,
-            accountNumber: number,
-            accountHolder: holder,
-          );
-        },
+        onSubmit:
+            (num amount, String bank, String number, String holder) async {
+              await _service.requestPayout(
+                amount: amount,
+                bankName: bank,
+                accountNumber: number,
+                accountHolder: holder,
+              );
+            },
       ),
     );
     if (requested == true) await _load();
@@ -169,6 +172,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             fontSize: 19,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );
@@ -227,6 +232,11 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   Widget _balanceCard() {
     final num available = _number(_summary['available_balance']);
     final num minimum = _number(_summary['minimum_payout']);
+    final num platformFee = _number(_summary['platform_fee_percent']);
+    final String platformFeeLabel =
+        platformFee.toDouble() == platformFee.roundToDouble()
+        ? platformFee.toStringAsFixed(0)
+        : platformFee.toStringAsFixed(2);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -255,7 +265,16 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 7),
+          Text(
+            'Pendapatan bersih setelah komisi platform $platformFeeLabel%.',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: <Widget>[
               Expanded(
@@ -360,7 +379,10 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(number, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  number,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 Text(
                   holder,
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
@@ -377,8 +399,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       child: Column(
         children: _payouts.take(8).map((Map<String, dynamic> payout) {
           final String status = (payout['status'] ?? '').toString();
-          final DateTime? date =
-              DateTime.tryParse((payout['created_at'] ?? '').toString())?.toLocal();
+          final DateTime? date = DateTime.tryParse(
+            (payout['created_at'] ?? '').toString(),
+          )?.toLocal();
           return Container(
             margin: const EdgeInsets.only(bottom: 9),
             padding: const EdgeInsets.all(12),
@@ -454,7 +477,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                         ? const Color(0xFFE4F1DB)
                         : const Color(0xFFFFE1DE),
                     child: Icon(
-                      positive ? Icons.south_west_rounded : Icons.north_east_rounded,
+                      positive
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded,
                       color: positive ? _walletGreen : Colors.red.shade700,
                       size: 19,
                     ),
@@ -584,7 +609,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
 
   Color _payoutStatusColor(String status) {
     if (status == 'paid') return _walletGreen;
-    if (<String>['rejected', 'failed'].contains(status)) return Colors.red.shade700;
+    if (<String>['rejected', 'failed'].contains(status))
+      return Colors.red.shade700;
     if (status == 'cancelled') return Colors.grey.shade700;
     return _walletOrange;
   }
@@ -628,7 +654,8 @@ class _PayoutFormSheet extends StatefulWidget {
     String bank,
     String accountNumber,
     String accountHolder,
-  ) onSubmit;
+  )
+  onSubmit;
 
   @override
   State<_PayoutFormSheet> createState() => _PayoutFormSheetState();
@@ -649,8 +676,12 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
       text: widget.availableBalance.floor().toString(),
     );
     _bankController = TextEditingController(text: widget.initialBankName);
-    _accountController = TextEditingController(text: widget.initialAccountNumber);
-    _holderController = TextEditingController(text: widget.initialAccountHolder);
+    _accountController = TextEditingController(
+      text: widget.initialAccountNumber,
+    );
+    _holderController = TextEditingController(
+      text: widget.initialAccountHolder,
+    );
   }
 
   @override

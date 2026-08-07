@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class JobBidsPage extends StatefulWidget {
   const JobBidsPage({super.key, required this.jobId});
@@ -153,6 +154,8 @@ class _JobBidsPageState extends State<JobBidsPage> {
             fontSize: 18,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))

@@ -197,31 +197,46 @@ List<Map<String, dynamic>> embeddedReviews(Map<String, dynamic> job) {
 
 IconData categoryIcon(String value) {
   final String category = value.toLowerCase();
-  if (category.contains('bersih')) return Icons.cleaning_services_rounded;
+  if (category.contains('elektronik')) return Icons.electrical_services_rounded;
+  if (category.contains('antar-jemput')) return Icons.commute_rounded;
+  if (category.contains('jasa titip')) return Icons.shopping_bag_rounded;
+  if (category.contains('kost')) return Icons.apartment_rounded;
+  if (category.contains('administrasi')) return Icons.description_rounded;
+  if (category.contains('design') || category.contains('coding')) {
+    return Icons.code_rounded;
+  }
+  if (category.contains('rumah tangga') || category.contains('bersih')) {
+    return Icons.home_repair_service_rounded;
+  }
+  if (category.contains('otomotif')) return Icons.two_wheeler_rounded;
   if (category.contains('kurir') || category.contains('antar')) {
     return Icons.local_shipping_rounded;
   }
   if (category.contains('tukang') || category.contains('perbaikan')) {
     return Icons.handyman_rounded;
   }
-  if (category.contains('ac') || category.contains('elektronik')) {
-    return Icons.ac_unit_rounded;
-  }
-  if (category.contains('masak') || category.contains('makanan')) {
-    return Icons.restaurant_rounded;
-  }
-  if (category.contains('pindah')) return Icons.local_shipping_outlined;
-  return Icons.work_outline_rounded;
+  return Icons.grid_view_rounded;
 }
 
 Color categoryBackground(String value) {
   final String category = value.toLowerCase();
-  if (category.contains('bersih')) return const Color(0xFFFFE9C9);
-  if (category.contains('kurir') || category.contains('pindah')) {
+  if (category.contains('elektronik') || category.contains('administrasi')) {
+    return const Color(0xFFFFE9C9);
+  }
+  if (category.contains('antar') ||
+      category.contains('kurir') ||
+      category.contains('kost')) {
     return const Color(0xFFE8F3DF);
   }
-  if (category.contains('ac') || category.contains('tukang')) {
+  if (category.contains('jasa titip') ||
+      category.contains('design') ||
+      category.contains('coding')) {
     return const Color(0xFFFFE3E0);
+  }
+  if (category.contains('rumah tangga') ||
+      category.contains('otomotif') ||
+      category.contains('tukang')) {
+    return const Color(0xFFFFEDCC);
   }
   return const Color(0xFFF2ECE7);
 }

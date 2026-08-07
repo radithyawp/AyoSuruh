@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'jobs/create_job_page.dart';
@@ -6,6 +8,7 @@ import 'jobs/job_helpers.dart';
 import 'jobs/job_service.dart';
 import 'jobs/job_widgets.dart';
 import 'notification.dart';
+import 'services/service_marketplace_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,6 +19,8 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final JobService _jobService = JobService();
+  final PageController _promoController = PageController();
+  Timer? _promoTimer;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -23,11 +28,53 @@ class _DashboardPageState extends State<DashboardPage> {
   String _userAddress = 'Alamat belum diatur';
   String? _avatarUrl;
   List<Map<String, dynamic>> _recentJobs = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _categories = <Map<String, dynamic>>[];
+  int _promoPage = 0;
+
+  static const List<_PromoItem> _promos = <_PromoItem>[
+    _PromoItem(
+      eyebrow: 'BANTUAN HARIAN',
+      title: 'Rumah lebih rapi,\nwaktu lebih santai.',
+      categoryName: 'Rumah Tangga',
+      icon: Icons.home_repair_service_rounded,
+      background: Color(0xFFFFE8B8),
+    ),
+    _PromoItem(
+      eyebrow: 'TUGAS & KREATIF',
+      title: 'Butuh desain atau\nbantuan coding?',
+      categoryName: 'Design & Coding',
+      icon: Icons.code_rounded,
+      background: Color(0xFFFFD9CF),
+    ),
+    _PromoItem(
+      eyebrow: 'HEMAT WAKTU',
+      title: 'Titip beli kebutuhan\ntanpa keluar tempat.',
+      categoryName: 'Jasa Titip',
+      icon: Icons.shopping_bag_rounded,
+      background: Color(0xFFDCECCF),
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     _fetchDashboardData();
+    _promoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_promoController.hasClients) return;
+      final int nextPage = (_promoPage + 1) % _promos.length;
+      _promoController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 550),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _promoTimer?.cancel();
+    _promoController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchDashboardData() async {
@@ -42,23 +89,31 @@ class _DashboardPageState extends State<DashboardPage> {
         _jobService.fetchMyProfile(),
         _jobService.fetchCustomerJobs(),
         _jobService.fetchMyAddresses(),
+        _jobService.fetchCategories(),
       ]);
       final Map<String, dynamic>? profile = result[0] as Map<String, dynamic>?;
       final List<Map<String, dynamic>> jobs =
           result[1] as List<Map<String, dynamic>>;
       final List<Map<String, dynamic>> addresses =
           result[2] as List<Map<String, dynamic>>;
+      final List<Map<String, dynamic>> categories =
+          result[3] as List<Map<String, dynamic>>;
 
       if (!mounted) return;
       setState(() {
         _userName = (profile?['fullname'] ?? 'Pengguna').toString();
         _avatarUrl = profile?['avatar_url']?.toString();
-        if (addresses.isNotEmpty) {
+        final String profileAddress = (profile?['alamat'] ?? '').toString().trim();
+        if (profileAddress.isNotEmpty) {
+          // Home mengikuti alamat utama pada Edit Profil. Alamat job tetap terpisah.
+          _userAddress = profileAddress;
+        } else if (addresses.isNotEmpty) {
           _userAddress = addresses.first['address'].toString();
         } else {
-          _userAddress = (profile?['alamat'] ?? 'Alamat belum diatur').toString();
+          _userAddress = 'Alamat belum diatur';
         }
         _recentJobs = jobs.take(3).toList();
+        _categories = categories;
         _isLoading = false;
       });
     } catch (error) {
@@ -70,12 +125,23 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  Future<void> _openCreateJob() async {
+  Future<void> _openCreateJob({String? categoryName}) async {
     final bool? created = await Navigator.push<bool>(
       context,
-      MaterialPageRoute<bool>(builder: (_) => const CreateJobPage()),
+      MaterialPageRoute<bool>(
+        builder: (_) => CreateJobPage(initialCategoryName: categoryName),
+      ),
     );
     if (created == true) await _fetchDashboardData();
+  }
+
+  Future<void> _showServiceSearch() async {
+    FocusScope.of(context).unfocus();
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const ServiceMarketplacePage()),
+    );
+    if (mounted) await _fetchDashboardData();
   }
 
   Future<void> _openJob(String jobId) async {
@@ -129,7 +195,7 @@ class _DashboardPageState extends State<DashboardPage> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 78),
         child: FloatingActionButton.extended(
-          onPressed: _openCreateJob,
+          onPressed: () => _openCreateJob(),
           backgroundColor: jobOrangeColor,
           foregroundColor: const Color(0xFF553600),
           icon: const Icon(Icons.add_rounded),
@@ -219,11 +285,12 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: jobBorderColor),
       ),
-      child: const TextField(
-        enabled: false,
-        decoration: InputDecoration(
+      child: TextField(
+        readOnly: true,
+        onTap: _showServiceSearch,
+        decoration: const InputDecoration(
           prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF746A64)),
-          hintText: 'Cari layanan...',
+          hintText: 'Cari layanan yang kamu butuhkan...',
           hintStyle: TextStyle(fontSize: 12, color: Color(0xFF9B918C)),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 13),
@@ -233,90 +300,184 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildPromoBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDDEDCF),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Rumah bersih, hati\nsenang.',
-                  style: TextStyle(
-                    fontSize: 17,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
+    return Column(
+      children: <Widget>[
+        AspectRatio(
+          // Poster Canva rekomendasi: 1200 x 500 px (rasio 12:5).
+          aspectRatio: 12 / 5,
+          child: PageView.builder(
+            controller: _promoController,
+            itemCount: _promos.length,
+            onPageChanged: (int index) => setState(() => _promoPage = index),
+            itemBuilder: (BuildContext context, int index) {
+              final _PromoItem promo = _promos[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => _openCreateJob(categoryName: promo.categoryName),
+                  child: Ink(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    decoration: BoxDecoration(
+                      color: promo.background,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                promo.eyebrow,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  letterSpacing: 1.1,
+                                  fontWeight: FontWeight.w800,
+                                  color: jobBrownColor,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                promo.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  height: 1.18,
+                                  fontWeight: FontWeight.w800,
+                                  color: jobDarkBrownColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Pesan sekarang  →',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: jobBrownColor.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.52),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Icon(
+                            promo.icon,
+                            size: 38,
+                            color: jobBrownColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 13),
-                FilledButton(
-                  onPressed: _openCreateJob,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: jobBrownColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  child: const Text('Pesan Sekarang'),
-                ),
-              ],
-            ),
+              );
+            },
           ),
-          const Icon(Icons.cleaning_services_rounded, size: 72, color: jobGreenColor),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List<Widget>.generate(_promos.length, (int index) {
+            final bool active = index == _promoPage;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active ? jobOrangeColor : const Color(0xFFD7C8BE),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
   Widget _buildCategorySection() {
-    final List<Map<String, dynamic>> categories = <Map<String, dynamic>>[
-      <String, dynamic>{'name': 'Kebersihan', 'icon': Icons.cleaning_services_rounded},
-      <String, dynamic>{'name': 'Kurir', 'icon': Icons.local_shipping_rounded},
-      <String, dynamic>{'name': 'Tukang', 'icon': Icons.handyman_rounded},
-      <String, dynamic>{'name': 'Lainnya', 'icon': Icons.grid_view_rounded},
-    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          'Kategori Layanan',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 13),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: categories.map((Map<String, dynamic> category) {
-            return GestureDetector(
-              onTap: _openCreateJob,
-              child: Column(
-                children: <Widget>[
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: categoryBackground(category['name'].toString()),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      category['icon'] as IconData,
-                      color: jobDarkBrownColor,
-                      size: 25,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    category['name'].toString(),
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-                  ),
-                ],
+          children: <Widget>[
+            const Expanded(
+              child: Text(
+                'Kategori Layanan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
-            );
-          }).toList(),
+            ),
+            TextButton(
+              onPressed: _showServiceSearch,
+              child: const Text('Lihat semua'),
+            ),
+          ],
         ),
+        const SizedBox(height: 8),
+        if (_categories.isEmpty)
+          const Text(
+            'Kategori belum tersedia.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF7C6F67)),
+          )
+        else
+          SizedBox(
+            height: 92,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (BuildContext context, int index) {
+                final Map<String, dynamic> category = _categories[index];
+                final String name = (category['name'] ?? 'Lainnya').toString();
+                return SizedBox(
+                  width: 68,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _openCreateJob(categoryName: name),
+                    child: Column(
+                      children: <Widget>[
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: categoryBackground(name),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            categoryIcon(name),
+                            color: jobDarkBrownColor,
+                            size: 25,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          name,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            height: 1.05,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }
@@ -354,4 +515,20 @@ class _DashboardPageState extends State<DashboardPage> {
       ],
     );
   }
+}
+
+class _PromoItem {
+  const _PromoItem({
+    required this.eyebrow,
+    required this.title,
+    required this.categoryName,
+    required this.icon,
+    required this.background,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String categoryName;
+  final IconData icon;
+  final Color background;
 }

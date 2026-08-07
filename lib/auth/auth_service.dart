@@ -9,6 +9,8 @@ class AuthService {
 
   static const String mobileRedirectUrl =
       'io.supabase.ayosuruh://login-callback/';
+  static const String passwordRecoveryRedirectUrl =
+      'io.supabase.ayosuruh://reset-password/';
 
   static Future<bool> signInWithGoogle() {
     return _supabase.auth.signInWithOAuth(
@@ -19,6 +21,17 @@ class AuthService {
       queryParams: const <String, String>{
         'prompt': 'select_account',
       },
+    );
+  }
+
+
+
+  static Future<void> sendPasswordResetEmail(String email) {
+    final String redirectTo =
+        kIsWeb ? '${Uri.base.origin}/reset-password' : passwordRecoveryRedirectUrl;
+    return _supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: redirectTo,
     );
   }
 

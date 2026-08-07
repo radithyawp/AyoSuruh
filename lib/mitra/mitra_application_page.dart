@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../navbar.dart';
 import '../syarat_ketentuan.dart';
 import 'mitra_application_service.dart';
+import '../widgets/home_shortcut_button.dart';
 
 const Color _mitraOrange = Color(0xFFF39C12);
 const Color _mitraBrown = Color(0xFF8B5A2B);
@@ -16,10 +17,7 @@ const Color _mitraInput = Color(0xFFF7F2F7);
 const Color _mitraGreen = Color(0xFF5C744D);
 
 class MitraApplicationPage extends StatefulWidget {
-  const MitraApplicationPage({
-    super.key,
-    this.existingApplication,
-  });
+  const MitraApplicationPage({super.key, this.existingApplication});
 
   final Map<String, dynamic>? existingApplication;
 
@@ -83,12 +81,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
           widget.existingApplication ?? await _service.fetchMyApplication();
 
       _fullnameController.text = (profile['fullname'] ?? '').toString();
-      _phoneController.text = _normalizePhone((profile['phone'] ?? '').toString());
-      _addressController.text = (
-        application?['address'] ?? profile['alamat'] ?? ''
-      ).toString();
-      _accountController.text =
-          (application?['account_number'] ?? '').toString();
+      _phoneController.text = _normalizePhone(
+        (profile['phone'] ?? '').toString(),
+      );
+      _addressController.text =
+          (application?['address'] ?? profile['alamat'] ?? '').toString();
+      _accountController.text = (application?['account_number'] ?? '')
+          .toString();
 
       final String? savedBank = application?['bank_name']?.toString();
       if (savedBank != null && _banks.contains(savedBank)) {
@@ -147,7 +146,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                 ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFFF0F4EB),
-                    child: Icon(Icons.photo_library_outlined, color: _mitraGreen),
+                    child: Icon(
+                      Icons.photo_library_outlined,
+                      color: _mitraGreen,
+                    ),
                   ),
                   title: const Text('Galeri'),
                   subtitle: const Text('Pilih foto dari perangkat'),
@@ -238,8 +240,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         documentType: 'selfie',
       );
 
-      final Map<String, dynamic> application =
-          await _service.submitApplication(
+      final Map<String, dynamic> application = await _service.submitApplication(
         fullname: _fullnameController.text,
         phone: '+62${_phoneController.text}',
         address: _addressController.text,
@@ -259,9 +260,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
       await Navigator.of(context).pushReplacement<void, void>(
         MaterialPageRoute<void>(
-          builder: (_) => MitraApplicationStatusPage(
-            initialApplication: application,
-          ),
+          builder: (_) =>
+              MitraApplicationStatusPage(initialApplication: application),
         ),
       );
     } catch (error) {
@@ -296,11 +296,11 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
             fontSize: 21,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: _mitraOrange),
-            )
+          ? const Center(child: CircularProgressIndicator(color: _mitraOrange))
           : Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -326,7 +326,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                           ),
                           SizedBox(width: 7),
                           Text(
-                            'Bergabung dengan 1000+ Mitra',
+                            'Bergabung sebagai Mitra terverifikasi',
                             style: TextStyle(color: _mitraBrown),
                           ),
                         ],
@@ -378,7 +378,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                               Container(
                                 height: 58,
                                 alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                                 decoration: const BoxDecoration(
                                   color: _mitraInput,
                                   border: Border(
@@ -401,8 +403,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                     LengthLimitingTextInputFormatter(13),
                                   ],
                                   validator: (String? value) {
-                                    final String digits =
-                                        (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                                    final String digits = (value ?? '')
+                                        .replaceAll(RegExp(r'[^0-9]'), '');
                                     if (digits.length < 9) {
                                       return 'Nomor WhatsApp belum valid.';
                                     }
@@ -438,7 +440,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                         children: <Widget>[
                           const Text(
                             'Foto KTM',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           _uploadBox(
@@ -462,7 +467,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                           const SizedBox(height: 22),
                           const Text(
                             'Foto Profil Terbaru',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           _uploadBox(
@@ -559,7 +567,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                   onTap: () => Navigator.push<void>(
                                     context,
                                     MaterialPageRoute<void>(
-                                      builder: (_) => const SyaratKetentuanPage(),
+                                      builder: (_) =>
+                                          const SyaratKetentuanPage(),
                                     ),
                                   ),
                                   child: const Text(
@@ -593,7 +602,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _mitraOrange,
                           foregroundColor: const Color(0xFF4C3608),
-                          disabledBackgroundColor: _mitraOrange.withValues(alpha: 0.55),
+                          disabledBackgroundColor: _mitraOrange.withValues(
+                            alpha: 0.55,
+                          ),
                           elevation: 3,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
@@ -753,10 +764,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         decoration: BoxDecoration(
           color: _mitraInput,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: const Color(0xFFE4C3A7),
-            width: 1.5,
-          ),
+          border: Border.all(color: const Color(0xFFE4C3A7), width: 1.5),
         ),
         child: bytes != null
             ? Stack(
@@ -802,10 +810,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.black45,
-                    ),
+                    style: const TextStyle(fontSize: 11, color: Colors.black45),
                   ),
                 ],
               ),
@@ -815,10 +820,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 }
 
 class MitraApplicationStatusPage extends StatefulWidget {
-  const MitraApplicationStatusPage({
-    super.key,
-    this.initialApplication,
-  });
+  const MitraApplicationStatusPage({super.key, this.initialApplication});
 
   final Map<String, dynamic>? initialApplication;
 
@@ -844,8 +846,7 @@ class _MitraApplicationStatusPageState
   Future<void> _refresh() async {
     setState(() => _isLoading = true);
     try {
-      final Map<String, dynamic>? latest =
-          await _service.fetchMyApplication();
+      final Map<String, dynamic>? latest = await _service.fetchMyApplication();
       if (mounted) setState(() => _application = latest);
     } catch (error) {
       if (mounted) {
@@ -863,31 +864,32 @@ class _MitraApplicationStatusPageState
 
   @override
   Widget build(BuildContext context) {
-    final String status =
-        (_application?['status'] ?? 'applied').toString().toLowerCase();
+    final String status = (_application?['status'] ?? 'applied')
+        .toString()
+        .toLowerCase();
     final bool approved = status == 'approved';
     final bool rejected = status == 'rejected';
 
     final Color statusColor = approved
         ? _mitraGreen
         : rejected
-            ? Colors.red.shade700
-            : _mitraOrange;
+        ? Colors.red.shade700
+        : _mitraOrange;
     final IconData statusIcon = approved
         ? Icons.verified_rounded
         : rejected
-            ? Icons.cancel_outlined
-            : Icons.hourglass_top_rounded;
+        ? Icons.cancel_outlined
+        : Icons.hourglass_top_rounded;
     final String title = approved
         ? 'Pengajuan Disetujui!'
         : rejected
-            ? 'Pengajuan Perlu Diperbaiki'
-            : 'Pengajuan Sedang Diverifikasi';
+        ? 'Pengajuan Perlu Diperbaiki'
+        : 'Pengajuan Sedang Diverifikasi';
     final String description = approved
         ? 'Selamat! Akunmu sudah aktif sebagai Mitra Ayo Suruh.'
         : rejected
-            ? 'Periksa catatan verifikasi, lalu kirim kembali data yang sudah diperbaiki.'
-            : 'Tim kami sedang memeriksa identitas dan dokumenmu. Proses biasanya membutuhkan waktu 1–3 hari kerja.';
+        ? 'Periksa catatan verifikasi, lalu kirim kembali data yang sudah diperbaiki.'
+        : 'Tim kami sedang memeriksa identitas dan dokumenmu. Proses biasanya membutuhkan waktu 1–3 hari kerja.';
 
     return Scaffold(
       backgroundColor: _mitraBackground,
@@ -907,6 +909,7 @@ class _MitraApplicationStatusPageState
           ),
         ),
         actions: <Widget>[
+          const HomeShortcutButton(),
           IconButton(
             tooltip: 'Perbarui status',
             onPressed: _isLoading ? null : _refresh,
@@ -972,7 +975,10 @@ class _MitraApplicationStatusPageState
             const SizedBox(height: 18),
             _detailsCard(status),
             if (rejected &&
-                (_application?['review_notes'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+                (_application?['review_notes'] ?? '')
+                    .toString()
+                    .trim()
+                    .isNotEmpty) ...<Widget>[
               const SizedBox(height: 18),
               Container(
                 width: double.infinity,
@@ -1012,14 +1018,14 @@ class _MitraApplicationStatusPageState
                 onPressed: approved
                     ? _openMitraDashboard
                     : rejected
-                        ? _reapply
-                        : _refresh,
+                    ? _reapply
+                    : _refresh,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: approved
                       ? _mitraGreen
                       : rejected
-                          ? _mitraOrange
-                          : _mitraBrown,
+                      ? _mitraOrange
+                      : _mitraBrown,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(26),
@@ -1029,15 +1035,15 @@ class _MitraApplicationStatusPageState
                   approved
                       ? Icons.dashboard_outlined
                       : rejected
-                          ? Icons.edit_note_rounded
-                          : Icons.refresh_rounded,
+                      ? Icons.edit_note_rounded
+                      : Icons.refresh_rounded,
                 ),
                 label: Text(
                   approved
                       ? 'Masuk Dashboard Mitra'
                       : rejected
-                          ? 'Perbaiki dan Ajukan Ulang'
-                          : 'Periksa Status Terbaru',
+                      ? 'Perbaiki dan Ajukan Ulang'
+                      : 'Periksa Status Terbaru',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1098,10 +1104,7 @@ class _MitraApplicationStatusPageState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.black54),
-          ),
+          child: Text(label, style: const TextStyle(color: Colors.black54)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1124,9 +1127,7 @@ class _MitraApplicationStatusPageState
   Future<void> _reapply() async {
     await Navigator.of(context).pushReplacement<void, void>(
       MaterialPageRoute<void>(
-        builder: (_) => MitraApplicationPage(
-          existingApplication: _application,
-        ),
+        builder: (_) => MitraApplicationPage(existingApplication: _application),
       ),
     );
   }

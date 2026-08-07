@@ -4,6 +4,7 @@ import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 import 'mitra_job_detail_page.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class MitraJobHistoryPage extends StatefulWidget {
   const MitraJobHistoryPage({super.key});
@@ -80,6 +81,8 @@ class _MitraJobHistoryPageState extends State<MitraJobHistoryPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(),
     );

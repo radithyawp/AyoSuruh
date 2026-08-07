@@ -1,4 +1,5 @@
 import 'package:ayosuruh/onboarding_screen.dart'; // <--- Import file onboarding
+import 'package:ayosuruh/navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -30,14 +31,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AyoSuruh', 
-      debugShowCheckedModeBanner: false, 
+      title: 'AyoSuruh',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5A2B)),
       ),
-      
+
+      routes: <String, WidgetBuilder>{
+        '/home': (_) => const MainNavigation(),
+      },
+
       // Ubah home menjadi SplashScreen
-      home: const SplashScreen(), 
+      home: const SplashScreen(),
     );
   }
 }

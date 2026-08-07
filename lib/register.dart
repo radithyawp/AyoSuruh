@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_service.dart';
+import 'kebijakan.dart';
 import 'login.dart';
-import 'navbar.dart';
+import 'syarat_ketentuan.dart';
 
 // Konstanta Warna
 const Color kPrimaryColor = Color(0xFFF39C12); // Warna Orange Utama
@@ -36,6 +37,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isNavigating = false;
+  bool _isGoogleFlow = false;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -45,7 +47,8 @@ class _RegisterPageState extends State<RegisterPage> {
       (AuthState state) {
         final String provider =
             state.session?.user.appMetadata['provider']?.toString() ?? '';
-        if (state.event == AuthChangeEvent.signedIn &&
+        if (_isGoogleFlow &&
+            state.event == AuthChangeEvent.signedIn &&
             state.session != null &&
             provider == 'google') {
           unawaited(_completeGoogleRegistration());
@@ -65,28 +68,44 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future<void> _goToApp({required String message}) async {
+  Future<void> _finishRegistration({
+    required String message,
+    String? email,
+  }) async {
     if (_isNavigating) return;
     _isNavigating = true;
 
     try {
-      await AuthService.syncCurrentUserProfile();
+      // Jika Supabase memberikan session setelah sign-up/OAuth, sinkronkan
+      // profil terlebih dahulu lalu paksa keluar. Sesuai flow Ayo Suruh,
+      // registrasi tidak langsung membawa pengguna masuk ke aplikasi.
+      if (_supabase.auth.currentSession != null) {
+        await AuthService.syncCurrentUserProfile();
+        await _supabase.auth.signOut();
+      }
+
+      _isGoogleFlow = false;
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
-      );
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-        (route) => false,
+        MaterialPageRoute<void>(
+          builder: (_) => LoginPage(
+            initialEmail: email,
+            noticeMessage: message,
+          ),
+        ),
+        (Route<dynamic> route) => false,
       );
     } catch (error) {
       _isNavigating = false;
+      _isGoogleFlow = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Akun dibuat, tetapi profil gagal disiapkan: $error'),
+          content: Text(
+            'Akun dibuat, tetapi proses akhir registrasi gagal: $error',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -94,8 +113,11 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _completeGoogleRegistration() async {
-    await _goToApp(
-      message: 'Akun Google berhasil digunakan. Selamat datang!',
+    final String email = _supabase.auth.currentUser?.email?.trim() ?? '';
+    await _finishRegistration(
+      email: email,
+      message:
+          'Google berhasil digunakan. Silakan login untuk masuk ke Ayo Suruh.',
     );
   }
 
@@ -124,23 +146,14 @@ class _RegisterPageState extends State<RegisterPage> {
         throw const AuthException('Supabase tidak mengembalikan data pengguna.');
       }
 
-      if (response.session != null) {
-        await _goToApp(message: 'Registrasi berhasil! Selamat datang.');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Registrasi berhasil! Silakan cek email untuk verifikasi akun.',
-            ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
-      }
+      final String message = response.session == null
+          ? 'Registrasi berhasil. Jika verifikasi email diaktifkan, selesaikan verifikasi terlebih dahulu lalu login.'
+          : 'Registrasi berhasil. Silakan login untuk masuk ke Ayo Suruh.';
+
+      await _finishRegistration(
+        email: email,
+        message: message,
+      );
     } on AuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,8 +178,10 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
+      _isGoogleFlow = true;
       final bool launched = await AuthService.signInWithGoogle();
       if (!launched && mounted) {
+        _isGoogleFlow = false;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Halaman Google tidak dapat dibuka.'),
@@ -175,6 +190,7 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
     } on AuthException catch (error) {
+      _isGoogleFlow = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -183,6 +199,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       );
     } catch (error) {
+      _isGoogleFlow = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -207,7 +224,7 @@ class _RegisterPageState extends State<RegisterPage> {
               children: [
                 // --- LOGO & HEADER ---
                 Image.asset(
-                  'images/icon.jpeg',
+                  'assets/images/icon.jpeg',
                   height: 90,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.directions_run_rounded,
@@ -539,30 +556,58 @@ class _RegisterPageState extends State<RegisterPage> {
                 // Terms & Privacy Note
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      children: const [
-                        TextSpan(text: 'Dengan mendaftar, Anda menyetujui '),
-                        TextSpan(
-                          text: 'Syarat & Ketentuan',
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        'Dengan mendaftar, Anda menyetujui ',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const SyaratKetentuanPage(),
+                          ),
+                        ),
+                        child: const Text(
+                          'Syarat & Ketentuan',
                           style: TextStyle(
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
                             color: kTitleColor,
                           ),
                         ),
-                        TextSpan(text: ' serta '),
-                        TextSpan(
-                          text: 'Kebijakan Privasi',
+                      ),
+                      Text(
+                        ' serta ',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const KebijakanPage(),
+                          ),
+                        ),
+                        child: const Text(
+                          'Kebijakan Privasi',
                           style: TextStyle(
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
                             color: kTitleColor,
                           ),
                         ),
-                        TextSpan(text: ' kami.'),
-                      ],
-                    ),
+                      ),
+                      Text(
+                        ' kami.',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
                   ),
                 ),
               ],

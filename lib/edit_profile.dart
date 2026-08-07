@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> userRow; // 👈 Menambahkan parameter userRow
@@ -136,6 +137,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
         titleSpacing: 0,
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: Column(
         children: [

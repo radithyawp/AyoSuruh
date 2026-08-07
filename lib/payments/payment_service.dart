@@ -37,7 +37,8 @@ class PaymentService {
       return await _client
           .from('payments')
           .select('''
-            id, job_id, amount, service_fee, status, paid_at, created_at,
+            id, job_id, amount, service_fee, platform_fee_percent,
+            platform_fee_amount, mitra_net_amount, status, paid_at, created_at,
             updated_at, provider, payment_required, order_id, snap_token,
             redirect_url, transaction_id, transaction_status, fraud_status,
             payment_type, status_code, status_message, expires_at,

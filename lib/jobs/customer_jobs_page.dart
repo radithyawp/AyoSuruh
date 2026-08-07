@@ -5,6 +5,7 @@ import 'customer_job_detail_page.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
+import '../widgets/home_shortcut_button.dart';
 
 class CustomerJobsPage extends StatefulWidget {
   const CustomerJobsPage({super.key});
@@ -113,6 +114,8 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
             Tab(text: 'Riwayat'),
           ],
         ),
+
+        actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _buildBody(activeJobs, historyJobs),
       floatingActionButton: Padding(

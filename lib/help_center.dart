@@ -1,56 +1,181 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'widgets/home_shortcut_button.dart';
 
-class HelpPage extends StatelessWidget {
+class HelpPage extends StatefulWidget {
   const HelpPage({super.key});
 
+  @override
+  State<HelpPage> createState() => _HelpPageState();
+}
+
+class _HelpPageState extends State<HelpPage> {
   static const Color _brownColor = Color(0xFF8B5A2B);
+  static const Color _orangeColor = Color(0xFFF39C12);
   static const Color _bgGrey = Color(0xFFFAF6F3);
 
-  final List<Map<String, String>> _faqs = const [
-    {
-      'question': 'Bagaimana cara isi saldo AyoPay?',
-      'answer':
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.'
-    },
-    {
-      'question': 'Apa itu layanan Ayo Suruh?',
-      'answer':
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
-    },
-    {
-      'question': 'Cara menjadi mitra Ayo Suruh?',
-      'answer':
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.'
-    },
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  bool _showAll = false;
+
+  static const List<_FaqItem> _faqs = <_FaqItem>[
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana cara membuat pekerjaan?',
+      answer:
+          'Dari Home tekan Buat Pekerjaan, pilih kategori, isi judul dan deskripsi, tentukan lokasi, jadwal, serta estimasi harga. Setelah dipublikasikan, pekerjaan akan terlihat oleh mitra yang dapat mengirim penawaran.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana memilih mitra yang mengirim penawaran?',
+      answer:
+          'Buka detail pekerjaan lalu bandingkan harga, estimasi pengerjaan, pesan, dan profil mitra. Pilih penawaran yang paling sesuai. Setelah dipilih, pekerjaan masuk ke tahap transaksi dan pengerjaan.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Apakah lokasi pekerjaan harus sama dengan alamat profil?',
+      answer:
+          'Tidak. Alamat profil hanya menjadi lokasi utama yang tampil di Home. Saat membuat pekerjaan Anda dapat memilih alamat lain, misalnya minimarket, kost, kampus, atau lokasi tujuan tertentu.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana mencari titik lokasi pekerjaan?',
+      answer:
+          'Pada form Buat Pekerjaan, buka pemilih peta. Anda dapat mencari alamat dengan OpenStreetMap, memakai lokasi perangkat, atau mengetuk peta untuk mengoreksi titik secara manual.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana pembayaran dilakukan?',
+      answer:
+          'Pembayaran pekerjaan yang sudah menggunakan payment gateway diproses melalui Midtrans. Status pembayaran akan disinkronkan ke Ayo Suruh sebelum alur pekerjaan dilanjutkan.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana jika saya membutuhkan refund?',
+      answer:
+          'Refund hanya tersedia pada transaksi dan kondisi yang memenuhi kebijakan. Ajukan dari detail transaksi jika opsi refund tersedia. Status permintaan akan tercatat dan dapat dipantau pada aplikasi.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      question: 'Bagaimana cara memberi rating kepada mitra?',
+      answer:
+          'Setelah pekerjaan selesai dan dikonfirmasi, buka detail atau riwayat pekerjaan lalu berikan rating dan ulasan berdasarkan pengalaman Anda.',
+    ),
+    _FaqItem(
+      category: 'Akun',
+      question: 'Saya lupa password. Apakah harus menghubungi admin?',
+      answer:
+          'Tidak. Pada halaman Login tekan Lupa Password, masukkan email akun, lalu buka tautan pemulihan yang dikirim ke email untuk membuat password baru.',
+    ),
+    _FaqItem(
+      category: 'Akun',
+      question: 'Apa fungsi Ingat Saya?',
+      answer:
+          'Ingat Saya mempertahankan sesi login pada perangkat dan mengingat email. Ayo Suruh tidak menyimpan password mentah; password dapat dikelola oleh password manager atau autofill bawaan perangkat.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Bagaimana cara menjadi mitra Ayo Suruh?',
+      answer:
+          'Ajukan pendaftaran mitra dari menu profil, lengkapi data dan dokumen yang diminta, lalu tunggu proses peninjauan. Setelah disetujui, mode Mitra dapat digunakan.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Bagaimana cara mengambil pekerjaan?',
+      answer:
+          'Pada mode Mitra, buka daftar pekerjaan yang tersedia, pelajari detail kebutuhan customer, lalu kirim penawaran harga, estimasi waktu, dan pesan. Customer akan memilih penawaran yang dianggap paling sesuai.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Berapa komisi Ayo Suruh untuk mitra?',
+      answer:
+          'Pada model MVP saat ini Ayo Suruh menggunakan komisi platform 6% dari nilai jasa pada transaksi berhasil. Nilai komisi disimpan pada transaksi agar histori tidak berubah jika kebijakan tarif diperbarui di masa depan.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Kapan pendapatan masuk ke Dompet Mitra?',
+      answer:
+          'Pendapatan bersih masuk ke ledger Dompet Mitra setelah pembayaran berstatus berhasil dan pekerjaan selesai. Sistem dapat menerapkan masa hold sebelum saldo berubah menjadi tersedia untuk dicairkan.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Bagaimana cara mencairkan saldo Mitra?',
+      answer:
+          'Buka Dompet & Rekening, pastikan rekening pencairan sudah tersedia, lalu ajukan nominal penarikan. Biaya transfer atau ketentuan pencairan ditampilkan terpisah dari komisi platform.',
+    ),
+    _FaqItem(
+      category: 'Mitra',
+      question: 'Apa yang terjadi jika transaksi direfund?',
+      answer:
+          'Jika pembayaran yang sudah mengkredit pendapatan mitra kemudian direfund atau dibatalkan, sistem melakukan penyesuaian pada ledger agar saldo mengikuti nilai transaksi yang valid.',
+    ),
+    _FaqItem(
+      category: 'AyoPay',
+      question: 'Bagaimana cara isi saldo AyoPay?',
+      answer:
+          'Fitur top up AyoPay masih berada pada tahap pengembangan MVP. Setelah diaktifkan, instruksi metode pembayaran, status top up, dan riwayat saldo akan tersedia langsung di aplikasi.',
+    ),
+    _FaqItem(
+      category: 'Keamanan',
+      question: 'Apakah login Google membuat akun baru yang terpisah?',
+      answer:
+          'Ayo Suruh menyinkronkan akun Google dengan profil pengguna berdasarkan identitas Supabase. Untuk email yang sudah terhubung pada identitas yang sama, data profil tetap diarahkan ke akun pengguna yang sama.',
+    ),
+    _FaqItem(
+      category: 'Keamanan',
+      question: 'Apa yang harus dilakukan jika menemukan aktivitas mencurigakan?',
+      answer:
+          'Segera ganti password, keluar dari akun pada perangkat yang tidak dikenal jika opsi sesi tersedia, dan hubungi Pusat Dukungan Ayo Suruh melalui WhatsApp untuk pemeriksaan lebih lanjut.',
+    ),
   ];
 
-  // 🔗 Helper Function untuk Membuka URL External
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _launchURL(BuildContext context, String urlString) async {
     final Uri url = Uri.parse(urlString);
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tidak dapat membuka link: $urlString')),
+            const SnackBar(content: Text('Tautan belum dapat dibuka.')),
           );
         }
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuka aplikasi')),
+          const SnackBar(content: Text('Gagal membuka aplikasi tujuan.')),
         );
       }
     }
   }
 
+  List<_FaqItem> get _filteredFaqs {
+    final String query = _query.trim().toLowerCase();
+    if (query.isEmpty) return _faqs;
+    return _faqs.where((_FaqItem faq) {
+      return faq.question.toLowerCase().contains(query) ||
+          faq.answer.toLowerCase().contains(query) ||
+          faq.category.toLowerCase().contains(query);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<_FaqItem> filtered = _filteredFaqs;
+    final List<_FaqItem> visible = _showAll || _query.trim().isNotEmpty
+        ? filtered
+        : filtered.take(5).toList();
+
     return Scaffold(
       backgroundColor: _bgGrey,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: _brownColor),
@@ -64,85 +189,93 @@ class HelpPage extends StatelessWidget {
             fontSize: 20,
           ),
         ),
-        centerTitle: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeaderWithSearch(),
-            const SizedBox(height: 36),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Pertanyaan Populer',
-                  style: TextStyle(
+        actions: const <Widget>[HomeShortcutButton()],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        children: <Widget>[
+          _buildHeaderWithSearch(),
+          const SizedBox(height: 36),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  _query.trim().isEmpty ? 'Pertanyaan Populer' : 'Hasil Pencarian',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
+              ),
+              if (_query.trim().isEmpty)
                 TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Lihat Semua',
-                    style: TextStyle(
+                  onPressed: () => setState(() => _showAll = !_showAll),
+                  child: Text(
+                    _showAll ? 'Ringkas' : 'Lihat Semua',
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: _brownColor,
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            ..._faqs.map((faq) => _buildFaqTile(faq['question']!, faq['answer']!)),
-            const SizedBox(height: 20),
-
-            const Text(
-              'Masih butuh bantuan?',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (visible.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: const Text(
+                'Topik belum ditemukan. Coba kata kunci lain atau hubungi tim dukungan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF766A62)),
+              ),
+            )
+          else
+            ...visible.map(_buildFaqTile),
+          const SizedBox(height: 22),
+          const Text(
+            'Masih butuh bantuan?',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
-            const SizedBox(height: 14),
-
-            // 🟢 Card WhatsApp
-            _buildContactCard(
-              icon: Icons.chat_bubble_outline_rounded,
-              iconBgColor: const Color(0xFFE8F5E9),
-              iconColor: const Color(0xFF2E7D32),
-              borderColor: const Color(0xFFC8E6C9),
-              title: 'Chat via WhatsApp',
-              subtitle: 'Respon cepat dalam 5 menit',
-              onTap: () => _launchURL(context, 'https://wa.me/628895255693'),
+          ),
+          const SizedBox(height: 14),
+          _buildContactCard(
+            icon: Icons.chat_bubble_outline_rounded,
+            iconBgColor: const Color(0xFFE8F5E9),
+            iconColor: const Color(0xFF2E7D32),
+            borderColor: const Color(0xFFC8E6C9),
+            title: 'Chat via WhatsApp',
+            subtitle: 'WhatsApp Business Ayo Suruh',
+            onTap: () => _launchURL(
+              context,
+              'https://wa.me/628895255693?text=Halo%20Ayo%20Suruh%2C%20saya%20ingin%20bertanya%20tentang%20layanan%20Ayo%20Suruh.',
             ),
-            const SizedBox(height: 12),
-
-            // 📸 Card Instagram
-            _buildContactCard(
-              icon: Icons.camera_alt_outlined,
-              iconBgColor: const Color(0xFFFDF0E6),
-              iconColor: _brownColor,
-              borderColor: Colors.grey.shade300,
-              title: 'Instagram Kami',
-              subtitle: '@ayo.suruh',
-              onTap: () => _launchURL(context, 'https://www.instagram.com/ayo.suruh/'),
+          ),
+          const SizedBox(height: 12),
+          _buildContactCard(
+            icon: Icons.camera_alt_outlined,
+            iconBgColor: const Color(0xFFFDF0E6),
+            iconColor: _brownColor,
+            borderColor: const Color(0xFFE7D5C8),
+            title: 'Instagram Kami',
+            subtitle: '@ayo.suruh',
+            onTap: () => _launchURL(
+              context,
+              'https://www.instagram.com/ayo.suruh?igsh=MWF6Y2M3NTFyYzJreQ==',
             ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          ),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
@@ -150,36 +283,36 @@ class HelpPage extends StatelessWidget {
   Widget _buildHeaderWithSearch() {
     return Stack(
       clipBehavior: Clip.none,
-      children: [
+      children: <Widget>[
         Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 48),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFFA726), Color(0xFFFB8C00)],
+              colors: <Color>[Color(0xFFFFB64F), Color(0xFFF39C12)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Column(
+          child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               Text(
                 'Ada yang bisa kami\nbantu?',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.brown.shade900,
+                  color: Color(0xFF633D1F),
                   height: 1.25,
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
-                'Temukan solusi cepat untuk setiap\nkendala layanan Anda.',
+                'Cari panduan untuk Customer, Mitra,\npembayaran, akun, dan keamanan.',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.brown.shade800,
+                  fontSize: 12.5,
+                  color: Color(0xFF754A27),
                   height: 1.3,
                 ),
               ),
@@ -190,25 +323,34 @@ class HelpPage extends StatelessWidget {
           left: 16,
           right: 16,
           bottom: -22,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            elevation: 3,
+            shadowColor: Colors.black12,
             child: TextField(
+              controller: _searchController,
+              onChanged: (String value) => setState(() => _query = value),
               decoration: InputDecoration(
                 hintText: 'Cari bantuan atau topik...',
                 hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[500], size: 22),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: Colors.grey[500],
+                  size: 22,
+                ),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
           ),
@@ -217,47 +359,47 @@ class HelpPage extends StatelessWidget {
     );
   }
 
-Widget _buildFaqTile(String question, String answer) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    child: Material(
-      color: const Color(0xFFF2EFEF),
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: Theme(
-        data: ThemeData(
-          dividerColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
+  Widget _buildFaqTile(_FaqItem faq) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          iconColor: Colors.black54,
+          iconColor: _orangeColor,
           collapsedIconColor: Colors.black54,
           title: Text(
-            question,
+            faq.question,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
           ),
-          children: [
-            Text(
-              answer,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[700],
-                height: 1.45,
+          subtitle: Text(
+            faq.category,
+            style: const TextStyle(fontSize: 10.5, color: _brownColor),
+          ),
+          children: <Widget>[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                faq.answer,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFF6E625C),
+                  height: 1.5,
+                ),
               ),
             ),
           ],
         ),
       ),
-    ));
+    );
   }
-}
 
   Widget _buildContactCard({
     required IconData icon,
@@ -278,10 +420,10 @@ Widget _buildFaqTile(String question, String answer) {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor, width: 1),
+            border: Border.all(color: borderColor),
           ),
           child: Row(
-            children: [
+            children: <Widget>[
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -294,34 +436,42 @@ Widget _buildFaqTile(String question, String answer) {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: <Widget>[
                     Text(
                       title,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: Color(0xFF746A64),
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.grey[400],
-                size: 22,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF9A8E87)),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+class _FaqItem {
+  const _FaqItem({
+    required this.category,
+    required this.question,
+    required this.answer,
+  });
+
+  final String category;
+  final String question;
+  final String answer;
+}

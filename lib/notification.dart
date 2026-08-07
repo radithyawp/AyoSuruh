@@ -7,6 +7,7 @@ import 'jobs/mitra_job_detail_page.dart';
 import 'notifications/notification_helpers.dart';
 import 'notifications/notification_service.dart';
 import 'mitra/mitra_application_page.dart';
+import 'widgets/home_shortcut_button.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -178,6 +179,7 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
         ),
         actions: <Widget>[
+          const HomeShortcutButton(),
           PopupMenuButton<String>(
             enabled: !_isActionLoading,
             color: Colors.white,

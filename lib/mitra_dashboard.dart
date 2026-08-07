@@ -6,6 +6,7 @@ import 'jobs/job_widgets.dart';
 import 'jobs/mitra_job_detail_page.dart';
 import 'jobs/mitra_jobs_page.dart';
 import 'notification.dart';
+import 'services/mitra_services_page.dart';
 
 class MitraDashboardPage extends StatefulWidget {
   const MitraDashboardPage({super.key});
@@ -93,6 +94,14 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
     await _loadDashboard();
   }
 
+  Future<void> _openMyServices() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const MitraServicesPage()),
+    );
+    if (mounted) await _loadDashboard();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -155,6 +164,8 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
               _buildIncomeCard(),
               const SizedBox(height: 10),
               _buildStats(),
+              const SizedBox(height: 14),
+              _buildServiceMarketplaceShortcut(),
               const SizedBox(height: 22),
               _buildActiveJob(),
               const SizedBox(height: 22),
@@ -202,6 +213,58 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
         ),
         const NotificationBell(color: jobBrownColor, size: 28),
       ],
+    );
+  }
+
+  Widget _buildServiceMarketplaceShortcut() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: _openMyServices,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: jobBorderColor),
+          ),
+          child: const Row(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Color(0xFFFFE6BD),
+                child: Icon(Icons.storefront_rounded, color: jobBrownColor),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Jasa Saya',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: jobBrownColor,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Publikasikan keahlian agar customer bisa menemukan jasamu.',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        height: 1.35,
+                        color: Color(0xFF746760),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: jobBrownColor),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
