@@ -39,12 +39,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      await AuthService.sendPasswordResetEmail(_emailController.text.trim());
+      const String resetRedirect = 'io.supabase.ayosuruh://reset-password/';
+
+      debugPrint('RESET PASSWORD REDIRECT SENT => $resetRedirect');
+
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        _emailController.text.trim(),
+        redirectTo: resetRedirect,
+      );
       if (!mounted) return;
       setState(() => _emailSent = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tautan reset password sudah dikirim. Periksa email Anda.'),
+          content: Text(
+            'Tautan reset password sudah dikirim. Periksa email Anda.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -118,10 +127,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               _emailSent
                   ? 'Email sudah dikirim. Buka tautan dari Supabase/Ayo Suruh, lalu Anda akan kembali ke aplikasi untuk membuat password baru.'
                   : 'Masukkan email akun Ayo Suruh. Kami akan mengirim tautan aman untuk membuat password baru tanpa perlu menghubungi admin.',
-              style: const TextStyle(
-                color: Color(0xFF746760),
-                height: 1.45,
-              ),
+              style: const TextStyle(color: Color(0xFF746760), height: 1.45),
             ),
             const SizedBox(height: 26),
             Form(

@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../admin/admin_navigation.dart';
+import '../admin/admin_service.dart';
+import '../navbar.dart';
+
 class HomeShortcutButton extends StatelessWidget {
   const HomeShortcutButton({super.key, this.color});
 
   final Color? color;
+
+  Future<void> _goHome(BuildContext context) async {
+    if (Supabase.instance.client.auth.currentUser == null) return;
+    bool isAdmin = false;
+    try {
+      isAdmin = await AdminService().isCurrentUserAdmin();
+    } catch (_) {
+      isAdmin = false;
+    }
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => isAdmin ? const AdminNavigation() : const MainNavigation(),
+      ),
+      (Route<dynamic> route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +35,7 @@ class HomeShortcutButton extends StatelessWidget {
 
     return IconButton(
       tooltip: 'Ke Home',
-      onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-        '/home',
-        (Route<dynamic> route) => false,
-      ),
+      onPressed: () => _goHome(context),
       icon: Icon(
         Icons.home_rounded,
         color: color ?? const Color(0xFF8B5A2B),

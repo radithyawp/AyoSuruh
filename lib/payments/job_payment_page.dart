@@ -628,8 +628,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           ),
           const SizedBox(height: 18),
           _priceRow('Harga jasa mitra', formatRupiah(baseAmount)),
-          const SizedBox(height: 10),
-          _priceRow('Biaya layanan', formatRupiah(serviceFee)),
+          if (serviceFee > 0) ...<Widget>[
+            const SizedBox(height: 10),
+            _priceRow('Biaya layanan pembayaran', formatRupiah(serviceFee)),
+          ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(height: 1),

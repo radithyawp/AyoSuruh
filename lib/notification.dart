@@ -10,7 +10,12 @@ import 'mitra/mitra_application_page.dart';
 import 'widgets/home_shortcut_button.dart';
 
 class NotificationPage extends StatefulWidget {
-  const NotificationPage({super.key});
+  const NotificationPage({
+    super.key,
+    this.activeMode = 'customer',
+  });
+
+  final String activeMode;
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -20,23 +25,17 @@ class _NotificationPageState extends State<NotificationPage> {
   final NotificationService _notificationService = NotificationService();
   late final Stream<List<Map<String, dynamic>>> _notificationStream;
 
-  String _role = 'user';
   bool _isActionLoading = false;
 
   @override
   void initState() {
     super.initState();
     _notificationStream = _notificationService.notificationsStream();
-    _loadRole();
   }
 
-  Future<void> _loadRole() async {
-    try {
-      final String role = await _notificationService.fetchCurrentRole();
-      if (mounted) setState(() => _role = role);
-    } catch (_) {
-      // Fallback role user sudah cukup untuk membuka detail milik customer.
-    }
+  String get _activeMode {
+    final String value = widget.activeMode.trim().toLowerCase();
+    return value == 'mitra' ? 'mitra' : 'customer';
   }
 
   Future<void> _markAllRead() async {
@@ -126,15 +125,11 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     if (jobId != null) {
-      String currentRole = _role;
-      try {
-        currentRole = await _notificationService.fetchCurrentRole();
-      } catch (_) {
-        // Gunakan role yang sudah dimuat sebelumnya bila query ulang gagal.
-      }
-      if (!mounted) return;
-
-      final Widget page = currentRole == 'mitra'
+      // Akun dual-mode tetap memiliki satu record user. Jangan memakai role
+      // database untuk menentukan detail job karena role tersebut dapat tetap
+      // `mitra` saat UI sedang berada di mode customer. Navigasi harus mengikuti
+      // mode aktif ketika lonceng notifikasi dibuka.
+      final Widget page = _activeMode == 'mitra'
           ? MitraJobDetailPage(jobId: jobId)
           : CustomerJobDetailPage(jobId: jobId);
       await Navigator.push<void>(
@@ -526,10 +521,12 @@ class NotificationBell extends StatefulWidget {
     super.key,
     this.color = jobDarkBrownColor,
     this.size = 26,
+    this.activeMode = 'customer',
   });
 
   final Color color;
   final double size;
+  final String activeMode;
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
@@ -557,7 +554,9 @@ class _NotificationBellState extends State<NotificationBell> {
             Navigator.push<void>(
               context,
               MaterialPageRoute<void>(
-                builder: (_) => const NotificationPage(),
+                builder: (_) => NotificationPage(
+                  activeMode: widget.activeMode,
+                ),
               ),
             );
           },

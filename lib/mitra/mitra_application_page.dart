@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../navbar.dart';
+import '../location/location_picker_page.dart';
+import '../location/osm_geocoding_service.dart';
 import '../syarat_ketentuan.dart';
 import 'mitra_application_service.dart';
 import '../widgets/home_shortcut_button.dart';
@@ -28,6 +31,7 @@ class MitraApplicationPage extends StatefulWidget {
 class _MitraApplicationPageState extends State<MitraApplicationPage> {
   final MitraApplicationService _service = MitraApplicationService();
   final ImagePicker _picker = ImagePicker();
+  final OsmGeocodingService _geocodingService = OsmGeocodingService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _fullnameController = TextEditingController();
@@ -43,6 +47,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   bool _termsAccepted = false;
   bool _isLoading = true;
   bool _isSubmitting = false;
+  bool _isResolvingAddress = false;
+  LatLng? _selectedPoint;
+  String _resolvedAddressText = '';
 
   static const List<String> _banks = <String>[
     'BCA',
@@ -71,21 +78,45 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     _phoneController.dispose();
     _addressController.dispose();
     _accountController.dispose();
+    _geocodingService.dispose();
     super.dispose();
   }
 
   Future<void> _loadInitialData() async {
     try {
-      final Map<String, dynamic> profile = await _service.fetchMyProfile();
+      final List<dynamic> initial = await Future.wait<dynamic>(<Future<dynamic>>[
+        _service.fetchMyProfile(),
+        widget.existingApplication != null
+            ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
+            : _service.fetchMyApplication(),
+        _service.fetchMitraBaseLocation(),
+      ]);
+      final Map<String, dynamic> profile =
+          initial[0] as Map<String, dynamic>;
       final Map<String, dynamic>? application =
-          widget.existingApplication ?? await _service.fetchMyApplication();
+          initial[1] as Map<String, dynamic>?;
+      final Map<String, dynamic>? baseLocation =
+          initial[2] as Map<String, dynamic>?;
 
       _fullnameController.text = (profile['fullname'] ?? '').toString();
       _phoneController.text = _normalizePhone(
         (profile['phone'] ?? '').toString(),
       );
-      _addressController.text =
-          (application?['address'] ?? profile['alamat'] ?? '').toString();
+      _addressController.text = (baseLocation?['address'] ??
+              application?['address'] ??
+              profile['alamat'] ??
+              '')
+          .toString();
+      final double? latitude = double.tryParse(
+        baseLocation?['latitude']?.toString() ?? '',
+      );
+      final double? longitude = double.tryParse(
+        baseLocation?['longitude']?.toString() ?? '',
+      );
+      if (latitude != null && longitude != null) {
+        _selectedPoint = LatLng(latitude, longitude);
+        _resolvedAddressText = _addressController.text.trim();
+      }
       _accountController.text = (application?['account_number'] ?? '')
           .toString();
 
@@ -112,6 +143,157 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     if (phone.startsWith('62')) phone = phone.substring(2);
     if (phone.startsWith('0')) phone = phone.substring(1);
     return phone;
+  }
+
+  List<String> _geocodingQueryCandidates(String rawAddress) {
+    final String normalized = rawAddress
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\s*,\s*'), ', ')
+        .trim();
+    final List<String> queries = <String>[normalized];
+
+    String broader = normalized
+        .replaceAll(
+          RegExp(
+            r'\b(?:blok|block)\s*[a-z0-9/-]+(?:\s*(?:no\.?|nomor)\s*[a-z0-9./-]+)?',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'\b(?:kecamatan|kec\.?)\s+', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'\b(?:kota|kabupaten|kab\.?)\s+', caseSensitive: false),
+          '',
+        )
+        .replaceAll(RegExp(r'\s+,'), ',')
+        .replaceAll(RegExp(r',\s*,+'), ', ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (broader.endsWith(',')) {
+      broader = broader.substring(0, broader.length - 1).trim();
+    }
+    if (broader.isNotEmpty && !broader.toLowerCase().contains('indonesia')) {
+      broader = '$broader, Jawa Barat, Indonesia';
+    }
+    if (broader.isNotEmpty && !queries.contains(broader)) {
+      queries.add(broader);
+    }
+
+    final List<String> parts = broader
+        .split(',')
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList();
+    if (parts.length >= 4) {
+      final String areaFallback = parts.sublist(parts.length - 4).join(', ');
+      if (!queries.contains(areaFallback)) queries.add(areaFallback);
+    }
+    return queries;
+  }
+
+  Future<bool> _resolveMitraAddress({bool showMessage = true}) async {
+    final String query = _addressController.text.trim();
+    if (query.length < 8) {
+      if (showMessage && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alamat terlalu singkat untuk dicari.')),
+        );
+      }
+      return false;
+    }
+
+    if (mounted) setState(() => _isResolvingAddress = true);
+    try {
+      final List<String> candidates = _geocodingQueryCandidates(query);
+      OsmGeocodingResult? best;
+      bool approximate = false;
+      for (int index = 0; index < candidates.length; index++) {
+        final List<OsmGeocodingResult> results =
+            await _geocodingService.search(candidates[index]);
+        if (results.isNotEmpty) {
+          best = results.first;
+          approximate = index > 0;
+          break;
+        }
+      }
+
+      if (best == null) {
+        if (showMessage && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Alamat belum ditemukan di OpenStreetMap. Tambahkan kecamatan/kota atau pilih titik manual.',
+              ),
+              backgroundColor: _mitraBrown,
+            ),
+          );
+        }
+        return false;
+      }
+
+      if (!mounted) return false;
+      setState(() {
+        _selectedPoint = best!.point;
+        if (!approximate) {
+          _addressController.text = best.displayName;
+        }
+        _resolvedAddressText = _addressController.text.trim();
+      });
+      if (showMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              approximate
+                  ? 'Titik perkiraan ditemukan. Periksa pin di peta sebelum mengirim pengajuan.'
+                  : 'Titik lokasi Mitra berhasil ditemukan.',
+            ),
+            backgroundColor: _mitraGreen,
+          ),
+        );
+      }
+      return true;
+    } catch (error) {
+      if (showMessage && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pencarian lokasi gagal: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _isResolvingAddress = false);
+    }
+  }
+
+  Future<void> _pickMitraLocationOnMap() async {
+    FocusScope.of(context).unfocus();
+    final PickedLocation? picked = await Navigator.push<PickedLocation>(
+      context,
+      MaterialPageRoute<PickedLocation>(
+        builder: (_) => LocationPickerPage(
+          initialPoint: _selectedPoint,
+          addressLabel: _addressController.text.trim(),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selectedPoint = picked.point;
+      if (picked.addressLabel.trim().isNotEmpty) {
+        _addressController.text = picked.addressLabel.trim();
+      }
+      _resolvedAddressText = _addressController.text.trim();
+    });
   }
 
   Future<void> _pickDocument({required bool isKtm}) async {
@@ -206,6 +388,23 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     final bool valid = _formKey.currentState?.validate() ?? false;
     if (!valid) return;
 
+    if (_selectedPoint == null ||
+        _resolvedAddressText != _addressController.text.trim()) {
+      final bool resolved = await _resolveMitraAddress(showMessage: false);
+      if (!resolved || _selectedPoint == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Lokasi Utama Mitra wajib memiliki titik. Cari otomatis atau pilih titik di peta.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     if (_ktmBytes == null || _selfieBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -244,6 +443,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         fullname: _fullnameController.text,
         phone: '+62${_phoneController.text}',
         address: _addressController.text,
+        latitude: _selectedPoint!.latitude,
+        longitude: _selectedPoint!.longitude,
         bankName: _selectedBank!,
         accountNumber: _accountController.text,
         ktmPath: ktmPath,
@@ -415,17 +616,99 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             ],
                           ),
                           const SizedBox(height: 17),
-                          _fieldLabel('Alamat Lengkap'),
+                          _fieldLabel('Lokasi Utama Mitra'),
                           _textField(
                             controller: _addressController,
                             hint: 'Jl. Raya No. 123, Kelurahan, Kecamatan...',
                             maxLines: 4,
+                            onChanged: (String value) {
+                              if (_resolvedAddressText.isNotEmpty &&
+                                  value.trim() != _resolvedAddressText) {
+                                setState(() => _selectedPoint = null);
+                              }
+                            },
                             validator: (String? value) {
                               if ((value ?? '').trim().length < 10) {
                                 return 'Alamat lengkap wajib diisi.';
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _isResolvingAddress
+                                      ? null
+                                      : _resolveMitraAddress,
+                                  icon: _isResolvingAddress
+                                      ? const SizedBox(
+                                          width: 17,
+                                          height: 17,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: _mitraBrown,
+                                          ),
+                                        )
+                                      : const Icon(Icons.auto_fix_high_rounded),
+                                  label: const Text('Tentukan Otomatis'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _mitraBrown,
+                                    side: const BorderSide(color: _mitraOrange),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: _pickMitraLocationOnMap,
+                                  icon: const Icon(Icons.map_outlined),
+                                  label: const Text('Pilih di Peta'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFFEBD0),
+                                    foregroundColor: _mitraBrown,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _selectedPoint == null
+                                  ? const Color(0xFFFFF4E5)
+                                  : const Color(0xFFF0F6EC),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Icon(
+                                  _selectedPoint == null
+                                      ? Icons.location_off_outlined
+                                      : Icons.location_on_rounded,
+                                  color: _selectedPoint == null
+                                      ? _mitraBrown
+                                      : _mitraGreen,
+                                ),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    _selectedPoint == null
+                                        ? 'Titik lokasi wajib ditentukan agar Customer dapat melihat jarak Mitra dari lokasi pekerjaan.'
+                                        : 'Titik Lokasi Utama Mitra sudah siap. Lokasi ini dapat diubah kembali dari Profil Mitra.',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      height: 1.4,
+                                      color: Color(0xFF66534B),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -737,6 +1020,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
       controller: controller,
@@ -744,6 +1028,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
+      onChanged: onChanged,
       decoration: _inputDecoration(hint),
     );
   }

@@ -91,6 +91,21 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
 
   Future<void> _submitBid() async {
     if (_job == null) return;
+    final String customerId = (_job!['customer_id'] ?? '').toString().trim();
+    final String currentUserId = _jobService.currentUserId.trim();
+    if (customerId.isNotEmpty &&
+        customerId.toLowerCase() == currentUserId.toLowerCase()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pekerjaan ini dibuat oleh akunmu sendiri. Buka dari mode Customer untuk melihat penawaran.',
+          ),
+          backgroundColor: jobBrownColor,
+        ),
+      );
+      return;
+    }
     final bool? submitted = await Navigator.push<bool>(
       context,
       MaterialPageRoute<bool>(
@@ -220,6 +235,9 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
         (_jobAccess?['my_bid_status'] ?? _myBid?['status'])?.toString() == 'accepted';
     final bool assignedToMe =
         assignedFromJob || assignedFromAccess || assignedFromAcceptedBid;
+    final String customerId = (job['customer_id'] ?? '').toString().trim();
+    final bool isOwnCustomerJob = customerId.isNotEmpty &&
+        customerId.toLowerCase() == currentMitraId.toLowerCase();
     final bool paymentAllowsStart = canMitraStartJob(_payment);
 
     return RefreshIndicator(
@@ -390,7 +408,17 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             ),
             const SizedBox(height: 10),
           ],
-          if (available && _myBid == null)
+          if (isOwnCustomerJob) ...<Widget>[
+            _card(
+              title: 'Pekerjaan Milik Akunmu',
+              child: const Text(
+                'Pekerjaan ini kamu buat sebagai Customer. Kembali ke mode Customer untuk melihat dan memilih penawaran Mitra.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (available && _myBid == null && !isOwnCustomerJob)
             SizedBox(
               height: 52,
               child: FilledButton.icon(

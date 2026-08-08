@@ -103,7 +103,9 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _userName = (profile?['fullname'] ?? 'Pengguna').toString();
         _avatarUrl = profile?['avatar_url']?.toString();
-        final String profileAddress = (profile?['alamat'] ?? '').toString().trim();
+        final String profileAddress = (profile?['alamat'] ?? '')
+            .toString()
+            .trim();
         if (profileAddress.isNotEmpty) {
           // Home mengikuti alamat utama pada Edit Profil. Alamat job tetap terpisah.
           _userAddress = profileAddress;
@@ -160,7 +162,9 @@ class _DashboardPageState extends State<DashboardPage> {
       backgroundColor: jobBackgroundColor,
       appBar: _buildAppBar(),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
+          ? const Center(
+              child: CircularProgressIndicator(color: jobOrangeColor),
+            )
           : RefreshIndicator(
               color: jobOrangeColor,
               onRefresh: _fetchDashboardData,
@@ -193,7 +197,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 78),
+        padding: const EdgeInsets.only(bottom: 6),
         child: FloatingActionButton.extended(
           onPressed: () => _openCreateJob(),
           backgroundColor: jobOrangeColor,
@@ -223,7 +227,10 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
       actions: <Widget>[
-        const NotificationBell(color: jobDarkBrownColor),
+        const NotificationBell(
+          color: jobDarkBrownColor,
+          activeMode: 'customer',
+        ),
       ],
     );
   }
@@ -255,7 +262,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       _userAddress,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF6F645D)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6F645D),
+                      ),
                     ),
                   ),
                 ],
@@ -494,7 +504,8 @@ class _DashboardPageState extends State<DashboardPage> {
         if (_recentJobs.isEmpty)
           const EmptyJobState(
             title: 'Belum ada pekerjaan',
-            description: 'Buat pekerjaan pertama dan mulai menerima penawaran dari mitra.',
+            description:
+                'Buat pekerjaan pertama dan mulai menerima penawaran dari mitra.',
           )
         else
           ..._recentJobs.map((Map<String, dynamic> job) {

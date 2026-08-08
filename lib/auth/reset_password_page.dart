@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'auth_preferences.dart';
 import '../login.dart';
 
 class ResetPasswordPage extends StatefulWidget {
@@ -45,6 +46,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         UserAttributes(password: _passwordController.text),
       );
       final String email = supabase.auth.currentUser?.email ?? '';
+      final bool rememberMe = await AuthPreferences.shouldRememberSession();
+      await AuthPreferences.saveLoginPreference(
+        rememberMe: rememberMe,
+        email: email,
+        password: _passwordController.text,
+      );
       await supabase.auth.signOut();
       if (!mounted) return;
 

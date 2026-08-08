@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 // Import Halaman Terkait
 import 'edit_profile.dart';
@@ -12,6 +13,7 @@ import 'jobs/mitra_job_history_page.dart';
 import 'notification.dart';
 import 'mitra/mitra_application_page.dart';
 import 'mitra/mitra_application_service.dart';
+import 'location/location_picker_page.dart';
 import 'payments/payment_history_page.dart';
 import 'wallet/mitra_wallet_page.dart';
 import 'wallet/wallet_service.dart';
@@ -40,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Map<String, dynamic>? _userRow;
   Map<String, dynamic>? _mitraApplication;
+  Map<String, dynamic>? _mitraBaseLocation;
   bool _isLoading = true;
   bool _isSwitchingMode = false;
 
@@ -69,19 +72,23 @@ class _ProfilePageState extends State<ProfilePage> {
           .eq('id', user.id)
           .maybeSingle();
 
-      final Map<String, dynamic> profile =
-          Map<String, dynamic>.from(response ?? <String, dynamic>{});
+      final Map<String, dynamic> profile = Map<String, dynamic>.from(
+        response ?? <String, dynamic>{},
+      );
 
       Map<String, dynamic>? application;
+      Map<String, dynamic>? mitraBaseLocation;
       if (widget.activeMode == 'mitra' && widget.canUseMitraMode) {
         try {
           final List<dynamic> mitraResult =
               await Future.wait<dynamic>(<Future<dynamic>>[
-            _jobService.fetchMitraDashboardProfile(),
-            _walletService.fetchSummary(),
-          ]);
+                _jobService.fetchMitraDashboardProfile(),
+                _walletService.fetchSummary(),
+                _applicationService.fetchMitraBaseLocation(),
+              ]);
           profile.addAll(mitraResult[0] as Map<String, dynamic>);
           profile.addAll(mitraResult[1] as Map<String, dynamic>);
+          mitraBaseLocation = mitraResult[2] as Map<String, dynamic>?;
         } catch (error) {
           debugPrint('Statistik mitra belum dapat dimuat: $error');
         }
@@ -99,6 +106,7 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _userRow = profile;
           _mitraApplication = application;
+          _mitraBaseLocation = mitraBaseLocation;
           _isLoading = false;
         });
       }
@@ -111,7 +119,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /* ---------- NAVIGASI ---------- */
-  
+
   // Navigasi ke Edit Data Profil (Nama, Telepon, dsb)
   Future<void> _navigateToEditProfile() async {
     final result = await Navigator.push(
@@ -154,41 +162,88 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _navigateToMitraLocation() async {
+    try {
+      final Map<String, dynamic>? current =
+          _mitraBaseLocation ??
+          await _applicationService.fetchMitraBaseLocation();
+      final double? latitude = double.tryParse(
+        current?['latitude']?.toString() ?? '',
+      );
+      final double? longitude = double.tryParse(
+        current?['longitude']?.toString() ?? '',
+      );
+      final LatLng? initialPoint = latitude != null && longitude != null
+          ? LatLng(latitude, longitude)
+          : null;
+      final String initialAddress =
+          (current?['address'] ?? _userRow?['alamat'] ?? '').toString();
+
+      if (!mounted) return;
+      final PickedLocation? picked = await Navigator.push<PickedLocation>(
+        context,
+        MaterialPageRoute<PickedLocation>(
+          builder: (_) => LocationPickerPage(
+            initialPoint: initialPoint,
+            addressLabel: initialAddress,
+          ),
+        ),
+      );
+      if (picked == null || !mounted) return;
+
+      final Map<String, dynamic> saved = await _applicationService
+          .saveMitraBaseLocation(
+            address: picked.addressLabel.trim().isEmpty
+                ? initialAddress
+                : picked.addressLabel,
+            latitude: picked.point.latitude,
+            longitude: picked.point.longitude,
+          );
+      if (!mounted) return;
+      setState(() => _mitraBaseLocation = saved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lokasi Utama Mitra berhasil diperbarui.'),
+          backgroundColor: Color(0xFF5C744D),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lokasi Mitra belum dapat diperbarui: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   Future<void> _navigateToMitraHistory() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => const MitraJobHistoryPage(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MitraJobHistoryPage()),
     );
     if (mounted) await _loadProfileData();
   }
 
-
   Future<void> _navigateToWallet() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => const MitraWalletPage(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MitraWalletPage()),
     );
     if (mounted) await _loadProfileData();
   }
 
   Future<void> _navigateToMitraApplication() async {
-    final String status =
-        (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+    final String status = (_mitraApplication?['status'] ?? '')
+        .toString()
+        .toLowerCase();
 
     final Widget page;
     if (_mitraApplication == null || status == 'rejected') {
-      page = MitraApplicationPage(
-        existingApplication: _mitraApplication,
-      );
+      page = MitraApplicationPage(existingApplication: _mitraApplication);
     } else {
-      page = MitraApplicationStatusPage(
-        initialApplication: _mitraApplication,
-      );
+      page = MitraApplicationStatusPage(initialApplication: _mitraApplication);
     }
 
     await Navigator.push<void>(
@@ -237,9 +292,9 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       await _supabase.auth.signOut();
       if (context.mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
       }
     } catch (e) {
       debugPrint('Error logout: $e');
@@ -260,8 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final String email = _userRow?['email'] ?? '-';
     final String phone = _userRow?['phone'] ?? '-';
     final String? avatarUrl = _userRow?['avatar_url'];
-    final bool isMitra =
-        widget.activeMode == 'mitra' && widget.canUseMitraMode;
+    final bool isMitra = widget.activeMode == 'mitra' && widget.canUseMitraMode;
 
     return Scaffold(
       backgroundColor: _bgGrey,
@@ -294,7 +348,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 'Riwayat Pekerjaan Mitra',
                 _navigateToMitraHistory,
               ),
-              _buildMenuCard(Icons.edit_outlined, 'Edit Profil', _navigateToEditProfile),
+              _buildMenuCard(
+                Icons.edit_outlined,
+                'Edit Profil',
+                _navigateToEditProfile,
+              ),
+              _buildMitraLocationCard(),
               _buildMenuCard(
                 Icons.account_balance_wallet_outlined,
                 'Dompet & Rekening',
@@ -313,13 +372,25 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              _buildMenuCard(Icons.person_outline, 'Edit Profil', _navigateToEditProfile),
+              _buildMenuCard(
+                Icons.person_outline,
+                'Edit Profil',
+                _navigateToEditProfile,
+              ),
               if (!widget.canUseMitraMode) _buildPartnerBanner(),
             ],
 
             // --- MENU UMUM ---
-            _buildMenuCard(Icons.help_outline, 'Bantuan & Pusat Dukungan', _navigateToHelpCenter),
-            _buildMenuCard(Icons.settings_outlined, 'Pengaturan', _navigateToPengaturanPage),
+            _buildMenuCard(
+              Icons.help_outline,
+              'Bantuan & Pusat Dukungan',
+              _navigateToHelpCenter,
+            ),
+            _buildMenuCard(
+              Icons.settings_outlined,
+              'Pengaturan',
+              _navigateToPengaturanPage,
+            ),
             const SizedBox(height: 24),
 
             // --- TOMBOL KELUAR SESI ---
@@ -329,7 +400,11 @@ class _ProfilePageState extends State<ProfilePage> {
             // --- FOOTER VERSI ---
             Text(
               'Ayo Suruh v2.4.0',
-              style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -349,18 +424,31 @@ class _ProfilePageState extends State<ProfilePage> {
           SizedBox(width: 8),
           Text(
             'Profil',
-            style: TextStyle(color: _brownColor, fontWeight: FontWeight.bold, fontSize: 22),
+            style: TextStyle(
+              color: _brownColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
           ),
         ],
       ),
       actions: [
-        const NotificationBell(color: Colors.black87, size: 26),
+        NotificationBell(
+          color: Colors.black87,
+          size: 26,
+          activeMode: widget.activeMode,
+        ),
       ],
     );
   }
 
   Widget _buildProfileHeader(
-      String name, String email, String phone, String? avatarUrl, bool isMitra) {
+    String name,
+    String email,
+    String phone,
+    String? avatarUrl,
+    bool isMitra,
+  ) {
     return Column(
       children: [
         // Avatar dengan Badge Kamera (Klik untuk ubah foto)
@@ -393,41 +481,67 @@ class _ProfilePageState extends State<ProfilePage> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                child: const Icon(
+                  Icons.camera_alt,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isMitra ? Colors.green.shade100 : const Color(0xFFFFE8C2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                isMitra ? 'Mode Mitra' : 'Mode Customer',
-                style: TextStyle(
-                  color: isMitra ? Colors.green.shade800 : _brownColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isMitra
+                      ? Colors.green.shade100
+                      : const Color(0xFFFFE8C2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  isMitra ? 'Mode Mitra' : 'Mode Customer',
+                  style: TextStyle(
+                    color: isMitra ? Colors.green.shade800 : _brownColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 2),
         Text(email, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         const SizedBox(height: 4),
-        Text(phone, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _brownColor)),
+        Text(
+          phone,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: _brownColor,
+          ),
+        ),
       ],
     );
   }
@@ -446,15 +560,19 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildModeSwitcher(bool isMitra) {
-    final String activeLabel = isMitra ? 'Mode Mitra Aktif' : 'Mode Customer Aktif';
+    final String activeLabel = isMitra
+        ? 'Mode Mitra Aktif'
+        : 'Mode Customer Aktif';
     final String description = isMitra
         ? 'Terima pekerjaan, kirim penawaran, dan perbarui progres.'
         : 'Pasang pekerjaan, pilih mitra, dan kelola pesananmu.';
     final String buttonLabel = isMitra ? 'Ke Customer' : 'Ke Mitra';
-    final IconData activeIcon =
-        isMitra ? Icons.engineering_rounded : Icons.person_rounded;
-    final IconData buttonIcon =
-        isMitra ? Icons.person_outline_rounded : Icons.engineering_outlined;
+    final IconData activeIcon = isMitra
+        ? Icons.engineering_rounded
+        : Icons.person_rounded;
+    final IconData buttonIcon = isMitra
+        ? Icons.person_outline_rounded
+        : Icons.engineering_outlined;
 
     return Container(
       width: double.infinity,
@@ -524,8 +642,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 : Icon(buttonIcon, size: 17),
             label: Text(buttonLabel),
             style: FilledButton.styleFrom(
-              backgroundColor:
-                  isMitra ? const Color(0xFF4B613E) : _brownColor,
+              backgroundColor: isMitra ? const Color(0xFF4B613E) : _brownColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               textStyle: const TextStyle(
@@ -553,8 +670,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (userRow == null) {
       rawAmount = null;
     } else if (isMitraIncome) {
-      rawAmount =
-          userRow['available_balance'] ?? userRow['total_pendapatan'];
+      rawAmount = userRow['available_balance'] ?? userRow['total_pendapatan'];
     } else {
       rawAmount = userRow['saldo'];
     }
@@ -585,7 +701,11 @@ class _ProfilePageState extends State<ProfilePage> {
               color: const Color(0xFFFDF0E6),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.account_balance_wallet_outlined, color: _brownColor, size: 26),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: _brownColor,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -594,25 +714,46 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600],
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Rp $saldo',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),
           ),
           ElevatedButton.icon(
             onPressed: onPressed,
-            icon: const Icon(Icons.add_circle_outline, size: 16, color: Colors.white),
-            label: Text(buttonText, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              size: 16,
+              color: Colors.white,
+            ),
+            label: Text(
+              buttonText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _brownColor,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           ),
         ],
@@ -635,9 +776,19 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                Text('$pekerjaanSelesai', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _brownColor)),
+                Text(
+                  '$pekerjaanSelesai',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _brownColor,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                const Text('Pekerjaan Selesai', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                const Text(
+                  'Pekerjaan Selesai',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
               ],
             ),
           ),
@@ -655,7 +806,13 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 const Icon(Icons.star, color: Colors.amber, size: 22),
                 const SizedBox(width: 6),
-                Text('$rating', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  '$rating',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -665,8 +822,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildPartnerBanner() {
-    final String status =
-        (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+    final String status = (_mitraApplication?['status'] ?? '')
+        .toString()
+        .toLowerCase();
 
     String title = 'Daftar Menjadi Mitra';
     String subtitle = 'Dapatkan penghasilan tambahan';
@@ -701,7 +859,10 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 6,
+          ),
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -722,9 +883,59 @@ class _ProfilePageState extends State<ProfilePage> {
             subtitle,
             style: const TextStyle(fontSize: 12, color: Colors.black87),
           ),
-          trailing: const Icon(Icons.arrow_forward_rounded, color: Colors.black87),
+          trailing: const Icon(
+            Icons.arrow_forward_rounded,
+            color: Colors.black87,
+          ),
           onTap: _navigateToMitraApplication,
         ),
+      ),
+    );
+  }
+
+  Widget _buildMitraLocationCard() {
+    final String address = (_mitraBaseLocation?['address'] ?? '')
+        .toString()
+        .trim();
+    final bool ready =
+        address.isNotEmpty &&
+        _mitraBaseLocation?['latitude'] != null &&
+        _mitraBaseLocation?['longitude'] != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: ready
+              ? const Color(0xFFF0F6EC)
+              : const Color(0xFFFFF0DD),
+          child: Icon(
+            ready ? Icons.location_on_rounded : Icons.location_off_outlined,
+            color: ready ? const Color(0xFF5C744D) : _brownColor,
+          ),
+        ),
+        title: const Text(
+          'Lokasi Utama Mitra',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          ready
+              ? address
+              : 'Lengkapi titik lokasi agar jarak muncul pada penawaran Customer.',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: ready ? Colors.black54 : _brownColor,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: _navigateToMitraLocation,
       ),
     );
   }
@@ -748,14 +959,21 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
           leading: CircleAvatar(
             backgroundColor: const Color(0xFFF7F3F0),
             child: Icon(icon, color: Colors.black87, size: 20),
           ),
           title: Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
           ),
           trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
           onTap: onTap,
@@ -785,12 +1003,18 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
         label: const Text(
           'Log out',
-          style: TextStyle(color: Colors.red, fontSize: 15, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         style: OutlinedButton.styleFrom(
           backgroundColor: const Color(0xFFFFF5F5),
           side: BorderSide(color: Colors.red.shade200),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );
