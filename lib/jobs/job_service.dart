@@ -101,6 +101,12 @@ class JobService {
     double? longitude,
     String? preferredMitraId,
   }) async {
+    if (preferredMitraId != null &&
+        preferredMitraId.trim().isNotEmpty &&
+        preferredMitraId.trim() == currentUserId) {
+      throw StateError('Kamu tidak dapat memesan jasa milik akunmu sendiri.');
+    }
+
     String? finalAddressId = addressId;
 
     if ((finalAddressId == null || finalAddressId.isEmpty) &&
@@ -363,6 +369,8 @@ class JobService {
             'message': item['message'],
             'status': item['status'],
             'created_at': item['created_at'],
+            'mitra_area': item['mitra_area'],
+            'distance_km': item['distance_km'],
             'mitra': <String, dynamic>{
               'id': item['mitra_id'],
               'rating': item['mitra_rating'],
@@ -772,10 +780,6 @@ class JobService {
           .eq('id', currentUserId)
           .maybeSingle(),
       _client
-          .from('earnings')
-          .select('amount')
-          .eq('mitra_id', currentUserId),
-      _client
           .from('jobs')
           .select('id')
           .eq('mitra_id', currentUserId)
@@ -787,23 +791,49 @@ class JobService {
     final Map<String, dynamic>? mitra = result[1] == null
         ? null
         : Map<String, dynamic>.from(result[1] as Map);
-    final List<dynamic> earnings = result[2] as List<dynamic>;
-    final List<dynamic> completedJobs = result[3] as List<dynamic>;
+    final List<dynamic> completedJobs = result[2] as List<dynamic>;
+
     num totalEarnings = 0;
-    for (final dynamic row in earnings) {
-      if (row is Map) {
-        final dynamic amount = row['amount'];
-        totalEarnings += amount is num
-            ? amount
-            : num.tryParse(amount?.toString() ?? '') ?? 0;
+    Map<String, dynamic> financial = <String, dynamic>{};
+    try {
+      final dynamic response = await _client.rpc('get_mitra_financial_summary');
+      if (response is List && response.isNotEmpty && response.first is Map) {
+        financial = Map<String, dynamic>.from(response.first as Map);
+      } else if (response is Map) {
+        financial = Map<String, dynamic>.from(response);
+      }
+      final dynamic lifetime = financial['lifetime_net_earnings'];
+      totalEarnings = lifetime is num
+          ? lifetime
+          : num.tryParse(lifetime?.toString() ?? '') ?? 0;
+    } on PostgrestException catch (error) {
+      // Fallback sementara sebelum migration Batch 1.1 dijalankan.
+      final String lower = error.message.toLowerCase();
+      if (error.code != 'PGRST202' &&
+          !lower.contains('get_mitra_financial_summary')) {
+        rethrow;
+      }
+      final dynamic legacyRows = await _client
+          .from('earnings')
+          .select('amount')
+          .eq('mitra_id', currentUserId);
+      for (final dynamic row in legacyRows as List<dynamic>) {
+        if (row is Map) {
+          final dynamic amount = row['amount'];
+          totalEarnings += amount is num
+              ? amount
+              : num.tryParse(amount?.toString() ?? '') ?? 0;
+        }
       }
     }
+
     return <String, dynamic>{
       ...user,
       'rating': mitra?['rating'] ?? 0,
       'is_active': mitra?['is_active'] ?? false,
       'total_pendapatan': totalEarnings,
       'pekerjaan_selesai': completedJobs.length,
+      ...financial,
     };
   }
 

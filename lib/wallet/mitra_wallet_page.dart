@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
+import 'mitra_bank_accounts_page.dart';
 import 'wallet_service.dart';
 import '../widgets/home_shortcut_button.dart';
 
@@ -26,6 +27,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   Map<String, dynamic> _summary = <String, dynamic>{};
   List<Map<String, dynamic>> _ledger = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _payouts = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _bankAccounts = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -39,12 +41,14 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         _service.fetchSummary(),
         _service.fetchLedger(),
         _service.fetchPayouts(),
+        _service.fetchBankAccounts(),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = result[0] as Map<String, dynamic>;
         _ledger = result[1] as List<Map<String, dynamic>>;
         _payouts = result[2] as List<Map<String, dynamic>>;
+        _bankAccounts = result[3] as List<Map<String, dynamic>>;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -85,6 +89,22 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       return;
     }
 
+    if (_bankAccounts.isEmpty) {
+      await _openBankAccounts();
+      if (!mounted) return;
+      if (_bankAccounts.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tambahkan rekening pencairan terlebih dahulu.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    final Map<String, dynamic>? bank = await _selectBankAccount();
+    if (bank == null || !mounted) return;
+
     final bool? requested = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -92,21 +112,84 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       builder: (BuildContext context) => _PayoutFormSheet(
         availableBalance: available,
         minimumPayout: minimum,
-        initialBankName: (_summary['bank_name'] ?? '').toString(),
-        initialAccountNumber: (_summary['account_number'] ?? '').toString(),
-        initialAccountHolder: (_summary['account_holder'] ?? '').toString(),
-        onSubmit:
-            (num amount, String bank, String number, String holder) async {
-              await _service.requestPayout(
-                amount: amount,
-                bankName: bank,
-                accountNumber: number,
-                accountHolder: holder,
-              );
-            },
+        bankAccount: bank,
+        onSubmit: (num amount) async {
+          await _service.requestPayout(
+            amount: amount,
+            bankAccountId: bank['id'].toString(),
+          );
+        },
       ),
     );
     if (requested == true) await _load();
+  }
+
+  Future<void> _openBankAccounts() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const MitraBankAccountsPage()),
+    );
+    if (!mounted) return;
+    await _load();
+  }
+
+  Future<Map<String, dynamic>?> _selectBankAccount() async {
+    if (_bankAccounts.isEmpty) return null;
+    if (_bankAccounts.length == 1) return _bankAccounts.first;
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
+            children: <Widget>[
+              const Text(
+                'Pilih Rekening Pencairan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: _walletBrown,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ..._bankAccounts.map((Map<String, dynamic> account) {
+                final bool isDefault = account['is_default'] == true;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFFFE9C7),
+                    child: Icon(
+                      Icons.account_balance_rounded,
+                      color: _walletBrown,
+                    ),
+                  ),
+                  title: Text(
+                    (account['bank_name'] ?? 'Rekening').toString(),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  subtitle: Text(
+                    '${_maskAccount(account['account_number'])} · ${(account['account_holder'] ?? '').toString()}',
+                  ),
+                  trailing: isDefault
+                      ? const Icon(Icons.star_rounded, color: _walletOrange)
+                      : null,
+                  onTap: () => Navigator.pop(sheetContext, account),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _maskAccount(Object? raw) {
+    final String value = (raw ?? '').toString().trim();
+    if (value.length <= 4) return value;
+    return '•••• ${value.substring(value.length - 4)}';
   }
 
   Future<void> _cancelPayout(Map<String, dynamic> payout) async {
@@ -357,38 +440,91 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   }
 
   Widget _bankCard() {
-    final String bank = (_summary['bank_name'] ?? '').toString();
-    final String number = (_summary['account_number'] ?? '').toString();
-    final String holder = (_summary['account_holder'] ?? '').toString();
+    Map<String, dynamic>? bank;
+    for (final Map<String, dynamic> account in _bankAccounts) {
+      if (account['is_default'] == true) {
+        bank = account;
+        break;
+      }
+    }
+    bank ??= _bankAccounts.isEmpty ? null : _bankAccounts.first;
+
     return _whiteCard(
       title: 'Rekening Pencairan',
       icon: Icons.account_balance_outlined,
-      child: bank.isEmpty || number.isEmpty
-          ? const Text(
-              'Data rekening belum tersedia. Isi rekening ketika mengajukan pencairan.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (bank == null)
+            const Text(
+              'Belum ada rekening pencairan. Tambahkan rekening sebelum mengajukan pencairan saldo.',
               style: TextStyle(fontSize: 12, height: 1.4),
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          else ...<Widget>[
+            Row(
               children: <Widget>[
-                Text(
-                  bank,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            (bank['bank_name'] ?? '').toString(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                            ),
+                          ),
+                          if (bank['is_default'] == true) ...<Widget>[
+                            const SizedBox(width: 7),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: _walletOrange,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _maskAccount(bank['account_number']),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        (bank['account_holder'] ?? '').toString(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 3),
                 Text(
-                  number,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  holder,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  '${_bankAccounts.length} tersimpan',
+                  style: const TextStyle(fontSize: 10.5, color: Colors.black45),
                 ),
               ],
             ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _openBankAccounts,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text(
+                bank == null ? 'Tambah Rekening' : 'Kelola / Ganti Rekening',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _walletBrown,
+                side: const BorderSide(color: _walletOrange),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -609,8 +745,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
 
   Color _payoutStatusColor(String status) {
     if (status == 'paid') return _walletGreen;
-    if (<String>['rejected', 'failed'].contains(status))
+    if (<String>['rejected', 'failed'].contains(status)) {
       return Colors.red.shade700;
+    }
     if (status == 'cancelled') return Colors.grey.shade700;
     return _walletOrange;
   }
@@ -638,24 +775,14 @@ class _PayoutFormSheet extends StatefulWidget {
   const _PayoutFormSheet({
     required this.availableBalance,
     required this.minimumPayout,
-    required this.initialBankName,
-    required this.initialAccountNumber,
-    required this.initialAccountHolder,
+    required this.bankAccount,
     required this.onSubmit,
   });
 
   final num availableBalance;
   final num minimumPayout;
-  final String initialBankName;
-  final String initialAccountNumber;
-  final String initialAccountHolder;
-  final Future<void> Function(
-    num amount,
-    String bank,
-    String accountNumber,
-    String accountHolder,
-  )
-  onSubmit;
+  final Map<String, dynamic> bankAccount;
+  final Future<void> Function(num amount) onSubmit;
 
   @override
   State<_PayoutFormSheet> createState() => _PayoutFormSheetState();
@@ -664,9 +791,6 @@ class _PayoutFormSheet extends StatefulWidget {
 class _PayoutFormSheetState extends State<_PayoutFormSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _amountController;
-  late final TextEditingController _bankController;
-  late final TextEditingController _accountController;
-  late final TextEditingController _holderController;
   bool _isSubmitting = false;
 
   @override
@@ -675,21 +799,11 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
     _amountController = TextEditingController(
       text: widget.availableBalance.floor().toString(),
     );
-    _bankController = TextEditingController(text: widget.initialBankName);
-    _accountController = TextEditingController(
-      text: widget.initialAccountNumber,
-    );
-    _holderController = TextEditingController(
-      text: widget.initialAccountHolder,
-    );
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _bankController.dispose();
-    _accountController.dispose();
-    _holderController.dispose();
     super.dispose();
   }
 
@@ -697,16 +811,17 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
     return num.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
   }
 
+  String _mask(Object? raw) {
+    final String value = (raw ?? '').toString().trim();
+    if (value.length <= 4) return value;
+    return '•••• ${value.substring(value.length - 4)}';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-      await widget.onSubmit(
-        _parseAmount(_amountController.text),
-        _bankController.text,
-        _accountController.text,
-        _holderController.text,
-      );
+      await widget.onSubmit(_parseAmount(_amountController.text));
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
@@ -723,6 +838,7 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic> bank = widget.bankAccount;
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -767,12 +883,49 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                   'Saldo tersedia ${formatRupiah(widget.availableBalance)}',
                   style: const TextStyle(color: Colors.black54),
                 ),
-                const SizedBox(height: 18),
-                _field(
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE6DAD2)),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(
+                        Icons.account_balance_rounded,
+                        color: _walletBrown,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              (bank['bank_name'] ?? 'Rekening').toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              '${_mask(bank['account_number'])} · ${(bank['account_holder'] ?? '').toString()}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
                   controller: _amountController,
-                  label: 'Nominal pencairan',
                   keyboardType: TextInputType.number,
-                  prefixText: 'Rp ',
                   validator: (String? value) {
                     final num amount = _parseAmount(value ?? '');
                     if (amount < widget.minimumPayout) {
@@ -783,25 +936,26 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                     }
                     return null;
                   },
-                ),
-                const SizedBox(height: 12),
-                _field(
-                  controller: _bankController,
-                  label: 'Nama bank/e-wallet',
-                  validator: _required,
-                ),
-                const SizedBox(height: 12),
-                _field(
-                  controller: _accountController,
-                  label: 'Nomor rekening/akun',
-                  keyboardType: TextInputType.number,
-                  validator: _required,
-                ),
-                const SizedBox(height: 12),
-                _field(
-                  controller: _holderController,
-                  label: 'Nama pemilik rekening',
-                  validator: _required,
+                  decoration: InputDecoration(
+                    labelText: 'Nominal pencairan',
+                    prefixText: 'Rp ',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE6DAD2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: _walletOrange,
+                        width: 1.4,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
@@ -834,35 +988,6 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  String? _required(String? value) {
-    if ((value ?? '').trim().isEmpty) return 'Wajib diisi.';
-    return null;
-  }
-
-  Widget _field({
-    required TextEditingController controller,
-    required String label,
-    TextInputType? keyboardType,
-    String? prefixText,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixText: prefixText,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFEEDFD5)),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../location/job_location_map.dart';
 import '../location/location_picker_page.dart';
+import '../location/osm_geocoding_service.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
@@ -32,6 +33,7 @@ class CreateJobPage extends StatefulWidget {
 
 class _CreateJobPageState extends State<CreateJobPage> {
   final JobService _jobService = JobService();
+  final OsmGeocodingService _geocodingService = OsmGeocodingService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -67,6 +69,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     _descriptionController.dispose();
     _addressController.dispose();
     _budgetController.dispose();
+    _geocodingService.dispose();
     super.dispose();
   }
 
@@ -209,6 +212,129 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
+  List<String> _geocodingQueryCandidates(String rawAddress) {
+    final String normalized = rawAddress
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\s*,\s*'), ', ')
+        .trim();
+    final List<String> queries = <String>[normalized];
+
+    String broader = normalized
+        .replaceAll(
+          RegExp(
+            r'\b(?:blok|block)\s*[a-z0-9/-]+(?:\s*(?:no\.?|nomor)\s*[a-z0-9./-]+)?',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(
+          RegExp(
+            r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'\b(?:kecamatan|kec\.?)\s+', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(
+            r'\b(?:kota|kabupaten|kab\.?)\s+',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(RegExp(r'\s+,'), ',')
+        .replaceAll(RegExp(r',\s*,+'), ', ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (broader.endsWith(',')) {
+      broader = broader.substring(0, broader.length - 1).trim();
+    }
+    if (broader.isNotEmpty &&
+        !broader.toLowerCase().contains('indonesia')) {
+      broader = '$broader, Jawa Barat, Indonesia';
+    }
+    if (broader.isNotEmpty && !queries.contains(broader)) {
+      queries.add(broader);
+    }
+
+    final List<String> parts = broader
+        .split(',')
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList();
+    if (parts.length >= 4) {
+      final String areaFallback = parts.sublist(parts.length - 4).join(', ');
+      if (!queries.contains(areaFallback)) queries.add(areaFallback);
+    }
+
+    return queries;
+  }
+
+  Future<bool> _resolveTypedAddress({bool showMessage = true}) async {
+    final String query = _addressController.text.trim();
+    if (query.length < 8) {
+      if (showMessage && mounted) {
+        _showMessage('Alamat terlalu singkat untuk dicari.', isError: true);
+      }
+      return false;
+    }
+
+    try {
+      final List<String> candidates = _geocodingQueryCandidates(query);
+      OsmGeocodingResult? best;
+      bool approximate = false;
+
+      for (int index = 0; index < candidates.length; index++) {
+        final List<OsmGeocodingResult> results =
+            await _geocodingService.search(candidates[index]);
+        if (results.isNotEmpty) {
+          best = results.first;
+          approximate = index > 0;
+          break;
+        }
+      }
+
+      if (best == null) {
+        if (showMessage && mounted) {
+          _showMessage(
+            'Alamat belum ditemukan di OpenStreetMap. Coba format: nama jalan/perumahan, kelurahan, kecamatan, kota; atau pilih titik manual.',
+            isError: true,
+          );
+        }
+        return false;
+      }
+
+      if (!mounted) return false;
+      setState(() {
+        _selectedPoint = best!.point;
+        // Untuk fallback area yang lebih luas, pertahankan alamat yang diketik
+        // pengguna. Titik hanya menjadi perkiraan dan tetap perlu diverifikasi.
+        if (!approximate) {
+          _addressController.text = best.displayName;
+        }
+        _useNewAddress = true;
+        _selectedAddressId = null;
+      });
+      if (showMessage) {
+        _showMessage(
+          approximate
+              ? 'Titik perkiraan ditemukan. Pastikan pin sudah tepat sebelum membuat pekerjaan.'
+              : 'Titik lokasi otomatis dipilih dari alamat.',
+        );
+      }
+      return true;
+    } catch (error) {
+      if (showMessage && mounted) {
+        _showMessage('Pencarian titik otomatis gagal: $error', isError: true);
+      }
+      return false;
+    }
+  }
+
   Future<void> _pickLocationOnMap() async {
     FocusScope.of(context).unfocus();
     final PickedLocation? location = await Navigator.push<PickedLocation>(
@@ -250,6 +376,16 @@ class _CreateJobPageState extends State<CreateJobPage> {
     if (!_useNewAddress && _selectedAddressId == null) {
       _showMessage('Pilih alamat pekerjaan.', isError: true);
       return;
+    }
+    if (_selectedPoint == null && (_useNewAddress || _addresses.isEmpty)) {
+      final bool resolved = await _resolveTypedAddress(showMessage: false);
+      if (!resolved) {
+        _showMessage(
+          'Alamat belum memiliki titik lokasi. Cari titik otomatis atau pilih di peta.',
+          isError: true,
+        );
+        return;
+      }
     }
     if (_selectedPoint == null) {
       _showMessage(
@@ -641,6 +777,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
             hintText: 'Masukkan alamat lengkap',
             prefixIcon: Icons.location_on_outlined,
             maxLines: 3,
+            onFieldSubmitted: (_) => _resolveTypedAddress(),
             validator: (String? value) {
               if ((_useNewAddress || _addresses.isEmpty) &&
                   (value == null || value.trim().length < 8)) {
@@ -649,6 +786,18 @@ class _CreateJobPageState extends State<CreateJobPage> {
               return null;
             },
           ),
+        if (_useNewAddress || _addresses.isEmpty) ...<Widget>[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _isSubmitting ? null : _resolveTypedAddress,
+              icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+              label: const Text('Tentukan titik otomatis'),
+              style: TextButton.styleFrom(foregroundColor: jobBrownColor),
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         if (_selectedPoint != null) ...<Widget>[
           JobLocationMapCard(
@@ -762,6 +911,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     TextInputAction? textInputAction,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    ValueChanged<String>? onFieldSubmitted,
   }) {
     return TextFormField(
       controller: controller,
@@ -770,6 +920,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
       textInputAction: maxLines > 1 ? TextInputAction.newline : textInputAction,
       inputFormatters: inputFormatters,
       validator: validator,
+      onFieldSubmitted: onFieldSubmitted,
       decoration: InputDecoration(
         hintText: hintText,
         prefixText: prefixText,

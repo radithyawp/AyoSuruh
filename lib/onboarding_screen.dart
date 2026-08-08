@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:ayosuruh/admin/admin_navigation.dart';
+import 'package:ayosuruh/admin/admin_service.dart';
 import 'package:ayosuruh/auth/auth_preferences.dart';
 import 'package:ayosuruh/auth/auth_service.dart';
 import 'package:ayosuruh/auth/reset_password_page.dart';
@@ -61,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
           await AuthPreferences.shouldRememberSession();
       if (!rememberSession) {
         // Checkbox Remember Me mengontrol pemulihan sesi pada cold start.
-        // Password tidak pernah disimpan oleh Ayo Suruh.
+        // Bila dipilih, credential login disimpan melalui secure storage perangkat.
         await supabase.auth.signOut();
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
@@ -75,10 +77,18 @@ class _SplashScreenState extends State<SplashScreen> {
         } catch (_) {
           // Profil dapat dicoba disinkronkan kembali setelah halaman utama terbuka.
         }
+        bool isAdmin = false;
+        try {
+          isAdmin = await AdminService().isCurrentUserAdmin();
+        } catch (_) {
+          isAdmin = false;
+        }
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const MainNavigation()),
+          MaterialPageRoute<void>(
+            builder: (_) => isAdmin ? const AdminNavigation() : const MainNavigation(),
+          ),
         );
         return;
       }
@@ -182,19 +192,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Butuh Bantuan?',
       description:
           'Temukan mitra terpercaya untuk menyelesaikan pekerjaan Anda dengan cepat dan mudah.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'assets/images/ayos/ayos_hello.png',
     ),
     OnboardingModel(
       title: 'Temukan Mitra Terpercaya',
       description:
           'Pilih mitra terbaik berdasarkan rating dan ulasan dari pengguna lain untuk hasil kerja yang memuaskan.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'assets/images/ayos/ayos_play_phone.png',
     ),
     OnboardingModel(
       title: 'Selesai Lebih Cepat',
       description:
           'Lacak progres pekerjaan secara langsung dan bayar dengan mudah serta aman.',
-      imagePath: 'assets/images/icon.jpeg',
+      imagePath: 'assets/images/ayos/ayos_hooray_with_confetti.png',
     ),
   ];
 

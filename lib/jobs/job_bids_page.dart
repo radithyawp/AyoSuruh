@@ -302,6 +302,8 @@ class _JobBidsPageState extends State<JobBidsPage> {
             ],
           ),
           const SizedBox(height: 10),
+          _buildMitraLocationInfo(bid),
+          const SizedBox(height: 10),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(11),
@@ -359,6 +361,84 @@ class _JobBidsPageState extends State<JobBidsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildMitraLocationInfo(Map<String, dynamic> bid) {
+    final String area = _mitraArea(bid);
+    final String distance = _mitraDistanceLabel(bid);
+    final bool hasArea = area.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFDFC0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(
+            Icons.location_on_outlined,
+            size: 18,
+            color: jobOrangeColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  hasArea ? area : 'Area Mitra belum tersedia',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: jobDarkBrownColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  distance,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    height: 1.3,
+                    color: Color(0xFF74675F),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _mitraArea(Map<String, dynamic> bid) {
+    return (bid['mitra_area'] ?? '').toString().trim();
+  }
+
+  String _mitraDistanceLabel(Map<String, dynamic> bid) {
+    final dynamic rawDistance = bid['distance_km'];
+    final double? distanceKm = rawDistance is num
+        ? rawDistance.toDouble()
+        : double.tryParse(rawDistance?.toString() ?? '');
+
+    if (distanceKm == null || distanceKm.isNaN || distanceKm.isInfinite) {
+      return 'Jarak dari lokasi pekerjaan belum tersedia';
+    }
+
+    if (distanceKm < 1) {
+      final int meters = (distanceKm * 1000).round();
+      return '± $meters m dari lokasi pekerjaan';
+    }
+
+    final String value = distanceKm < 10
+        ? distanceKm.toStringAsFixed(1)
+        : distanceKm.toStringAsFixed(0);
+    return '± $value km dari lokasi pekerjaan';
   }
 
   String _mitraName(Map<String, dynamic> bid) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../jobs/create_job_page.dart';
 import '../jobs/job_helpers.dart';
@@ -79,15 +80,26 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   }
 
   Future<void> _orderService(Map<String, dynamic> service) async {
+    final String currentUserId =
+        Supabase.instance.client.auth.currentUser?.id ?? '';
+    final String mitraId = (service['mitra_id'] ?? '').toString();
+    if (mitraId.isEmpty) return;
+    if (currentUserId.isNotEmpty && currentUserId == mitraId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kamu tidak dapat memesan jasa yang kamu publikasikan sendiri.'),
+          backgroundColor: jobBrownColor,
+        ),
+      );
+      return;
+    }
+
     final Map<String, dynamic>? category = service['categories'] is Map
         ? Map<String, dynamic>.from(service['categories'] as Map)
         : null;
     final Map<String, dynamic>? mitra = service['mitra'] is Map
         ? Map<String, dynamic>.from(service['mitra'] as Map)
         : null;
-    final String mitraId = (service['mitra_id'] ?? '').toString();
-    if (mitraId.isEmpty) return;
-
     await Navigator.push<bool>(
       context,
       MaterialPageRoute<bool>(
@@ -337,6 +349,10 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final num price = service['starting_price'] is num
         ? service['starting_price'] as num
         : num.tryParse(service['starting_price']?.toString() ?? '') ?? 0;
+    final String currentUserId =
+        Supabase.instance.client.auth.currentUser?.id ?? '';
+    final bool isOwnService =
+        currentUserId.isNotEmpty && currentUserId == service['mitra_id']?.toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 11),
@@ -422,15 +438,20 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
-              onPressed: () => _orderService(service),
+              onPressed: isOwnService ? null : () => _orderService(service),
               style: FilledButton.styleFrom(
                 backgroundColor: jobOrangeColor,
                 foregroundColor: const Color(0xFF553600),
+                disabledBackgroundColor: const Color(0xFFE8E0D9),
+                disabledForegroundColor: const Color(0xFF8B7E76),
               ),
-              icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-              label: const Text(
-                'Pesan Jasa',
-                style: TextStyle(fontWeight: FontWeight.w900),
+              icon: Icon(
+                isOwnService ? Icons.person_outline_rounded : Icons.arrow_forward_rounded,
+                size: 17,
+              ),
+              label: Text(
+                isOwnService ? 'Jasa Anda' : 'Pesan Jasa',
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ),

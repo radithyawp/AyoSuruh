@@ -26,6 +26,40 @@ class MitraApplicationService {
     return Map<String, dynamic>.from(row ?? <String, dynamic>{});
   }
 
+
+  Future<Map<String, dynamic>?> fetchMitraBaseLocation() async {
+    final dynamic result = await _client.rpc('get_my_mitra_base_location');
+
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return Map<String, dynamic>.from(result.first as Map);
+    }
+    if (result is Map && result.isNotEmpty) {
+      return Map<String, dynamic>.from(result);
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>> saveMitraBaseLocation({
+    required String address,
+    required double latitude,
+    required double longitude,
+  }) async {
+    await _client.rpc(
+      'save_my_mitra_base_location',
+      params: <String, dynamic>{
+        'p_address': address.trim(),
+        'p_latitude': latitude,
+        'p_longitude': longitude,
+      },
+    );
+
+    final Map<String, dynamic>? saved = await fetchMitraBaseLocation();
+    if (saved == null) {
+      throw StateError('Lokasi Mitra berhasil disimpan, tetapi belum dapat dibaca kembali.');
+    }
+    return saved;
+  }
+
   Future<Map<String, dynamic>?> fetchMyApplication() async {
     final dynamic result = await _client.rpc('get_my_mitra_application');
 
@@ -88,11 +122,19 @@ class MitraApplicationService {
     required String fullname,
     required String phone,
     required String address,
+    required double latitude,
+    required double longitude,
     required String bankName,
     required String accountNumber,
     required String ktmPath,
     required String selfiePath,
   }) async {
+    await saveMitraBaseLocation(
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+    );
+
     await _client.rpc(
       'submit_mitra_application',
       params: <String, dynamic>{

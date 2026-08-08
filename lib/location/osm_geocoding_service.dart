@@ -20,12 +20,8 @@ class OsmGeocodingService {
   final http.Client _client;
   static DateTime? _lastRequestAt;
 
-  Future<List<OsmGeocodingResult>> search(String query) async {
-    final String normalized = query.trim();
-    if (normalized.length < 3) return const <OsmGeocodingResult>[];
-
-    // Public Nominatim dipakai hanya ketika user menekan cari/submit, bukan
-    // autocomplete tiap ketikan. Jaga jarak request minimal satu detik.
+  Future<void> _respectRateLimit() async {
+    // Public Nominatim: jangan menembak request bertubi-tubi.
     final DateTime now = DateTime.now();
     final DateTime? previous = _lastRequestAt;
     if (previous != null) {
@@ -35,6 +31,15 @@ class OsmGeocodingService {
       }
     }
     _lastRequestAt = DateTime.now();
+  }
+
+  Future<List<OsmGeocodingResult>> search(String query) async {
+    final String normalized = query.trim();
+    if (normalized.length < 3) return const <OsmGeocodingResult>[];
+
+    // Public Nominatim dipakai hanya ketika user menekan cari/submit, bukan
+    // autocomplete tiap ketikan. Jaga jarak request minimal satu detik.
+    await _respectRateLimit();
 
     final Uri uri = Uri.https(
       'nominatim.openstreetmap.org',
@@ -79,6 +84,43 @@ class OsmGeocodingService {
       );
     }
     return results;
+  }
+
+  Future<OsmGeocodingResult?> reverse(LatLng point) async {
+    await _respectRateLimit();
+
+    final Uri uri = Uri.https(
+      'nominatim.openstreetmap.org',
+      '/reverse',
+      <String, String>{
+        'lat': point.latitude.toString(),
+        'lon': point.longitude.toString(),
+        'format': 'jsonv2',
+        'addressdetails': '1',
+        'zoom': '18',
+      },
+    );
+
+    final http.Response response = await _client.get(
+      uri,
+      headers: const <String, String>{
+        'User-Agent': 'AyoSuruh/1.0 (academic MVP; UPI Cibiru)',
+        'Accept-Language': 'id,en;q=0.8',
+        'Accept': 'application/json',
+      },
+    ).timeout(const Duration(seconds: 12));
+
+    if (response.statusCode != 200) {
+      throw StateError('Pembacaan alamat titik gagal (${response.statusCode}).');
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map) return null;
+
+    final String label = decoded['display_name']?.toString().trim() ?? '';
+    if (label.isEmpty) return null;
+
+    return OsmGeocodingResult(displayName: label, point: point);
   }
 
   void dispose() => _client.close();

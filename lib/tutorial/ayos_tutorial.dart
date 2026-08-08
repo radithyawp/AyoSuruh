@@ -55,11 +55,13 @@ class _TutorialStep {
     required this.title,
     required this.body,
     required this.icon,
+    required this.assetPath,
   });
 
   final String title;
   final String body;
   final IconData icon;
+  final String assetPath;
 }
 
 class _AyosTutorialDialog extends StatefulWidget {
@@ -86,24 +88,28 @@ class _AyosTutorialDialogState extends State<_AyosTutorialDialog> {
             body:
                 'Aku akan bantu kamu mengenali alur kerja Mitra Ayo Suruh. Kamu tetap bisa memakai Mode Customer dari akun yang sama.',
             icon: Icons.handyman_rounded,
+            assetPath: 'assets/images/ayos/ayos_hello.png',
           ),
           _TutorialStep(
             title: 'Temukan kebutuhan customer',
             body:
                 'Buka Home atau Jobs untuk melihat pekerjaan yang tersedia. Pilih pekerjaan yang sesuai dengan kemampuan dan lokasi kamu.',
             icon: Icons.travel_explore_rounded,
+            assetPath: 'assets/images/ayos/ayos_run.png',
           ),
           _TutorialStep(
             title: 'Kirim penawaran yang transparan',
             body:
                 'Ajukan harga dan estimasi pengerjaan. Sebelum mengirim bid, Ayo Suruh menampilkan estimasi pendapatan bersih setelah komisi platform 6%.',
             icon: Icons.request_quote_rounded,
+            assetPath: 'assets/images/ayos/ayos_board_task.png',
           ),
           _TutorialStep(
             title: 'Kerjakan, chat, lalu cairkan',
             body:
                 'Setelah bid diterima, gunakan chat dan update progres sampai selesai. Pendapatan bersih masuk ke Dompet Mitra dan dapat diajukan untuk pencairan.',
             icon: Icons.account_balance_wallet_rounded,
+            assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
           ),
         ]
       : const <_TutorialStep>[
@@ -112,24 +118,28 @@ class _AyosTutorialDialogState extends State<_AyosTutorialDialog> {
             body:
                 'Aku akan jadi pemandu singkat kamu di Ayo Suruh. Cari bantuan, buat pekerjaan, dan pantau semuanya dari satu aplikasi.',
             icon: Icons.waving_hand_rounded,
+            assetPath: 'assets/images/ayos/ayos_hello.png',
           ),
           _TutorialStep(
             title: 'Cari layanan yang kamu butuhkan',
             body:
                 'Gunakan kolom Cari Layanan atau pilih katalog seperti Elektronik, Antar-Jemput, Jasa Titip, Design & Coding, dan lainnya.',
             icon: Icons.search_rounded,
+            assetPath: 'assets/images/ayos/ayos_play_phone.png',
           ),
           _TutorialStep(
             title: 'Buat pekerjaan dan pilih mitra',
             body:
                 'Isi detail, lokasi, jadwal, dan estimasi harga. Mitra dapat memberikan penawaran, lalu kamu memilih penawaran yang paling sesuai.',
             icon: Icons.work_outline_rounded,
+            assetPath: 'assets/images/ayos/ayos_board_task.png',
           ),
           _TutorialStep(
             title: 'Pantau sampai selesai',
             body:
                 'Gunakan chat untuk koordinasi, lakukan pembayaran melalui alur Ayo Suruh, pantau progres, lalu beri rating setelah pekerjaan selesai.',
             icon: Icons.task_alt_rounded,
+            assetPath: 'assets/images/ayos/ayos_hooray_with_confetti.png',
           ),
         ];
 
@@ -191,14 +201,18 @@ class _AyosTutorialDialogState extends State<_AyosTutorialDialog> {
                     Positioned(
                       right: -12,
                       bottom: -2,
-                      child: Image.asset(
-                        'assets/images/ayos_mascot.png',
-                        height: 160,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 260),
+                        child: Image.asset(
+                          _steps[_page].assetPath,
+                          key: ValueKey<String>(_steps[_page].assetPath),
+                          height: 160,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.smart_toy_rounded,
-                          size: 118,
-                          color: _orange,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.smart_toy_rounded,
+                            size: 118,
+                            color: _orange,
+                          ),
                         ),
                       ),
                     ),

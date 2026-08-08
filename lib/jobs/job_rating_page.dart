@@ -15,11 +15,71 @@ class JobRatingPage extends StatefulWidget {
 }
 
 class _JobRatingPageState extends State<JobRatingPage> {
-  static const List<String> _availableTags = <String>[
+  static const Map<String, List<String>> _categoryTags = <String, List<String>>{
+    'design & coding': <String>[
+      'Sesuai Brief',
+      'Kualitas Hasil',
+      'Tepat Waktu',
+      'Komunikatif',
+      'Responsif Revisi',
+    ],
+    'elektronik': <String>[
+      'Diagnosis Tepat',
+      'Berfungsi Baik',
+      'Rapi',
+      'Cepat',
+      'Komunikatif',
+    ],
+    'antar-jemput': <String>[
+      'Tepat Waktu',
+      'Aman',
+      'Ramah',
+      'Nyaman',
+      'Komunikatif',
+    ],
+    'jasa titip': <String>[
+      'Sesuai Pesanan',
+      'Transparan',
+      'Cepat',
+      'Aman',
+      'Responsif',
+    ],
+    'survey & informasi kost': <String>[
+      'Informasi Akurat',
+      'Detail',
+      'Foto Jelas',
+      'Cepat',
+      'Komunikatif',
+    ],
+    'administrasi': <String>[
+      'Teliti',
+      'Rapi',
+      'Tepat Waktu',
+      'Jelas',
+      'Responsif',
+    ],
+    'rumah tangga': <String>[
+      'Bersih',
+      'Rapi',
+      'Teliti',
+      'Cepat',
+      'Ramah',
+    ],
+    'otomotif': <String>[
+      'Diagnosis Tepat',
+      'Aman',
+      'Rapi',
+      'Solutif',
+      'Cepat',
+    ],
+  };
+
+  static const List<String> _defaultTags = <String>[
+    'Sesuai Permintaan',
+    'Profesional',
     'Tepat Waktu',
-    'Sesuai Pesanan',
-    'Sangat Ramah',
-    'Sangat Bersih',
+    'Komunikatif',
+    'Hasil Memuaskan',
   ];
 
   final JobService _jobService = JobService();
@@ -77,6 +137,13 @@ class _JobRatingPageState extends State<JobRatingPage> {
         _errorMessage = error.toString();
       });
     }
+  }
+
+  List<String> get _availableTags {
+    final Map<String, dynamic>? job = _job;
+    if (job == null) return _defaultTags;
+    final String category = categoryName(job).trim().toLowerCase();
+    return _categoryTags[category] ?? _defaultTags;
   }
 
   int _parseRating(dynamic value) {
@@ -461,17 +528,21 @@ class _JobRatingPageState extends State<JobRatingPage> {
   }
 
   IconData _tagIcon(String tag) {
-    switch (tag) {
-      case 'Tepat Waktu':
-        return Icons.schedule_rounded;
-      case 'Sesuai Pesanan':
-        return Icons.checklist_rounded;
-      case 'Sangat Ramah':
-        return Icons.sentiment_satisfied_alt_rounded;
-      case 'Sangat Bersih':
-        return Icons.auto_awesome_rounded;
-      default:
-        return Icons.check_circle_outline_rounded;
+    final String value = tag.toLowerCase();
+    if (value.contains('waktu') || value.contains('cepat')) {
+      return Icons.schedule_rounded;
     }
+    if (value.contains('ramah') || value.contains('komunikatif') || value.contains('responsif')) {
+      return Icons.sentiment_satisfied_alt_rounded;
+    }
+    if (value.contains('bersih') || value.contains('rapi')) {
+      return Icons.auto_awesome_rounded;
+    }
+    if (value.contains('aman')) return Icons.verified_user_outlined;
+    if (value.contains('foto')) return Icons.photo_camera_outlined;
+    if (value.contains('diagnosis') || value.contains('solutif')) {
+      return Icons.build_circle_outlined;
+    }
+    return Icons.check_circle_outline_rounded;
   }
 }

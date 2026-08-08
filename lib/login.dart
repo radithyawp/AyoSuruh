@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'admin/admin_navigation.dart';
+import 'admin/admin_service.dart';
 import 'auth/auth_preferences.dart';
 import 'auth/auth_service.dart';
 import 'auth/forgot_password_page.dart';
@@ -12,11 +14,7 @@ import 'navbar.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({
-    super.key,
-    this.initialEmail,
-    this.noticeMessage,
-  });
+  const LoginPage({super.key, this.initialEmail, this.noticeMessage});
 
   final String? initialEmail;
   final String? noticeMessage;
@@ -47,28 +45,38 @@ class _LoginPageState extends State<LoginPage> {
     unawaited(_loadRememberPreference());
     WidgetsBinding.instance.addPostFrameCallback((_) => _showNoticeMessage());
 
-    _authSubscription = _supabase.auth.onAuthStateChange.listen(
-      (AuthState state) {
-        if (state.event == AuthChangeEvent.passwordRecovery &&
-            state.session != null) {
-          unawaited(_openPasswordRecovery());
-          return;
-        }
-        if (state.event == AuthChangeEvent.signedIn && state.session != null) {
-          unawaited(_completeLogin(showMessage: false));
-        }
-      },
-    );
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((
+      AuthState state,
+    ) {
+      if (state.event == AuthChangeEvent.passwordRecovery &&
+          state.session != null) {
+        unawaited(_openPasswordRecovery());
+        return;
+      }
+      if (state.event == AuthChangeEvent.signedIn && state.session != null) {
+        unawaited(_completeLogin(showMessage: false));
+      }
+    });
   }
 
   Future<void> _loadRememberPreference() async {
-    final bool remember = await AuthPreferences.shouldRememberSession();
-    final String? rememberedEmail = await AuthPreferences.rememberedEmail();
+    final List<dynamic> preference =
+        await Future.wait<dynamic>(<Future<dynamic>>[
+          AuthPreferences.shouldRememberSession(),
+          AuthPreferences.rememberedEmail(),
+          AuthPreferences.rememberedPassword(),
+        ]);
+    final bool remember = preference[0] as bool;
+    final String? rememberedEmail = preference[1] as String?;
+    final String? rememberedPassword = preference[2] as String?;
     if (!mounted) return;
     setState(() {
       _rememberMe = remember;
       if (_emailCtrl.text.trim().isEmpty && rememberedEmail != null) {
         _emailCtrl.text = rememberedEmail;
+      }
+      if (remember && _passCtrl.text.isEmpty && rememberedPassword != null) {
+        _passCtrl.text = rememberedPassword;
       }
     });
   }
@@ -105,6 +113,12 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await AuthService.syncCurrentUserProfile();
+      if (_rememberMe) {
+        await AuthPreferences.saveLoginPreference(
+          rememberMe: true,
+          email: _supabase.auth.currentUser?.email,
+        );
+      }
       if (!mounted) return;
 
       if (showMessage) {
@@ -116,17 +130,30 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
 
+      bool isAdmin = false;
+      try {
+        isAdmin = await AdminService().isCurrentUserAdmin();
+      } catch (_) {
+        isAdmin = false;
+      }
+      if (!mounted) return;
+
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
-        (route) => false,
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              isAdmin ? const AdminNavigation() : const MainNavigation(),
+        ),
+        (Route<dynamic> route) => false,
       );
     } catch (error) {
       _isNavigating = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Akun berhasil masuk, tetapi profil gagal disiapkan: $error'),
+          content: Text(
+            'Akun berhasil masuk, tetapi profil gagal disiapkan: $error',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -149,9 +176,10 @@ class _LoginPageState extends State<LoginPage> {
         await AuthPreferences.saveLoginPreference(
           rememberMe: _rememberMe,
           email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
         );
-        // Password tidak disimpan oleh aplikasi. Android/iOS credential manager
-        // dapat menawarkan penyimpanan aman berdasarkan autofillHints field login.
+        // Credential disimpan aman melalui Android Keystore/iOS Keychain ketika
+        // Remember Me aktif. Autofill OS tetap diberi kesempatan menyimpan juga.
         TextInput.finishAutofillContext(shouldSave: _rememberMe);
         await _completeLogin(showMessage: true);
       }
@@ -236,9 +264,7 @@ class _LoginPageState extends State<LoginPage> {
               height: 100,
               decoration: const BoxDecoration(
                 color: Color(0xFFF8EFEA),
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(100),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(100)),
               ),
             ),
           ),
@@ -246,13 +272,16 @@ class _LoginPageState extends State<LoginPage> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: Column(
                   children: [
                     // --- LOGO & HEADER ---
                     Image.asset(
-                      'assets/images/icon.jpeg', // Sesuaikan dengan lokasi ikon logo Anda
-                      height: 100,
+                      'assets/images/Logo_Ayo_Suruh.png',
+                      height: 120,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.directions_run_rounded,
                         size: 90,
@@ -271,10 +300,7 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 4),
                     Text(
                       'Butuh bantuan? Ayo suruh kami!',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 24),
 
@@ -325,8 +351,8 @@ class _LoginPageState extends State<LoginPage> {
                               ],
                               validator: (val) =>
                                   val == null || !val.contains('@')
-                                      ? 'Email tidak valid'
-                                      : null,
+                                  ? 'Email tidak valid'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
 
@@ -342,9 +368,12 @@ class _LoginPageState extends State<LoginPage> {
                                           Navigator.push<void>(
                                             context,
                                             MaterialPageRoute<void>(
-                                              builder: (_) => ForgotPasswordPage(
-                                                initialEmail: _emailCtrl.text.trim(),
-                                              ),
+                                              builder: (_) =>
+                                                  ForgotPasswordPage(
+                                                    initialEmail: _emailCtrl
+                                                        .text
+                                                        .trim(),
+                                                  ),
                                             ),
                                           );
                                         },
@@ -367,7 +396,9 @@ class _LoginPageState extends State<LoginPage> {
                               icon: Icons.lock_outline_rounded,
                               bgColor: inputBgColor,
                               obscureText: _obscurePassword,
-                              autofillHints: const <String>[AutofillHints.password],
+                              autofillHints: const <String>[
+                                AutofillHints.password,
+                              ],
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -377,8 +408,9 @@ class _LoginPageState extends State<LoginPage> {
                                   size: 20,
                                 ),
                                 onPressed: () {
-                                  setState(() =>
-                                      _obscurePassword = !_obscurePassword);
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
                                 },
                               ),
                               validator: (val) => val == null || val.isEmpty
@@ -397,7 +429,16 @@ class _LoginPageState extends State<LoginPage> {
                                     onChanged: _isLoading
                                         ? null
                                         : (bool? value) {
-                                            setState(() => _rememberMe = value ?? false);
+                                            final bool remember =
+                                                value ?? false;
+                                            setState(
+                                              () => _rememberMe = remember,
+                                            );
+                                            if (!remember) {
+                                              unawaited(
+                                                AuthPreferences.clearRememberedLogin(),
+                                              );
+                                            }
                                           },
                                   ),
                                 ),
@@ -464,10 +505,12 @@ class _LoginPageState extends State<LoginPage> {
                             Row(
                               children: [
                                 Expanded(
-                                    child: Divider(color: Colors.grey[300])),
+                                  child: Divider(color: Colors.grey[300]),
+                                ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10),
+                                    horizontal: 10,
+                                  ),
                                   child: Text(
                                     'atau',
                                     style: TextStyle(
@@ -477,7 +520,8 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 Expanded(
-                                    child: Divider(color: Colors.grey[300])),
+                                  child: Divider(color: Colors.grey[300]),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 18),
@@ -542,7 +586,8 @@ class _LoginPageState extends State<LoginPage> {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const RegisterPage()),
+                                builder: (_) => const RegisterPage(),
+                              ),
                             );
                           },
                           child: const Text(
@@ -604,8 +649,10 @@ class _LoginPageState extends State<LoginPage> {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: bgColor,
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 14,
+          horizontal: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 0.8),

@@ -50,3 +50,6 @@ app.*.map.json
 # Supabase Edge Function local secrets
 supabase/functions/.env*
 .env.local
+
+# Generated Android build files
+android/build/

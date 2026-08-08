@@ -16,19 +16,19 @@ class AuthService {
     return _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb ? Uri.base.origin : mobileRedirectUrl,
-      authScreenLaunchMode:
-          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
-      queryParams: const <String, String>{
-        'prompt': 'select_account',
-      },
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.externalApplication,
+      queryParams: const <String, String>{'prompt': 'select_account'},
     );
   }
 
-
-
   static Future<void> sendPasswordResetEmail(String email) {
-    final String redirectTo =
-        kIsWeb ? '${Uri.base.origin}/reset-password' : passwordRecoveryRedirectUrl;
+    final String redirectTo = kIsWeb
+        ? '${Uri.base.origin}/reset-password'
+        : passwordRecoveryRedirectUrl;
+    debugPrint('PASSWORD RESET REDIRECT => $redirectTo');
+
     return _supabase.auth.resetPasswordForEmail(
       email.trim(),
       redirectTo: redirectTo,
@@ -46,8 +46,9 @@ class AuthService {
       debugPrint('RPC sync_current_user_profile belum tersedia: $error');
     }
 
-    final Map<String, dynamic> metadata =
-        Map<String, dynamic>.from(user.userMetadata ?? const {});
+    final Map<String, dynamic> metadata = Map<String, dynamic>.from(
+      user.userMetadata ?? const {},
+    );
 
     String firstNonEmpty(Iterable<dynamic> values) {
       for (final dynamic value in values) {

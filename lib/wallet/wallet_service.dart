@@ -6,6 +6,13 @@ class WalletService {
 
   final SupabaseClient _client;
 
+
+  String get _currentUserId {
+    final String? id = _client.auth.currentUser?.id;
+    if (id == null) throw StateError('Pengguna belum login.');
+    return id;
+  }
+
   Future<Map<String, dynamic>> fetchSummary() async {
     final dynamic response = await _client.rpc('get_mitra_wallet_summary');
     Map<String, dynamic> summary;
@@ -63,19 +70,102 @@ class WalletService {
         .toList();
   }
 
-  Future<String> requestPayout({
-    required num amount,
+  Future<List<Map<String, dynamic>>> fetchBankAccounts() async {
+    final dynamic response = await _client
+        .from('mitra_bank_accounts')
+        .select('id, mitra_id, bank_name, account_number, account_holder, is_default, created_at, updated_at')
+        .eq('mitra_id', _currentUserId)
+        .order('is_default', ascending: false)
+        .order('created_at');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<void> addBankAccount({
     required String bankName,
     required String accountNumber,
     required String accountHolder,
+    bool isDefault = false,
+  }) async {
+    final bool makeDefault = isDefault || (await fetchBankAccounts()).isEmpty;
+    if (makeDefault) {
+      await _client
+          .from('mitra_bank_accounts')
+          .update(<String, dynamic>{'is_default': false})
+          .eq('mitra_id', _currentUserId)
+          .eq('is_default', true);
+    }
+    await _client.from('mitra_bank_accounts').insert(<String, dynamic>{
+      'mitra_id': _currentUserId,
+      'bank_name': bankName.trim(),
+      'account_number': accountNumber.trim(),
+      'account_holder': accountHolder.trim(),
+      'is_default': makeDefault,
+    });
+  }
+
+  Future<void> updateBankAccount({
+    required String accountId,
+    required String bankName,
+    required String accountNumber,
+    required String accountHolder,
+    bool makeDefault = false,
+  }) async {
+    if (makeDefault) {
+      await _client.rpc(
+        'set_default_mitra_bank_account',
+        params: <String, dynamic>{'p_account_id': accountId},
+      );
+    }
+    await _client
+        .from('mitra_bank_accounts')
+        .update(<String, dynamic>{
+          'bank_name': bankName.trim(),
+          'account_number': accountNumber.trim(),
+          'account_holder': accountHolder.trim(),
+        })
+        .eq('id', accountId)
+        .eq('mitra_id', _currentUserId);
+  }
+
+  Future<void> setDefaultBankAccount(String accountId) async {
+    await _client.rpc(
+      'set_default_mitra_bank_account',
+      params: <String, dynamic>{'p_account_id': accountId},
+    );
+  }
+
+  Future<void> deleteBankAccount(String accountId) async {
+    final List<Map<String, dynamic>> accounts = await fetchBankAccounts();
+    Map<String, dynamic>? target;
+    for (final Map<String, dynamic> row in accounts) {
+      if (row['id'].toString() == accountId) {
+        target = row;
+        break;
+      }
+    }
+    await _client
+        .from('mitra_bank_accounts')
+        .delete()
+        .eq('id', accountId)
+        .eq('mitra_id', _currentUserId);
+
+    if (target?['is_default'] == true) {
+      final List<Map<String, dynamic>> remaining = await fetchBankAccounts();
+      if (remaining.isNotEmpty) {
+        await setDefaultBankAccount(remaining.first['id'].toString());
+      }
+    }
+  }
+
+  Future<String> requestPayout({
+    required num amount,
+    required String bankAccountId,
   }) async {
     final dynamic response = await _client.rpc(
-      'request_mitra_payout',
+      'request_mitra_payout_v2',
       params: <String, dynamic>{
         'p_amount': amount,
-        'p_bank_name': bankName.trim(),
-        'p_account_number': accountNumber.trim(),
-        'p_account_holder': accountHolder.trim(),
+        'p_bank_account_id': bankAccountId,
       },
     );
     return response.toString();

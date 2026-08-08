@@ -211,7 +211,11 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
             ],
           ),
         ),
-        const NotificationBell(color: jobBrownColor, size: 28),
+        const NotificationBell(
+          color: jobBrownColor,
+          size: 28,
+          activeMode: 'mitra',
+        ),
       ],
     );
   }

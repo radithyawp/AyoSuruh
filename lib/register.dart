@@ -43,18 +43,18 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _authSubscription = _supabase.auth.onAuthStateChange.listen(
-      (AuthState state) {
-        final String provider =
-            state.session?.user.appMetadata['provider']?.toString() ?? '';
-        if (_isGoogleFlow &&
-            state.event == AuthChangeEvent.signedIn &&
-            state.session != null &&
-            provider == 'google') {
-          unawaited(_completeGoogleRegistration());
-        }
-      },
-    );
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((
+      AuthState state,
+    ) {
+      final String provider =
+          state.session?.user.appMetadata['provider']?.toString() ?? '';
+      if (_isGoogleFlow &&
+          state.event == AuthChangeEvent.signedIn &&
+          state.session != null &&
+          provider == 'google') {
+        unawaited(_completeGoogleRegistration());
+      }
+    });
   }
 
   @override
@@ -90,10 +90,8 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute<void>(
-          builder: (_) => LoginPage(
-            initialEmail: email,
-            noticeMessage: message,
-          ),
+          builder: (_) =>
+              LoginPage(initialEmail: email, noticeMessage: message),
         ),
         (Route<dynamic> route) => false,
       );
@@ -143,17 +141,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (!mounted) return;
       if (response.user == null) {
-        throw const AuthException('Supabase tidak mengembalikan data pengguna.');
+        throw const AuthException(
+          'Supabase tidak mengembalikan data pengguna.',
+        );
       }
 
       final String message = response.session == null
           ? 'Registrasi berhasil. Jika verifikasi email diaktifkan, selesaikan verifikasi terlebih dahulu lalu login.'
           : 'Registrasi berhasil. Silakan login untuk masuk ke Ayo Suruh.';
 
-      await _finishRegistration(
-        email: email,
-        message: message,
-      );
+      await _finishRegistration(email: email, message: message);
     } on AuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -224,8 +221,8 @@ class _RegisterPageState extends State<RegisterPage> {
               children: [
                 // --- LOGO & HEADER ---
                 Image.asset(
-                  'assets/images/icon.jpeg',
-                  height: 90,
+                  'assets/images/Logo_Ayo_Suruh.png',
+                  height: 120,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.directions_run_rounded,
                     size: 80,
@@ -244,10 +241,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Butuh bantuan? Ayo suruh kami!',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 24),
 
@@ -373,8 +367,9 @@ class _RegisterPageState extends State<RegisterPage> {
                               size: 20,
                             ),
                             onPressed: () {
-                              setState(() =>
-                                  _obscurePassword = !_obscurePassword);
+                              setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              );
                             },
                           ),
                           validator: (val) {
@@ -407,8 +402,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               size: 20,
                             ),
                             onPressed: () {
-                              setState(() => _obscureConfirmPassword =
-                                  !_obscureConfirmPassword);
+                              setState(
+                                () => _obscureConfirmPassword =
+                                    !_obscureConfirmPassword,
+                              );
                             },
                           ),
                           validator: (val) {
@@ -462,8 +459,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           children: [
                             Expanded(child: Divider(color: Colors.grey[300])),
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
                               child: Text(
                                 'atau',
                                 style: TextStyle(
@@ -527,17 +525,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   children: [
                     Text(
                       'Sudah punya akun? ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
                     GestureDetector(
                       onTap: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                              builder: (_) => const LoginPage()),
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
                         );
                       },
                       child: const Text(
@@ -653,8 +647,10 @@ class _RegisterPageState extends State<RegisterPage> {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: bgColor,
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey[300]!, width: 0.8),

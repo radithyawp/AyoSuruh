@@ -43,6 +43,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   String _selectedAddressLabel = '';
   bool _isLocating = false;
   bool _isSearching = false;
+  bool _isResolvingPoint = false;
+  bool _pointNeedsReverse = false;
 
   @override
   void initState() {
@@ -66,7 +68,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       final position = await _locationService.determineCurrentPosition();
       final LatLng point = LatLng(position.latitude, position.longitude);
       if (!mounted) return;
-      setState(() => _selectedPoint = point);
+      setState(() {
+        _selectedPoint = point;
+        _selectedAddressLabel = '';
+        _pointNeedsReverse = true;
+      });
       _mapController.move(point, 17);
     } catch (error) {
       if (!mounted) return;
@@ -156,6 +162,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         _selectedPoint = selected!.point;
         _selectedAddressLabel = selected.displayName;
         _searchController.text = selected.displayName;
+        _pointNeedsReverse = false;
       });
       _mapController.move(selected.point, 17);
     } catch (error) {
@@ -171,7 +178,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
-  void _confirmPoint() {
+  Future<void> _confirmPoint() async {
     final LatLng? point = _selectedPoint;
     if (point == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,14 +189,52 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       );
       return;
     }
+    if (_isResolvingPoint) return;
+
+    String address = _selectedAddressLabel.trim();
+    if (_pointNeedsReverse || address.length < 8) {
+      setState(() => _isResolvingPoint = true);
+      try {
+        final OsmGeocodingResult? resolved =
+            await _geocodingService.reverse(point);
+        if (!mounted) return;
+        if (resolved != null) {
+          address = resolved.displayName.trim();
+          setState(() {
+            _selectedAddressLabel = address;
+            _searchController.text = address;
+            _pointNeedsReverse = false;
+          });
+        }
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Alamat titik belum dapat dibaca otomatis: $error'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isResolvingPoint = false);
+      }
+    }
+
+    if (!mounted) return;
+    if (address.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Alamat titik belum terbaca. Cari alamat terlebih dahulu atau ketik alamat yang lebih lengkap.',
+          ),
+          backgroundColor: jobBrownColor,
+        ),
+      );
+      return;
+    }
+
     Navigator.pop<PickedLocation>(
       context,
-      PickedLocation(
-        point: point,
-        addressLabel: _selectedAddressLabel.trim().isEmpty
-            ? _searchController.text.trim()
-            : _selectedAddressLabel.trim(),
-      ),
+      PickedLocation(point: point, addressLabel: address),
     );
   }
 
@@ -299,7 +344,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                     maxZoom: 19,
                     onTap: (_, LatLng point) {
                       FocusScope.of(context).unfocus();
-                      setState(() => _selectedPoint = point);
+                      setState(() {
+                        _selectedPoint = point;
+                        _selectedAddressLabel = '';
+                        _pointNeedsReverse = true;
+                      });
                     },
                   ),
                   children: <Widget>[
@@ -408,7 +457,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   width: double.infinity,
                   height: 50,
                   child: FilledButton.icon(
-                    onPressed: _confirmPoint,
+                    onPressed: _isResolvingPoint ? null : _confirmPoint,
                     style: FilledButton.styleFrom(
                       backgroundColor: jobOrangeColor,
                       foregroundColor: const Color(0xFF5E3B00),
@@ -416,10 +465,21 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                         borderRadius: BorderRadius.circular(25),
                       ),
                     ),
-                    icon: const Icon(Icons.check_circle_outline_rounded),
-                    label: const Text(
-                      'Gunakan Titik Ini',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    icon: _isResolvingPoint
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF5E3B00),
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline_rounded),
+                    label: Text(
+                      _isResolvingPoint
+                          ? 'Membaca Alamat Titik...'
+                          : 'Gunakan Titik Ini',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
