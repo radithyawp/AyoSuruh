@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "858390387750",
+    "project_id": "ayosuruh",
+    "storage_bucket": "ayosuruh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858390387750:android:a4ee07f19b2f86d75e5ae7",
+        "android_client_info": {
+          "package_name": "com.ayosuruh.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2HtrCeNOW3cM7CsjJ9WzI4l-odnf_BBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858390387750:android:ebbadea4de5f8f415e5ae7",
+        "android_client_info": {
+          "package_name": "com.example.ayosuruh"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2HtrCeNOW3cM7CsjJ9WzI4l-odnf_BBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

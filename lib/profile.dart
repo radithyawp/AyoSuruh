@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:ayosuruh/services/notification_service.dart';
 
 // Import Halaman Terkait
 import 'edit_profile.dart';
@@ -17,6 +18,7 @@ import 'location/location_picker_page.dart';
 import 'payments/payment_history_page.dart';
 import 'wallet/mitra_wallet_page.dart';
 import 'wallet/wallet_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -289,16 +291,30 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout(BuildContext context) async {
+    // Kegagalan FCM tidak boleh menggagalkan logout akun.
+    if (!kIsWeb) {
+      try {
+        await NotificationService.instance.unregisterCurrentDevice();
+      } catch (error, stackTrace) {
+        debugPrint('Pembersihan token FCM dilewati: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+
     try {
       await _supabase.auth.signOut();
-      if (context.mounted) {
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
-      }
-    } catch (e) {
-      debugPrint('Error logout: $e');
+    } catch (error, stackTrace) {
+      debugPrint('Error logout Supabase: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
     }
+
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+      (Route<dynamic> route) => false,
+    );
   }
 
   /* ---------- BUILD METHOD ---------- */
