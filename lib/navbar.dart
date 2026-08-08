@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ayosuruh/mitra_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,6 +9,8 @@ import 'customer_dashboard.dart';
 import 'job.dart';
 import 'profile.dart';
 import 'tutorial/ayos_tutorial.dart';
+import 'notifications/notification_router.dart';
+import 'services/notification_service.dart' as push_notifications;
 
 class MainNavigation extends StatefulWidget {
   /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
@@ -32,6 +36,8 @@ class _MainNavigationState extends State<MainNavigation> {
   String _activeMode = 'customer';
   bool _canUseMitraMode = false;
   bool _isLoadingAccess = true;
+  StreamSubscription<Map<String, dynamic>>? _notificationTapSubscription;
+  Map<String, dynamic>? _pendingNotificationTap;
 
   static const Color _navBgColor = Color(0xFFFAF7F5);
   static const Color _inactiveColor = Color(0xFF524538);
@@ -42,7 +48,56 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+
+    _notificationTapSubscription = push_notifications
+        .NotificationService.instance.notificationTapStream
+        .listen((Map<String, dynamic> data) {
+      unawaited(_handleNotificationTap(data));
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final Map<String, dynamic>? pending = push_notifications
+          .NotificationService.instance
+          .takePendingNotificationTap();
+      if (pending != null) {
+        unawaited(_handleNotificationTap(pending));
+      }
+    });
+
     _fetchUserAccess();
+  }
+
+  @override
+  void dispose() {
+    _notificationTapSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
+    if (_isLoadingAccess) {
+      _pendingNotificationTap = Map<String, dynamic>.from(data);
+      return;
+    }
+
+    if (!mounted) return;
+
+    await NotificationRouter.openFromPushData(
+      context,
+      data,
+      activeMode: _activeMode,
+    );
+  }
+
+  void _flushPendingNotificationTap() {
+    final Map<String, dynamic>? pending = _pendingNotificationTap;
+    if (pending == null) return;
+    _pendingNotificationTap = null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_handleNotificationTap(pending));
+      }
+    });
   }
 
   String? _normalizeMode(String? value) {
@@ -107,6 +162,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _activeMode = resolvedMode;
         _isLoadingAccess = false;
       });
+      _flushPendingNotificationTap();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           AyosTutorial.showIfNeeded(context, mode: resolvedMode);
@@ -120,6 +176,7 @@ class _MainNavigationState extends State<MainNavigation> {
           _canUseMitraMode = false;
           _isLoadingAccess = false;
         });
+        _flushPendingNotificationTap();
       }
     }
   }

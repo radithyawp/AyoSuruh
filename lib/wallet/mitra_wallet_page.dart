@@ -298,6 +298,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         children: <Widget>[
           _balanceCard(),
           const SizedBox(height: 14),
+          _heldFundsInfoCard(),
+          const SizedBox(height: 14),
           _bankCard(),
           if (_payouts.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
@@ -433,6 +435,95 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heldFundsInfoCard() {
+    final num pending = _number(_summary['pending_balance']);
+    final num held = _number(_summary['held_balance']);
+    final String activeStatus =
+        (_summary['active_payout_status'] ?? '').toString().trim();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E2),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: const Color(0xFFF2D5A8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Row(
+            children: <Widget>[
+              Icon(Icons.lock_clock_outlined, color: _walletBrown, size: 21),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tentang saldo Pending & Ditahan',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: _walletBrown,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Pending ${formatRupiah(pending)} adalah pendapatan pekerjaan yang '
+            'masih melewati masa hold sebelum menjadi saldo tersedia.',
+            style: const TextStyle(fontSize: 11.5, height: 1.45),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            held > 0
+                ? 'Ditahan ${formatRupiah(held)} sedang dikunci untuk proses '
+                    'pencairan dan tidak dapat diajukan lagi sampai pencairan '
+                    'selesai, ditolak, atau dibatalkan.'
+                : 'Saldo Ditahan akan terisi ketika kamu mengajukan pencairan. '
+                    'Dana tersebut tidak bisa digunakan kembali selama proses admin berlangsung.',
+            style: const TextStyle(fontSize: 11.5, height: 1.45),
+          ),
+          if (activeStatus.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 17,
+                    color: _walletOrange,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'Status pencairan aktif: ${_payoutStatusLabel(activeStatus)}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: _walletBrown,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'Jika transaksi direfund setelah pendapatan tercatat, sistem dapat '
+            'membuat penyesuaian ledger. Kasus yang dananya sudah masuk proses '
+            'pencairan akan ditinjau admin.',
+            style: TextStyle(fontSize: 10.5, height: 1.4, color: Colors.black54),
           ),
         ],
       ),

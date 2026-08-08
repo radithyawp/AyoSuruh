@@ -29,7 +29,9 @@ class NotificationService {
   static const String channelDescription =
       'Notifikasi pekerjaan, pembayaran, chat, dan aktivitas Ayo Suruh';
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  // Lazy getter: jangan menyentuh Firebase saat singleton hanya direferensikan
+  // di Flutter Web. Firebase Web belum dikonfigurasi untuk Ayo Suruh.
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -40,9 +42,22 @@ class NotificationService {
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
 
+  final StreamController<Map<String, dynamic>> _tapController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Map<String, dynamic>? _pendingTap;
+
   String? _currentToken;
   bool _initialized = false;
   bool _isSyncing = false;
+
+  Stream<Map<String, dynamic>> get notificationTapStream =>
+      _tapController.stream;
+
+  Map<String, dynamic>? takePendingNotificationTap() {
+    final Map<String, dynamic>? pending = _pendingTap;
+    _pendingTap = null;
+    return pending == null ? null : Map<String, dynamic>.from(pending);
+  }
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     channelId,
@@ -53,6 +68,13 @@ class NotificationService {
 
   Future<void> initialize() async {
     if (_initialized) return;
+
+    // FCM saat ini hanya dikonfigurasi untuk Android. Menyentuh
+    // FirebaseMessaging.instance di Web dapat memicu FirebaseException.
+    if (kIsWeb) {
+      _initialized = true;
+      return;
+    }
 
     const initializationSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -156,6 +178,11 @@ class NotificationService {
   }
 
   Future<void> unregisterCurrentDevice() async {
+    if (kIsWeb) {
+      _currentToken = null;
+      return;
+    }
+
     final token = _currentToken ?? await _messaging.getToken();
 
     if (token != null && _supabase.auth.currentUser != null) {
@@ -206,12 +233,40 @@ class NotificationService {
     );
   }
 
-  static void _handleLocalNotificationTap(NotificationResponse response) {
+  void _handleLocalNotificationTap(NotificationResponse response) {
     debugPrint('Local notification dibuka: ${response.payload}');
+
+    final String payload = (response.payload ?? '').trim();
+    if (payload.isEmpty) return;
+
+    try {
+      final dynamic decoded = jsonDecode(payload);
+      if (decoded is Map) {
+        _queueNotificationTap(
+          Map<String, dynamic>.from(decoded),
+        );
+      }
+    } catch (error) {
+      debugPrint('Payload local notification tidak valid: $error');
+    }
   }
 
-  static void _handleRemoteNotificationTap(RemoteMessage message) {
+  void _handleRemoteNotificationTap(RemoteMessage message) {
     debugPrint('Push notification dibuka: ${message.data}');
+    _queueNotificationTap(Map<String, dynamic>.from(message.data));
+  }
+
+  void _queueNotificationTap(Map<String, dynamic> data) {
+    if (data.isEmpty) return;
+
+    final Map<String, dynamic> normalized =
+        Map<String, dynamic>.from(data);
+
+    if (_tapController.hasListener) {
+      _tapController.add(normalized);
+    } else {
+      _pendingTap = normalized;
+    }
   }
 
   Future<void> dispose() async {
@@ -226,6 +281,7 @@ class NotificationService {
     _openedSubscription = null;
 
     _currentToken = null;
+    _pendingTap = null;
     _isSyncing = false;
     _initialized = false;
   }

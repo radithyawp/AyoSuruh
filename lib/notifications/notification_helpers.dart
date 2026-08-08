@@ -128,6 +128,24 @@ NotificationVisual notificationVisual(String? type) {
         background: Color(0xFFFFE0DE),
         foreground: Color(0xFFB5473D),
       );
+    case 'admin_mitra_application_new':
+      return const NotificationVisual(
+        icon: Icons.person_search_rounded,
+        background: Color(0xFFFFE7C2),
+        foreground: Color(0xFF9A5B00),
+      );
+    case 'admin_payout_requested':
+      return const NotificationVisual(
+        icon: Icons.payments_outlined,
+        background: Color(0xFFDCEEF3),
+        foreground: Color(0xFF3E6B7A),
+      );
+    case 'admin_refund_review':
+      return const NotificationVisual(
+        icon: Icons.manage_search_rounded,
+        background: Color(0xFFFFE7C2),
+        foreground: Color(0xFF9A5B00),
+      );
     default:
       return const NotificationVisual(
         icon: Icons.notifications_none_rounded,
