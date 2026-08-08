@@ -1,20 +1,31 @@
-import 'package:ayosuruh/onboarding_screen.dart'; // <--- Import file onboarding
-import 'package:ayosuruh/navbar.dart';
+import 'package:ayosuruh/firebase_options.dart';
+import 'package:ayosuruh/onboarding_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ayosuruh/services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: "assets/.env");
+  if (!kIsWeb) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    await NotificationService.instance.initialize();
+  }
+
+  await dotenv.load(fileName: 'assets/.env');
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
-    publishableKey: dotenv.env['SUPABASE_ANONKEY']!,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
-    ),
+    anonKey: dotenv.env['SUPABASE_ANONKEY']!,
   );
 
   FlutterError.onError = (details) {
@@ -34,14 +45,8 @@ class MyApp extends StatelessWidget {
       title: 'AyoSuruh',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5A2B)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF97465)),
       ),
-
-      routes: <String, WidgetBuilder>{
-        '/home': (_) => const MainNavigation(),
-      },
-
-      // Ubah home menjadi SplashScreen
       home: const SplashScreen(),
     );
   }
