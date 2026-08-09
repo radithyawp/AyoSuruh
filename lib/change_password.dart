@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
 
@@ -61,33 +62,21 @@ class _ChangePasswordPageState extends State<ChangePassword> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kata sandi berhasil diperbarui!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AyoSnackBar.success(context, 'Kata sandi berhasil diperbarui.');
         Navigator.pop(context);
       }
     } on AuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message.contains('Invalid login credentials')
-                ? 'Kata sandi saat ini salah.'
-                : e.message),
-            backgroundColor: Colors.red,
-          ),
+        AyoSnackBar.error(
+          context,
+          e.message.contains('Invalid login credentials')
+              ? 'Kata sandi saat ini salah.'
+              : e.message,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Terjadi kesalahan: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AyoSnackBar.error(context, 'Terjadi kesalahan: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -267,7 +256,7 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryOrange,
                     elevation: 2,
-                    shadowColor: primaryOrange.withOpacity(0.4),
+                    shadowColor: primaryOrange.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'kebijakan.dart';
 import 'syarat_ketentuan.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'theme/ayo_theme.dart';
 
 class TentangAyoSuruhPage extends StatelessWidget {
   const TentangAyoSuruhPage({super.key});
@@ -17,15 +19,11 @@ class TentangAyoSuruhPage extends StatelessWidget {
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
           context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tautan belum dapat dibuka.')),
-        );
+        AyoSnackBar.error(context, 'Tautan belum dapat dibuka.');
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuka aplikasi tujuan.')),
-        );
+        AyoSnackBar.error(context, 'Gagal membuka aplikasi tujuan.');
       }
     }
   }
@@ -90,13 +88,17 @@ class TentangAyoSuruhPage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _socialTile(
+            context,
             icon: Icons.language_rounded,
             title: 'Website Company Profile',
-            subtitle: 'Domain akan ditambahkan setelah alamat web final',
-            enabled: false,
-            onTap: () {},
+            subtitle: 'madouseixalisphera.github.io/AyoSuruh-Web',
+            onTap: () => _openUrl(
+              context,
+              'https://madouseixalisphera.github.io/AyoSuruh-Web/',
+            ),
           ),
           _socialTile(
+            context,
             icon: Icons.camera_alt_outlined,
             title: 'Instagram',
             subtitle: '@ayo.suruh',
@@ -106,6 +108,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
             ),
           ),
           _socialTile(
+            context,
             icon: Icons.chat_bubble_outline_rounded,
             title: 'WhatsApp Business',
             subtitle: '+62 889-5255-693',
@@ -116,7 +119,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            '© 2026 Ayo Suruh. Dikembangkan sebagai proyek kewirausahaan Teknik Komputer UPI Kampus Cibiru.',
+            '© 2026 Ayo Suruh. Semua hak dilindungi.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF776C65)),
           ),
@@ -133,6 +136,12 @@ class TentangAyoSuruhPage extends StatelessWidget {
                     builder: (_) => const SyaratKetentuanPage(),
                   ),
                 ),
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(
+                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 child: const Text('Ketentuan Layanan'),
               ),
               const Text('•', style: TextStyle(color: _brown)),
@@ -140,6 +149,12 @@ class TentangAyoSuruhPage extends StatelessWidget {
                 onPressed: () => Navigator.push<void>(
                   context,
                   MaterialPageRoute<void>(builder: (_) => const KebijakanPage()),
+                ),
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(
+                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 child: const Text('Kebijakan Privasi'),
               ),
@@ -169,7 +184,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
             child: Image.asset(
               'assets/images/logo.jpeg',
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
+              errorBuilder: (_, _, _) => const Icon(
                 Icons.directions_run_rounded,
                 size: 60,
                 color: _orange,
@@ -188,7 +203,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         const Text(
-          'Versi 1.0.0 · MVP 2026',
+          'Versi 1.0.0 · 2026',
           style: TextStyle(fontSize: 11.5, color: Color(0xFF776C65)),
         ),
       ],
@@ -274,7 +289,8 @@ class TentangAyoSuruhPage extends StatelessWidget {
     );
   }
 
-  Widget _socialTile({
+  Widget _socialTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -293,7 +309,12 @@ class TentangAyoSuruhPage extends StatelessWidget {
         onTap: enabled ? onTap : null,
         leading: Icon(icon, color: enabled ? _brown : Colors.grey),
         title: Text(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+        subtitle: Text(
+          subtitle,
+          style: enabled
+              ? AyoTypography.link(context).copyWith(fontSize: 11)
+              : const TextStyle(fontSize: 11, color: Colors.grey),
+        ),
         trailing: Icon(
           enabled ? Icons.open_in_new_rounded : Icons.schedule_rounded,
           size: 17,

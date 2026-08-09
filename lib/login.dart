@@ -12,6 +12,9 @@ import 'auth/forgot_password_page.dart';
 import 'auth/reset_password_page.dart';
 import 'navbar.dart';
 import 'register.dart';
+import 'theme/ayo_theme.dart';
+import 'widgets/ayo_pressable.dart';
+import 'widgets/ayo_snackbar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.initialEmail, this.noticeMessage});
@@ -64,19 +67,15 @@ class _LoginPageState extends State<LoginPage> {
         await Future.wait<dynamic>(<Future<dynamic>>[
           AuthPreferences.shouldRememberSession(),
           AuthPreferences.rememberedEmail(),
-          AuthPreferences.rememberedPassword(),
+          AuthPreferences.clearLegacyStoredPassword(),
         ]);
     final bool remember = preference[0] as bool;
     final String? rememberedEmail = preference[1] as String?;
-    final String? rememberedPassword = preference[2] as String?;
     if (!mounted) return;
     setState(() {
       _rememberMe = remember;
       if (_emailCtrl.text.trim().isEmpty && rememberedEmail != null) {
         _emailCtrl.text = rememberedEmail;
-      }
-      if (remember && _passCtrl.text.isEmpty && rememberedPassword != null) {
-        _passCtrl.text = rememberedPassword;
       }
     });
   }
@@ -84,9 +83,7 @@ class _LoginPageState extends State<LoginPage> {
   void _showNoticeMessage() {
     final String message = widget.noticeMessage?.trim() ?? '';
     if (!mounted || message.isEmpty) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
+    AyoSnackBar.success(context, message);
   }
 
   Future<void> _openPasswordRecovery() async {
@@ -112,6 +109,8 @@ class _LoginPageState extends State<LoginPage> {
     _isNavigating = true;
 
     try {
+      final bool reactivated =
+          await AuthService.reactivateCurrentAccountIfNeeded();
       await AuthService.syncCurrentUserProfile();
       if (_rememberMe) {
         await AuthPreferences.saveLoginPreference(
@@ -121,12 +120,12 @@ class _LoginPageState extends State<LoginPage> {
       }
       if (!mounted) return;
 
-      if (showMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Berhasil masuk! Selamat datang.'),
-            backgroundColor: Colors.green,
-          ),
+      if (showMessage || reactivated) {
+        AyoSnackBar.success(
+          context,
+          reactivated
+              ? 'Akun diaktifkan kembali. Selamat datang!'
+              : 'Berhasil masuk! Selamat datang.',
         );
       }
 
@@ -149,13 +148,9 @@ class _LoginPageState extends State<LoginPage> {
     } catch (error) {
       _isNavigating = false;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Akun berhasil masuk, tetapi profil gagal disiapkan: $error',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Akun berhasil masuk, tetapi profil gagal disiapkan: $error',
       );
     }
   }
@@ -176,10 +171,9 @@ class _LoginPageState extends State<LoginPage> {
         await AuthPreferences.saveLoginPreference(
           rememberMe: _rememberMe,
           email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
         );
-        // Credential disimpan aman melalui Android Keystore/iOS Keychain ketika
-        // Remember Me aktif. Autofill OS tetap diberi kesempatan menyimpan juga.
+        // Ayo Suruh tidak menyimpan password. Autofill/password manager OS tetap
+        // dapat menawarkan penyimpanan credential secara terpisah.
         TextInput.finishAutofillContext(shouldSave: _rememberMe);
         await _completeLogin(showMessage: true);
       }
@@ -189,17 +183,10 @@ class _LoginPageState extends State<LoginPage> {
         message = 'Email atau password salah. Silakan periksa kembali.';
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      AyoSnackBar.error(context, message);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login gagal: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, 'Login gagal: $error');
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
@@ -217,29 +204,17 @@ class _LoginPageState extends State<LoginPage> {
       );
       final bool launched = await AuthService.signInWithGoogle();
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Halaman Google tidak dapat dibuka.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AyoSnackBar.error(context, 'Halaman Google tidak dapat dibuka.');
       }
     } on AuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal masuk dengan Google: ${error.message}'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Gagal masuk dengan Google: ${error.message}',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal masuk dengan Google: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, 'Gagal masuk dengan Google: $error');
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
@@ -247,12 +222,12 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFF39C12); // Orange Tombol & Aksen
-    const titleColor = Color(0xFF8B5A2B); // Cokelat Judul & Link
-    const inputBgColor = Color(0xFFF8F5F2); // Background Textfield
+    const primaryColor = Color(0xFFF6990E); // Orange Tombol & Aksen
+    const titleColor = Color(0xFF6E481F); // Cokelat Judul & Link
+    const inputBgColor = Color(0xFFFFFBF8); // Background Textfield
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6F3),
+      backgroundColor: const Color(0xFFFFFAF7),
       body: Stack(
         children: [
           // Latar Belakang Dekoratif Bawah (Wave/Curve)
@@ -282,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
                     Image.asset(
                       'assets/images/Logo_Ayo_Suruh.png',
                       height: 120,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, _, _) => const Icon(
                         Icons.directions_run_rounded,
                         size: 90,
                         color: primaryColor,
@@ -312,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 15,
                             offset: const Offset(0, 5),
                           ),
@@ -361,7 +336,7 @@ class _LoginPageState extends State<LoginPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 _buildLabel('Password'),
-                                GestureDetector(
+                                AyoPressable(
                                   onTap: _isLoading
                                       ? null
                                       : () {
@@ -377,14 +352,12 @@ class _LoginPageState extends State<LoginPage> {
                                             ),
                                           );
                                         },
-                                  child: const Text(
+                                  child: Text(
                                     'Lupa Password?',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
+                                    style: AyoTypography.link(
+                                      context,
                                       color: titleColor,
-                                    ),
+                                    ).copyWith(fontSize: 12),
                                   ),
                                 ),
                               ],
@@ -544,7 +517,7 @@ class _LoginPageState extends State<LoginPage> {
                                     Image.network(
                                       'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
                                       height: 18,
-                                      errorBuilder: (_, __, ___) => const Icon(
+                                      errorBuilder: (_, _, _) => const Icon(
                                         Icons.g_mobiledata,
                                         color: Colors.red,
                                         size: 24,
@@ -581,7 +554,9 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.grey[700],
                           ),
                         ),
-                        GestureDetector(
+                        AyoPressable(
+                          haptic: true,
+                          pressedScale: 0.96,
                           onTap: () {
                             Navigator.pushReplacement(
                               context,
@@ -590,13 +565,12 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             );
                           },
-                          child: const Text(
+                          child: Text(
                             'Daftar',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                            style: AyoTypography.link(
+                              context,
                               color: titleColor,
-                            ),
+                            ).copyWith(fontSize: 13),
                           ),
                         ),
                       ],

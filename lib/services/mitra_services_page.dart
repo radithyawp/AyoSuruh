@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
@@ -105,12 +106,11 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
 
   void _message(String message, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: error ? Colors.red.shade700 : jobGreenColor,
-      ),
-    );
+    if (error) {
+      AyoSnackBar.error(context, message);
+    } else {
+      AyoSnackBar.success(context, message);
+    }
   }
 
   @override
@@ -172,7 +172,7 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(18, 10, 18, 110),
                       itemCount: _items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (BuildContext context, int index) {
                         final Map<String, dynamic> item = _items[index];
                         final Map<String, dynamic>? category = item['categories'] is Map
@@ -184,6 +184,10 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                         final num price = item['starting_price'] is num
                             ? item['starting_price'] as num
                             : num.tryParse(item['starting_price']?.toString() ?? '') ?? 0;
+                        final dynamic rawImages = item['service_images'];
+                        final String coverUrl = rawImages is List && rawImages.isNotEmpty
+                            ? ((rawImages.first as Map)['image_url'] ?? '').toString()
+                            : '';
                         return Container(
                           padding: const EdgeInsets.all(15),
                           decoration: BoxDecoration(
@@ -197,16 +201,26 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                               Row(
                                 children: <Widget>[
                                   Container(
-                                    width: 44,
-                                    height: 44,
+                                    width: 54,
+                                    height: 54,
+                                    clipBehavior: Clip.antiAlias,
                                     decoration: BoxDecoration(
                                       color: categoryBackground(categoryName),
                                       borderRadius: BorderRadius.circular(13),
                                     ),
-                                    child: Icon(
-                                      categoryIcon(categoryName),
-                                      color: jobBrownColor,
-                                    ),
+                                    child: coverUrl.isEmpty
+                                        ? Icon(
+                                            categoryIcon(categoryName),
+                                            color: jobBrownColor,
+                                          )
+                                        : Image.network(
+                                            coverUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) => Icon(
+                                              categoryIcon(categoryName),
+                                              color: jobBrownColor,
+                                            ),
+                                          ),
                                   ),
                                   const SizedBox(width: 11),
                                   Expanded(

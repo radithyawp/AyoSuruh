@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -47,29 +48,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       );
       if (!mounted) return;
       setState(() => _emailSent = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Tautan reset password sudah dikirim. Periksa email Anda.',
-          ),
-          backgroundColor: Colors.green,
-        ),
+      AyoSnackBar.success(
+        context,
+        'Tautan reset password sudah dikirim. Periksa email Anda.',
       );
     } on AuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.message),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tautan reset belum dapat dikirim: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Tautan reset belum dapat dikirim: $error',
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

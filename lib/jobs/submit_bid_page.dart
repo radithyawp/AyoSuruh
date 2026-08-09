@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:flutter/services.dart';
 
 import 'job_helpers.dart';
@@ -115,11 +116,9 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penawaran belum berhasil dikirim: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Penawaran belum berhasil dikirim: $error',
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

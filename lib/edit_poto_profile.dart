@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
@@ -284,9 +285,9 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
       final user = _supabase.auth.currentUser;
       if (user == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Sesi telah berakhir, silakan login kembali.')),
+          AyoSnackBar.error(
+            context,
+            'Sesi telah berakhir, silakan login kembali.',
           );
         }
         return;
@@ -331,16 +332,15 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
           .eq('id', user.id);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto profil berhasil diperbarui!')),
-        );
+        AyoSnackBar.success(context, 'Foto profil berhasil diperbarui.');
         Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint('Error updating avatar: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui foto profil: $e')),
+        AyoSnackBar.error(
+          context,
+          'Gagal memperbarui foto profil: $e',
         );
       }
     } finally {
@@ -389,7 +389,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 15,
                           offset: const Offset(0, 5),
                         ),

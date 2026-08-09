@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../notification.dart';
+
 import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 import 'mitra_job_detail_page.dart';
 
 class MitraJobsPage extends StatefulWidget {
-  const MitraJobsPage({super.key});
+  const MitraJobsPage({
+    super.key,
+    this.tutorialKey,
+  });
+
+  final Key? tutorialKey;
 
   @override
   State<MitraJobsPage> createState() => _MitraJobsPageState();
@@ -92,7 +99,15 @@ class _MitraJobsPageState extends State<MitraJobsPage>
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: const <Widget>[
+          NotificationBell(
+            color: jobDarkBrownColor,
+            activeMode: 'mitra',
+          ),
+          SizedBox(width: 4),
+        ],
         bottom: TabBar(
+          key: widget.tutorialKey,
           controller: _tabController,
           isScrollable: false,
           labelColor: jobBrownColor,
@@ -158,7 +173,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
               itemCount: _availableJobs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> job = _availableJobs[index];
                 final bool alreadyBid = embeddedBids(job).any((bid) {
@@ -193,7 +208,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
               itemCount: _bids.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> bid = _bids[index];
                 final dynamic rawJob = bid['jobs'];
@@ -283,7 +298,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
               itemCount: _activeJobs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> job = _activeJobs[index];
                 return JobListCard(

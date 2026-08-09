@@ -5,6 +5,8 @@ import 'notifications/notification_helpers.dart';
 import 'notifications/notification_router.dart';
 import 'notifications/notification_service.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'widgets/ayo_pressable.dart';
+import 'widgets/ayo_snackbar.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({
@@ -95,10 +97,9 @@ class _NotificationPageState extends State<NotificationPage> {
       );
 
       if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notifikasi ini belum memiliki halaman tujuan.'),
-          ),
+        AyoSnackBar.info(
+          context,
+          'Notifikasi ini belum memiliki halaman tujuan.',
         );
       }
     } catch (error) {
@@ -108,12 +109,7 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-      ),
-    );
+    AyoSnackBar.error(context, message);
   }
 
   @override
@@ -519,53 +515,68 @@ class _NotificationBellState extends State<NotificationBell> {
       stream: _unreadStream,
       builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
         final int unreadCount = snapshot.data ?? 0;
-        return IconButton(
-          tooltip: 'Notifikasi',
-          onPressed: () {
-            Navigator.push<void>(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => NotificationPage(
-                  activeMode: widget.activeMode,
-                ),
-              ),
-            );
-          },
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              Icon(
-                Icons.notifications_none_rounded,
-                color: widget.color,
-                size: widget.size,
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  right: -5,
-                  top: -5,
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE53935),
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      unreadCount > 99 ? '99+' : unreadCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+        return Tooltip(
+          message: 'Notifikasi',
+          child: AyoPressable(
+            haptic: true,
+            pressedScale: 0.86,
+            pressedOpacity: 0.64,
+            onTap: () {
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => NotificationPage(
+                    activeMode: widget.activeMode,
                   ),
                 ),
-            ],
+              );
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1E6),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFF2DED0)),
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    color: widget.color,
+                    size: widget.size,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: -5,
+                      top: -5,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53935),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },

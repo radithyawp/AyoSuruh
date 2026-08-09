@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AuthService {
   AuthService._();
@@ -33,6 +32,40 @@ class AuthService {
       email.trim(),
       redirectTo: redirectTo,
     );
+  }
+
+  static Future<bool> reactivateCurrentAccountIfNeeded() async {
+    final User? user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final Map<String, dynamic>? row = await _supabase
+          .from('users')
+          .select('account_state')
+          .eq('id', user.id)
+          .maybeSingle();
+      final String state = (row?['account_state'] ?? 'active')
+          .toString()
+          .toLowerCase();
+      if (state == 'deleted') {
+        throw StateError('Akun ini sudah dihapus.');
+      }
+      if (state != 'deactivated') return false;
+
+      final dynamic reactivated = await _supabase.rpc('reactivate_my_account');
+      return reactivated == true;
+    } catch (error) {
+      final String message = error.toString().toLowerCase();
+      final bool migrationMissing =
+          message.contains('account_state') ||
+          message.contains('reactivate_my_account') ||
+          message.contains('does not exist');
+      if (migrationMissing) {
+        debugPrint('Account lifecycle migration belum tersedia: $error');
+        return false;
+      }
+      rethrow;
+    }
   }
 
   static Future<void> syncCurrentUserProfile() async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 import 'job_helpers.dart';
 import 'job_service.dart';
@@ -42,12 +43,7 @@ class _JobBidsPageState extends State<JobBidsPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penawaran belum dapat dimuat: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Penawaran belum dapat dimuat: $error');
     }
   }
 
@@ -104,11 +100,9 @@ class _JobBidsPageState extends State<JobBidsPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penawaran belum dapat diterima: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Penawaran belum dapat diterima: $error',
       );
     } finally {
       if (mounted) setState(() => _processingBidId = null);
@@ -123,12 +117,7 @@ class _JobBidsPageState extends State<JobBidsPage> {
       await _loadData();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penawaran belum dapat ditolak: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Penawaran belum dapat ditolak: $error');
     } finally {
       if (mounted) setState(() => _processingBidId = null);
     }

@@ -7,6 +7,10 @@ import '../jobs/job_helpers.dart';
 import '../jobs/job_service.dart';
 import 'mitra_service_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/network_photo_gallery.dart';
+import '../widgets/ayo_avatar.dart';
+import '../widgets/ayo_category_visual.dart';
+import '../widgets/ayo_snackbar.dart';
 
 class ServiceMarketplacePage extends StatefulWidget {
   const ServiceMarketplacePage({super.key});
@@ -85,11 +89,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final String mitraId = (service['mitra_id'] ?? '').toString();
     if (mitraId.isEmpty) return;
     if (currentUserId.isNotEmpty && currentUserId == mitraId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kamu tidak dapat memesan jasa yang kamu publikasikan sendiri.'),
-          backgroundColor: jobBrownColor,
-        ),
+      AyoSnackBar.info(
+        context,
+        'Jasa ini milik akunmu. Kelola dari halaman Jasa Saya.',
       );
       return;
     }
@@ -140,6 +142,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         (item['description'] ?? '').toString(),
         (category?['name'] ?? '').toString(),
         (mitra?['fullname'] ?? '').toString(),
+        (mitra?['location'] ?? '').toString(),
       ].join(' ').toLowerCase();
       return haystack.contains(q);
     }).toList();
@@ -249,24 +252,61 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                       style: TextStyle(color: Color(0xFF746760)),
                     )
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: categories.map((Map<String, dynamic> category) {
-                        final String name =
-                            (category['name'] ?? 'Lainnya').toString();
-                        return ActionChip(
-                          avatar: Icon(
-                            categoryIcon(name),
-                            size: 17,
-                            color: jobBrownColor,
-                          ),
-                          label: Text(name),
-                          backgroundColor: categoryBackground(name),
-                          side: BorderSide.none,
-                          onPressed: () => _createFromCategory(name),
+                    LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        final double itemWidth = (constraints.maxWidth - 10) / 2;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: categories.map((Map<String, dynamic> category) {
+                            final String name =
+                                (category['name'] ?? 'Lainnya').toString();
+                            return SizedBox(
+                              width: itemWidth,
+                              child: AyoGradientBorder(
+                                gradient: ayoCategoryGradient(name),
+                                radius: 18,
+                                width: 1.4,
+                                child: Material(
+                                  color: Colors.white,
+                                  child: InkWell(
+                                    onTap: () => _createFromCategory(name),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(7),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          AyoCategoryImage(
+                                            name: name,
+                                            width: itemWidth - 16,
+                                            height: 88,
+                                            radius: 13,
+                                            gradientBorder: false,
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(4, 9, 4, 4),
+                                            child: Text(
+                                              name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                height: 1.15,
+                                                fontWeight: FontWeight.w800,
+                                                color: jobBrownColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
                     ),
                   const SizedBox(height: 26),
                   Row(
@@ -346,6 +386,10 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final String categoryName = (category?['name'] ?? 'Lainnya').toString();
     final String mitraName = (mitra?['fullname'] ?? 'Mitra Ayo Suruh').toString();
     final String? avatar = mitra?['avatar_url']?.toString();
+    final num rating = mitra?['rating'] is num
+        ? mitra!['rating'] as num
+        : num.tryParse(mitra?['rating']?.toString() ?? '') ?? 0;
+    final String location = (mitra?['location'] ?? '').toString().trim();
     final num price = service['starting_price'] is num
         ? service['starting_price'] as num
         : num.tryParse(service['starting_price']?.toString() ?? '') ?? 0;
@@ -353,6 +397,14 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         Supabase.instance.client.auth.currentUser?.id ?? '';
     final bool isOwnService =
         currentUserId.isNotEmpty && currentUserId == service['mitra_id']?.toString();
+    final dynamic rawImages = service['service_images'];
+    final List<String> imageUrls = rawImages is List
+        ? rawImages
+            .whereType<Map>()
+            .map((Map image) => (image['image_url'] ?? '').toString().trim())
+            .where((String url) => url.isNotEmpty)
+            .toList()
+        : <String>[];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 11),
@@ -365,16 +417,21 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          if (imageUrls.isNotEmpty) ...<Widget>[
+            NetworkPhotoGallery(
+              urls: imageUrls,
+              aspectRatio: 16 / 9,
+              borderRadius: 15,
+            ),
+            const SizedBox(height: 13),
+          ],
           Row(
             children: <Widget>[
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFFFFE6C0),
-                backgroundImage:
-                    avatar == null || avatar.isEmpty ? null : NetworkImage(avatar),
-                child: avatar == null || avatar.isEmpty
-                    ? const Icon(Icons.person_rounded, color: jobBrownColor)
-                    : null,
+              AyoAvatar(
+                imageUrl: avatar,
+                size: 42,
+                backgroundColor: const Color(0xFFFFEFE1),
+                logoPadding: 6,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -387,12 +444,25 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                    Text(
-                      categoryName,
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF786A62),
-                      ),
+                    const SizedBox(height: 2),
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 3,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        _serviceMeta(
+                          icon: Icons.star_rounded,
+                          text: rating > 0
+                              ? rating.toStringAsFixed(1)
+                              : 'Baru',
+                          iconColor: const Color(0xFFF6990E),
+                        ),
+                        if (location.isNotEmpty)
+                          _serviceMeta(
+                            icon: Icons.location_on_outlined,
+                            text: location,
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -415,6 +485,15 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             ],
           ),
           const SizedBox(height: 12),
+          Text(
+            categoryName,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: Color(0xFF8B7A70),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             (service['title'] ?? 'Jasa Mitra').toString(),
             style: const TextStyle(
@@ -459,4 +538,33 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
       ),
     );
   }
+  Widget _serviceMeta({
+    required IconData icon,
+    required String text,
+    Color iconColor = const Color(0xFF8B7A70),
+  }) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 150),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 13, color: iconColor),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 9.8,
+                color: Color(0xFF746760),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
@@ -164,24 +165,14 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
       );
       await widget.onChanged();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            approve
-                ? 'Refund ditandai selesai.'
-                : 'Permintaan refund ditolak.',
-          ),
-          backgroundColor: approve ? _green : Colors.red.shade700,
-        ),
-      );
+      if (approve) {
+        AyoSnackBar.success(context, 'Refund ditandai selesai.');
+      } else {
+        AyoSnackBar.info(context, 'Permintaan refund ditolak.');
+      }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Refund belum dapat diproses: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Refund belum dapat diproses: $error');
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }

@@ -1,18 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_service.dart';
 import 'kebijakan.dart';
 import 'login.dart';
 import 'syarat_ketentuan.dart';
+import 'theme/ayo_theme.dart';
+import 'widgets/ayo_pressable.dart';
 
 // Konstanta Warna
-const Color kPrimaryColor = Color(0xFFF39C12); // Warna Orange Utama
-const Color kTitleColor = Color(0xFF8B5A2B); // Warna Cokelat Judul
-const Color kInputBgColor = Color(0xFFF7F3F0); // Background Textfield
-const Color kBackgroundColor = Color(0xFFFAF6F3); // Background Screen
+const Color kPrimaryColor = Color(0xFFF6990E); // Warna Orange Utama
+const Color kTitleColor = Color(0xFF6E481F); // Warna Cokelat Judul
+const Color kInputBgColor = Color(0xFFFFFBF8); // Background Textfield
+const Color kBackgroundColor = Color(0xFFFFFAF7); // Background Screen
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -99,13 +102,9 @@ class _RegisterPageState extends State<RegisterPage> {
       _isNavigating = false;
       _isGoogleFlow = false;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Akun dibuat, tetapi proses akhir registrasi gagal: $error',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Akun dibuat, tetapi proses akhir registrasi gagal: $error',
       );
     }
   }
@@ -153,17 +152,10 @@ class _RegisterPageState extends State<RegisterPage> {
       await _finishRegistration(email: email, message: message);
     } on AuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message), backgroundColor: Colors.red),
-      );
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, 'Terjadi kesalahan: $error');
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
@@ -179,30 +171,21 @@ class _RegisterPageState extends State<RegisterPage> {
       final bool launched = await AuthService.signInWithGoogle();
       if (!launched && mounted) {
         _isGoogleFlow = false;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Halaman Google tidak dapat dibuka.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AyoSnackBar.error(context, 'Halaman Google tidak dapat dibuka.');
       }
     } on AuthException catch (error) {
       _isGoogleFlow = false;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal mendaftar dengan Google: ${error.message}'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Gagal mendaftar dengan Google: ${error.message}',
       );
     } catch (error) {
       _isGoogleFlow = false;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal mendaftar dengan Google: $error'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Gagal mendaftar dengan Google: $error',
       );
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
@@ -223,7 +206,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Image.asset(
                   'assets/images/Logo_Ayo_Suruh.png',
                   height: 120,
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, _, _) => const Icon(
                     Icons.directions_run_rounded,
                     size: 80,
                     color: kPrimaryColor,
@@ -253,7 +236,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -493,7 +476,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 Image.network(
                                   'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png',
                                   height: 18,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => const Icon(
                                     Icons.g_mobiledata,
                                     color: Colors.red,
                                     size: 24,
@@ -527,20 +510,21 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Sudah punya akun? ',
                       style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
-                    GestureDetector(
+                    AyoPressable(
+                      haptic: true,
+                      pressedScale: 0.96,
                       onTap: () {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (_) => const LoginPage()),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'Masuk',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                        style: AyoTypography.link(
+                          context,
                           color: kTitleColor,
-                        ),
+                        ).copyWith(fontSize: 13),
                       ),
                     ),
                   ],

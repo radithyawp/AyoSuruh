@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../location/job_location_map.dart';
@@ -8,6 +11,7 @@ import '../location/osm_geocoding_service.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/ayo_snackbar.dart';
 
 class CreateJobPage extends StatefulWidget {
   const CreateJobPage({
@@ -39,6 +43,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _budgetController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
+
+  final List<XFile> _jobImages = <XFile>[];
 
   bool _isLoading = true;
   bool _isSubmitting = false;
@@ -91,18 +98,21 @@ class _CreateJobPageState extends State<CreateJobPage> {
         _categories = categories;
         _addresses = addresses;
         if (categories.isNotEmpty) {
-          final String initialName = (widget.initialCategoryName ?? '').trim().toLowerCase();
+          final String initialName = (widget.initialCategoryName ?? '')
+              .trim()
+              .toLowerCase();
           Map<String, dynamic>? initialCategory;
           if (initialName.isNotEmpty) {
             for (final Map<String, dynamic> category in categories) {
-              if ((category['name'] ?? '').toString().trim().toLowerCase() == initialName) {
+              if ((category['name'] ?? '').toString().trim().toLowerCase() ==
+                  initialName) {
                 initialCategory = category;
                 break;
               }
             }
           }
-          _selectedCategoryId =
-              (initialCategory ?? categories.first)['id'].toString();
+          _selectedCategoryId = (initialCategory ?? categories.first)['id']
+              .toString();
         }
         if (addresses.isNotEmpty) {
           _selectedAddressId = addresses.first['id'].toString();
@@ -188,27 +198,29 @@ class _CreateJobPageState extends State<CreateJobPage> {
   String _titleHintForCategory() {
     switch (_selectedCategoryName().trim().toLowerCase()) {
       case 'elektronik':
-        return 'Contoh: Perbaiki laptop yang tidak mau menyala';
+        return 'Contoh: Perbaiki laptop rusak';
       case 'antar-jemput':
-        return 'Contoh: Antar saya dari kampus ke stasiun';
+        return 'Contoh: Antar ke stasiun';
       case 'jasa titip':
-        return 'Contoh: Titip beli makanan di minimarket';
+        return 'Contoh: Titip beli kebutuhan';
       case 'survey & informasi kost':
         return 'Contoh: Survey kost dekat kampus';
       case 'administrasi':
-        return 'Contoh: Bantu urus berkas administrasi';
+        return 'Contoh: Bantu urus berkas';
       case 'design & coding':
         return 'Contoh: Buat desain poster acara';
       case 'rumah tangga':
-        return 'Contoh: Bersihkan kamar atau bongkar pasang lemari';
+        return 'Contoh: Bersihkan kamar kos';
       case 'otomotif':
         return 'Contoh: Bantu ganti aki motor';
       case 'kurir':
         return 'Contoh: Antar paket ke alamat tujuan';
       case 'tukang':
         return 'Contoh: Pasang rak dinding';
+      case 'gaya hidup':
+        return 'Contoh: Konsultasi, pijat, atau layanan relaksasi';
       default:
-        return 'Contoh: Jelaskan bantuan yang kamu butuhkan';
+        return 'Contoh: Bantuan yang dibutuhkan';
     }
   }
 
@@ -228,10 +240,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
           '',
         )
         .replaceAll(
-          RegExp(
-            r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+',
-            caseSensitive: false,
-          ),
+          RegExp(r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+', caseSensitive: false),
           '',
         )
         .replaceAll(
@@ -239,10 +248,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
           '',
         )
         .replaceAll(
-          RegExp(
-            r'\b(?:kota|kabupaten|kab\.?)\s+',
-            caseSensitive: false,
-          ),
+          RegExp(r'\b(?:kota|kabupaten|kab\.?)\s+', caseSensitive: false),
           '',
         )
         .replaceAll(RegExp(r'\s+,'), ',')
@@ -253,8 +259,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     if (broader.endsWith(',')) {
       broader = broader.substring(0, broader.length - 1).trim();
     }
-    if (broader.isNotEmpty &&
-        !broader.toLowerCase().contains('indonesia')) {
+    if (broader.isNotEmpty && !broader.toLowerCase().contains('indonesia')) {
       broader = '$broader, Jawa Barat, Indonesia';
     }
     if (broader.isNotEmpty && !queries.contains(broader)) {
@@ -289,8 +294,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
       bool approximate = false;
 
       for (int index = 0; index < candidates.length; index++) {
-        final List<OsmGeocodingResult> results =
-            await _geocodingService.search(candidates[index]);
+        final List<OsmGeocodingResult> results = await _geocodingService.search(
+          candidates[index],
+        );
         if (results.isNotEmpty) {
           best = results.first;
           approximate = index > 0;
@@ -403,19 +409,24 @@ class _CreateJobPageState extends State<CreateJobPage> {
       _selectedTime!.minute,
     );
     if (!scheduledAt.isAfter(DateTime.now())) {
-      _showMessage('Jadwal pekerjaan harus lebih lambat dari waktu sekarang.',
-          isError: true);
+      _showMessage(
+        'Jadwal pekerjaan harus lebih lambat dari waktu sekarang.',
+        isError: true,
+      );
       return;
     }
 
-    final String digits = _budgetController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final String digits = _budgetController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
     final num budget = num.tryParse(digits) ?? 0;
 
     setState(() => _isSubmitting = true);
     try {
       final String timeValue =
           '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}:00';
-      await _jobService.createJob(
+      final String jobId = await _jobService.createJob(
         categoryId: _selectedCategoryId!,
         title: _titleController.text,
         description: _descriptionController.text,
@@ -429,13 +440,32 @@ class _CreateJobPageState extends State<CreateJobPage> {
         preferredMitraId: widget.preferredMitraId,
       );
 
+      String? photoWarning;
+      if (_jobImages.isNotEmpty) {
+        try {
+          await _jobService.uploadJobImages(jobId: jobId, images: _jobImages);
+        } catch (error) {
+          photoWarning =
+              'Pekerjaan berhasil dibuat, tetapi foto belum seluruhnya terunggah. Kamu tetap dapat melanjutkan pekerjaan ini.';
+          debugPrint('Upload foto pekerjaan gagal: $error');
+        }
+      }
+
       if (!mounted) return;
+      final String baseSuccessMessage = widget.preferredMitraId == null
+          ? 'Pekerjaanmu sudah tampil untuk mitra. Penawaran yang masuk dapat dilihat dari halaman Pekerjaan.'
+          : 'Permintaan ini ditujukan ke ${widget.preferredMitraName ?? 'mitra pilihanmu'}. Mitra tersebut tetap mengirim penawaran melalui alur pekerjaan Ayo Suruh.';
+      final String successMessage = photoWarning == null
+          ? baseSuccessMessage
+          : '$baseSuccessMessage\n\n$photoWarning';
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext dialogContext) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
             icon: const CircleAvatar(
               radius: 30,
               backgroundColor: Color(0xFFD9EDCB),
@@ -446,12 +476,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: Text(
-              widget.preferredMitraId == null
-                  ? 'Pekerjaanmu sudah tampil untuk mitra. Penawaran yang masuk dapat dilihat dari halaman Pekerjaan.'
-                  : 'Permintaan ini ditujukan ke ${widget.preferredMitraName ?? 'mitra pilihanmu'}. Mitra tersebut tetap mengirim penawaran melalui alur pekerjaan Ayo Suruh.',
-              textAlign: TextAlign.center,
-            ),
+            content: Text(successMessage, textAlign: TextAlign.center),
             actionsAlignment: MainAxisAlignment.center,
             actions: <Widget>[
               FilledButton(
@@ -465,21 +490,204 @@ class _CreateJobPageState extends State<CreateJobPage> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      _showMessage('Pekerjaan belum berhasil dipublikasikan: $error',
-          isError: true);
+      _showMessage(
+        'Pekerjaan belum berhasil dipublikasikan: $error',
+        isError: true,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
+  Future<void> _addJobPhoto() async {
+    if (_jobImages.length >= 5 || _isSubmitting) return;
+    final String? source = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Text(
+                  'Tambah Foto Pekerjaan',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Tambahkan kondisi barang/lokasi agar Mitra lebih mudah memahami pekerjaan.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF756960)),
+                ),
+                const SizedBox(height: 14),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Ambil dari Kamera'),
+                  onTap: () => Navigator.pop(sheetContext, 'camera'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Pilih dari Galeri'),
+                  subtitle: const Text('Bisa memilih beberapa foto sekaligus.'),
+                  onTap: () => Navigator.pop(sheetContext, 'gallery'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || source == null) return;
+
+    try {
+      final int remaining = 5 - _jobImages.length;
+      if (source == 'camera') {
+        final XFile? file = await _imagePicker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 82,
+          maxWidth: 1600,
+          maxHeight: 1600,
+        );
+        if (file != null && mounted) {
+          setState(() => _jobImages.add(file));
+        }
+        return;
+      }
+
+      final List<XFile> files = await _imagePicker.pickMultiImage(
+        imageQuality: 82,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (!mounted || files.isEmpty) return;
+      final List<XFile> accepted = files.take(remaining).toList();
+      setState(() => _jobImages.addAll(accepted));
+      if (files.length > remaining) {
+        _showMessage(
+          'Maksimal 5 foto. Hanya $remaining foto pertama yang ditambahkan.',
+        );
+      }
+    } catch (error) {
+      _showMessage('Foto belum dapat dipilih: $error', isError: true);
+    }
+  }
+
+  Widget _buildJobPhotoPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                _jobImages.isEmpty
+                    ? 'Opsional · maksimal 5 foto'
+                    : '${_jobImages.length}/5 foto dipilih',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF756960)),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _jobImages.length >= 5 ? null : _addJobPhoto,
+              icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+              label: Text(_jobImages.isEmpty ? 'Tambah Foto' : 'Tambah'),
+            ),
+          ],
+        ),
+        if (_jobImages.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 92,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _jobImages.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 9),
+              itemBuilder: (BuildContext context, int index) {
+                final XFile file = _jobImages[index];
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: SizedBox(
+                        width: 92,
+                        height: 92,
+                        child: FutureBuilder<Uint8List>(
+                          future: file.readAsBytes(),
+                          builder:
+                              (
+                                BuildContext context,
+                                AsyncSnapshot<Uint8List> snapshot,
+                              ) {
+                                if (!snapshot.hasData) {
+                                  return const ColoredBox(
+                                    color: Color(0xFFF1ECE8),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return Image.memory(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: -7,
+                      right: -7,
+                      child: Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(),
+                        elevation: 2,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _isSubmitting
+                              ? null
+                              : () =>
+                                    setState(() => _jobImages.removeAt(index)),
+                          child: const Padding(
+                            padding: EdgeInsets.all(5),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 16,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 5),
+        const Text(
+          'Tips: foto kerusakan, kondisi barang, ukuran, atau area kerja membantu Mitra memberi penawaran yang lebih tepat.',
+          style: TextStyle(
+            fontSize: 10.5,
+            height: 1.4,
+            color: Color(0xFF81736B),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : jobGreenColor,
-      ),
-    );
+    if (isError) {
+      AyoSnackBar.error(context, message);
+    } else {
+      AyoSnackBar.success(context, message);
+    }
   }
 
   @override
@@ -506,7 +714,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
         actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
+          ? const Center(
+              child: CircularProgressIndicator(color: jobOrangeColor),
+            )
           : SafeArea(
               top: false,
               child: Form(
@@ -568,7 +778,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _descriptionController,
-                      hintText: 'Jelaskan apa yang perlu dikerjakan secara detail...',
+                      hintText:
+                          'Jelaskan apa yang perlu dikerjakan secara detail...',
                       maxLines: 5,
                       validator: (String? value) {
                         if (value == null || value.trim().length < 10) {
@@ -577,6 +788,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: 18),
+                    _sectionLabel('Foto Pekerjaan'),
+                    const SizedBox(height: 5),
+                    _buildJobPhotoPicker(),
                     const SizedBox(height: 18),
                     _sectionLabel('Lokasi Pekerjaan'),
                     const SizedBox(height: 8),
@@ -620,8 +835,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
                       ],
                       validator: (String? value) {
                         final num amount =
-                            num.tryParse((value ?? '').replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-                        if (amount < 1000) return 'Masukkan estimasi harga yang wajar.';
+                            num.tryParse(
+                              (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
+                            ) ??
+                            0;
+                        if (amount < 1000)
+                          return 'Masukkan estimasi harga yang wajar.';
                         return null;
                       },
                     ),
@@ -652,7 +871,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                                 ),
                               )
                             : const Text(
-                                'Publish Pekerjaan',
+                                'Buat Pekerjaan',
                                 style: TextStyle(
                                   color: Color(0xFF5E3B00),
                                   fontWeight: FontWeight.w800,
@@ -700,6 +919,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         final bool selected = id == _selectedCategoryId;
         return ChoiceChip(
           selected: selected,
+          showCheckmark: false,
           onSelected: (_) => setState(() => _selectedCategoryId = id),
           avatar: Icon(
             categoryIcon(name),
@@ -717,7 +937,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
           side: BorderSide(
             color: selected ? const Color(0xFFA8C895) : jobBorderColor,
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
         );
       }).toList(),
     );
@@ -742,7 +964,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 items: <DropdownMenuItem<String>>[
                   ..._addresses.map((Map<String, dynamic> address) {
-                    final String label = (address['label'] ?? 'Alamat').toString();
+                    final String label = (address['label'] ?? 'Alamat')
+                        .toString();
                     final String value = address['address'].toString();
                     return DropdownMenuItem<String>(
                       value: address['id'].toString(),
@@ -806,9 +1029,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
             job: <String, dynamic>{
               'latitude': _selectedPoint!.latitude,
               'longitude': _selectedPoint!.longitude,
-              'addresses': <String, dynamic>{
-                'address': _currentAddressLabel(),
-              },
+              'addresses': <String, dynamic>{'address': _currentAddressLabel()},
             },
           ),
           const SizedBox(height: 10),
@@ -924,10 +1145,15 @@ class _CreateJobPageState extends State<CreateJobPage> {
       decoration: InputDecoration(
         hintText: hintText,
         prefixText: prefixText,
-        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: jobBrownColor),
+        prefixIcon: prefixIcon == null
+            ? null
+            : Icon(prefixIcon, color: jobBrownColor),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: jobBorderColor),

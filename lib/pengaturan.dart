@@ -8,6 +8,8 @@ import 'security_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'tutorial/ayos_tutorial.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'account/account_management_page.dart';
+import 'feedback/app_feedback_page.dart';
 
 class PengaturanPage extends StatefulWidget {
   const PengaturanPage({super.key});
@@ -154,6 +156,17 @@ class _PengaturanPageState extends State<PengaturanPage> {
                         _navigateToChangePassword();
                       },
                     ),
+                    _buildDivider(),
+                    _buildSettingTile(
+                      icon: Icons.manage_accounts_outlined,
+                      title: 'Kelola / Hapus Akun',
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AccountManagementPage(),
+                        ),
+                      ),
+                    ),
                   ]),
                   const SizedBox(height: 20),
 
@@ -183,6 +196,17 @@ class _PengaturanPageState extends State<PengaturanPage> {
                   _buildSectionTitle('INFORMASI'),
                   const SizedBox(height: 8),
                   _buildCardGroup([
+                    _buildSettingTile(
+                      icon: Icons.rate_review_outlined,
+                      title: 'Kritik & Saran',
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AppFeedbackPage(),
+                        ),
+                      ),
+                    ),
+                    _buildDivider(),
                     _buildSettingTile(
                       icon: Icons.description_outlined,
                       title: 'Syarat & Ketentuan',
@@ -285,7 +309,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        color: primaryBrown.withOpacity(0.9),
+        color: primaryBrown.withValues(alpha: 0.9),
         letterSpacing: 0.8,
       ),
     );
@@ -299,7 +323,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -336,7 +360,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: primaryBrown.withOpacity(0.6),
+              color: primaryBrown.withValues(alpha: 0.6),
               size: 20,
             ),
           ],

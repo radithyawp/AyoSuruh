@@ -11,6 +11,8 @@ import 'profile.dart';
 import 'tutorial/ayos_tutorial.dart';
 import 'notifications/notification_router.dart';
 import 'services/notification_service.dart' as push_notifications;
+import 'widgets/ayo_pressable.dart';
+import 'widgets/ayo_snackbar.dart';
 
 class MainNavigation extends StatefulWidget {
   /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
@@ -27,6 +29,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final AyosTutorialAnchors _tutorialAnchors = AyosTutorialAnchors();
 
   int _currentIndex = 0;
   int _dashboardRefreshTick = 0;
@@ -49,6 +52,8 @@ class _MainNavigationState extends State<MainNavigation> {
   void initState() {
     super.initState();
 
+    AyosTutorial.replayRequest.addListener(_handleTutorialReplayRequest);
+
     _notificationTapSubscription = push_notifications
         .NotificationService.instance.notificationTapStream
         .listen((Map<String, dynamic> data) {
@@ -69,8 +74,40 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    AyosTutorial.replayRequest.removeListener(_handleTutorialReplayRequest);
     _notificationTapSubscription?.cancel();
     super.dispose();
+  }
+
+  void _handleTutorialReplayRequest() {
+    final String? requestedMode = AyosTutorial.replayRequest.value;
+    if (requestedMode == null || !mounted) return;
+    AyosTutorial.replayRequest.value = null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        AyosTutorial.show(
+          context,
+          mode: requestedMode,
+          anchors: _tutorialAnchors,
+          onSelectTab: _selectTutorialTab,
+        ),
+      );
+    });
+  }
+
+  Future<void> _selectTutorialTab(int index) async {
+    if (!mounted) return;
+    if (_currentIndex != index) {
+      setState(() {
+        _currentIndex = index;
+        if (index == 0) _dashboardRefreshTick++;
+        if (index == 1) _jobsRefreshTick++;
+        if (index == 3) _profileRefreshTick++;
+      });
+    }
+    await WidgetsBinding.instance.endOfFrame;
   }
 
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
@@ -162,12 +199,20 @@ class _MainNavigationState extends State<MainNavigation> {
         _activeMode = resolvedMode;
         _isLoadingAccess = false;
       });
+      final bool openedFromNotification = _pendingNotificationTap != null;
       _flushPendingNotificationTap();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          AyosTutorial.showIfNeeded(context, mode: resolvedMode);
-        }
-      });
+      if (!openedFromNotification) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AyosTutorial.showIfNeeded(
+              context,
+              mode: resolvedMode,
+              anchors: _tutorialAnchors,
+              onSelectTab: _selectTutorialTab,
+            );
+          }
+        });
+      }
     } catch (error) {
       debugPrint('Error fetching account access in navbar: $error');
       if (mounted) {
@@ -187,11 +232,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
     if (normalizedMode == 'mitra' && !_canUseMitraMode) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Akun belum terdaftar sebagai mitra aktif.'),
-            backgroundColor: Colors.red,
-          ),
+        AyoSnackBar.info(
+          context,
+          'Daftar sebagai Mitra terlebih dahulu untuk menerima pekerjaan.',
         );
       }
       return;
@@ -219,17 +262,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
     if (!mounted) return;
     final String label = normalizedMode == 'mitra' ? 'Mitra' : 'Customer';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sekarang menggunakan Mode $label.'),
-        backgroundColor: const Color(0xFF4B613E),
-        duration: const Duration(seconds: 2),
-      ),
+    AyoSnackBar.info(context, 'Sekarang menggunakan akun sebagai $label.');
+    await AyosTutorial.showIfNeeded(
+      context,
+      mode: normalizedMode,
+      anchors: _tutorialAnchors,
+      onSelectTab: _selectTutorialTab,
     );
-    await AyosTutorial.showIfNeeded(context, mode: normalizedMode);
   }
 
   void _changePage(int index) {
+    if (index == _currentIndex) return;
     setState(() {
       _currentIndex = index;
       if (index == 0) _dashboardRefreshTick++;
@@ -250,27 +293,41 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     final Widget activeDashboard = _activeMode == 'mitra'
-        ? MitraDashboardPage(key: ValueKey(_dashboardRefreshTick))
-        : DashboardPage(key: ValueKey(_dashboardRefreshTick));
+        ? MitraDashboardPage(
+            key: ValueKey(_dashboardRefreshTick),
+            tutorialAnchors: _tutorialAnchors,
+          )
+        : DashboardPage(
+            key: ValueKey(_dashboardRefreshTick),
+            tutorialAnchors: _tutorialAnchors,
+          );
 
     final List<Widget> pages = <Widget>[
       activeDashboard,
       JobPage(
         key: ValueKey('jobs-$_activeMode-$_jobsRefreshTick'),
         role: _activeMode,
+        tutorialKey: _tutorialAnchors.jobsOverview,
       ),
-      const ChatPage(),
+      ChatPage(
+        tutorialKey: _tutorialAnchors.chatOverview,
+        activeMode: _activeMode,
+      ),
       ProfilePage(
         key: ValueKey('profile-$_activeMode-$_profileRefreshTick'),
         activeMode: _activeMode,
         canUseMitraMode: _canUseMitraMode,
         onModeChanged: _changeActiveMode,
+        tutorialAnchors: _tutorialAnchors,
       ),
     ];
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(index: _currentIndex, children: pages),
+      body: HeroMode(
+        enabled: false,
+        child: pages[_currentIndex],
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: _navBgColor,
@@ -287,26 +344,30 @@ class _MainNavigationState extends State<MainNavigation> {
                 _buildNavButton(
                   icon: Icons.home_outlined,
                   activeIcon: Icons.home_rounded,
-                  label: 'Home',
+                  label: 'Beranda',
                   index: 0,
+                  tutorialKey: _tutorialAnchors.navHome,
                 ),
                 _buildNavButton(
                   icon: Icons.work_outline_rounded,
                   activeIcon: Icons.work_rounded,
-                  label: 'Jobs',
+                  label: 'Pekerjaan',
                   index: 1,
+                  tutorialKey: _tutorialAnchors.navJobs,
                 ),
                 _buildNavButton(
                   icon: Icons.chat_bubble_outline_rounded,
                   activeIcon: Icons.chat_bubble_rounded,
                   label: 'Chat',
                   index: 2,
+                  tutorialKey: _tutorialAnchors.navChat,
                 ),
                 _buildNavButton(
                   icon: Icons.person_outline_rounded,
                   activeIcon: Icons.person_rounded,
-                  label: 'Profile',
+                  label: 'Profil',
                   index: 3,
+                  tutorialKey: _tutorialAnchors.navProfile,
                 ),
               ],
             ),
@@ -321,16 +382,20 @@ class _MainNavigationState extends State<MainNavigation> {
     required IconData activeIcon,
     required String label,
     required int index,
+    Key? tutorialKey,
   }) {
     final bool isActive = _currentIndex == index;
 
-    return GestureDetector(
+    return AyoPressable(
+      key: tutorialKey,
       onTap: () => _changePage(index),
-      behavior: HitTestBehavior.opaque,
+      haptic: true,
+      pressedScale: 0.94,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        constraints: const BoxConstraints(minWidth: 72),
+        duration: const Duration(milliseconds: 210),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        constraints: const BoxConstraints(minWidth: 68),
         decoration: BoxDecoration(
           color: isActive ? _activePillBg : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -338,19 +403,25 @@ class _MainNavigationState extends State<MainNavigation> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive ? _activeColor : _inactiveColor,
-              size: 22,
+            AnimatedScale(
+              scale: isActive ? 1.08 : 1,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutBack,
+              child: Icon(
+                isActive ? activeIcon : icon,
+                color: isActive ? _activeColor : _inactiveColor,
+                size: 22,
+              ),
             ),
             const SizedBox(height: 3),
-            Text(
-              label,
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 180),
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
                 color: isActive ? _activeColor : _inactiveColor,
               ),
+              child: Text(label),
             ),
           ],
         ),

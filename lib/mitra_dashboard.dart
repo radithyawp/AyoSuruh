@@ -7,9 +7,16 @@ import 'jobs/mitra_job_detail_page.dart';
 import 'jobs/mitra_jobs_page.dart';
 import 'notification.dart';
 import 'services/mitra_services_page.dart';
+import 'tutorial/ayos_tutorial.dart';
+import 'widgets/ayo_avatar.dart';
 
 class MitraDashboardPage extends StatefulWidget {
-  const MitraDashboardPage({super.key});
+  const MitraDashboardPage({
+    super.key,
+    this.tutorialAnchors,
+  });
+
+  final AyosTutorialAnchors? tutorialAnchors;
 
   @override
   State<MitraDashboardPage> createState() => _MitraDashboardPageState();
@@ -159,17 +166,32 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
                     style: const TextStyle(fontSize: 11),
                   ),
                 ),
-              _buildHeader(),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.homeHeader,
+                child: _buildHeader(),
+              ),
               const SizedBox(height: 20),
-              _buildIncomeCard(),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.homeSearchOrIncome,
+                child: _buildIncomeCard(),
+              ),
               const SizedBox(height: 10),
               _buildStats(),
               const SizedBox(height: 14),
-              _buildServiceMarketplaceShortcut(),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.homePromoOrService,
+                child: _buildServiceMarketplaceShortcut(),
+              ),
               const SizedBox(height: 22),
-              _buildActiveJob(),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.homeCategoriesOrActive,
+                child: _buildActiveJob(),
+              ),
               const SizedBox(height: 22),
-              _buildAvailableJobs(),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.homePrimaryActionOrAvailable,
+                child: _buildAvailableJobs(),
+              ),
             ],
           ),
         ),
@@ -181,13 +203,11 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
     final String? avatar = _profile['avatar_url']?.toString();
     return Row(
       children: <Widget>[
-        CircleAvatar(
-          radius: 23,
+        AyoAvatar(
+          imageUrl: avatar,
+          size: 46,
           backgroundColor: const Color(0xFFFFE5C0),
-          backgroundImage: avatar == null || avatar.isEmpty ? null : NetworkImage(avatar),
-          child: avatar == null || avatar.isEmpty
-              ? const Icon(Icons.person, color: jobBrownColor)
-              : null,
+          logoPadding: 7,
         ),
         const SizedBox(width: 11),
         Expanded(
@@ -200,12 +220,13 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
               ),
               Text(
                 (_profile['fullname'] ?? 'Mitra Ayo Suruh').toString(),
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: jobBrownColor,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  height: 1.16,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],

@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../jobs/job_helpers.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'location_service.dart';
 
 LatLng? jobLatLng(Map<String, dynamic> job) {
@@ -57,12 +58,7 @@ class _JobLocationMapCardState extends State<JobLocationMapCard> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Peta belum dapat dibuka: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Peta belum dapat dibuka: $error');
     } finally {
       if (mounted) setState(() => _isOpeningMap = false);
     }

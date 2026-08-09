@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../jobs/job_helpers.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'location_service.dart';
 import 'osm_geocoding_service.dart';
 import '../widgets/home_shortcut_button.dart';
@@ -77,16 +78,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     } catch (error) {
       if (!mounted) return;
       final String message = error.toString().replaceFirst('Bad state: ', '');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red.shade700,
-          action: SnackBarAction(
-            label: 'Pengaturan',
-            textColor: Colors.white,
-            onPressed: _locationService.openAppLocationSettings,
-          ),
-        ),
+      AyoSnackBar.error(
+        context,
+        message,
+        actionLabel: 'Pengaturan',
+        onAction: _locationService.openAppLocationSettings,
       );
     } finally {
       if (mounted) setState(() => _isLocating = false);
@@ -97,9 +93,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     final String query = _searchController.text.trim();
     if (query.length < 3 || _isSearching) {
       if (query.length < 3) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ketik minimal 3 karakter alamat.')),
-        );
+        AyoSnackBar.info(context, 'Ketik minimal 3 karakter alamat.');
       }
       return;
     }
@@ -111,11 +105,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           await _geocodingService.search(query);
       if (!mounted) return;
       if (results.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Alamat belum ditemukan. Coba tambah nama kota/kecamatan.'),
-            backgroundColor: jobBrownColor,
-          ),
+        AyoSnackBar.info(
+          context,
+          'Alamat belum ditemukan. Coba tambah nama kota/kecamatan.',
         );
         return;
       }
@@ -133,7 +125,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 22),
                 itemCount: results.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (BuildContext context, int index) {
                   final OsmGeocodingResult result = results[index];
                   return ListTile(
@@ -167,12 +159,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       _mapController.move(selected.point, 17);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pencarian alamat gagal: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Pencarian alamat gagal: $error');
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
@@ -181,11 +168,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   Future<void> _confirmPoint() async {
     final LatLng? point = _selectedPoint;
     if (point == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cari alamat, ketuk peta, atau gunakan lokasi saat ini.'),
-          backgroundColor: jobBrownColor,
-        ),
+      AyoSnackBar.info(
+        context,
+        'Cari alamat, ketuk peta, atau gunakan lokasi saat ini.',
       );
       return;
     }
@@ -208,11 +193,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         }
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Alamat titik belum dapat dibaca otomatis: $error'),
-            backgroundColor: Colors.red.shade700,
-          ),
+        AyoSnackBar.error(
+          context,
+          'Alamat titik belum dapat dibaca otomatis: $error',
         );
       } finally {
         if (mounted) setState(() => _isResolvingPoint = false);
@@ -221,13 +204,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
     if (!mounted) return;
     if (address.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Alamat titik belum terbaca. Cari alamat terlebih dahulu atau ketik alamat yang lebih lengkap.',
-          ),
-          backgroundColor: jobBrownColor,
-        ),
+      AyoSnackBar.info(
+        context,
+        'Alamat titik belum terbaca. Cari alamat terlebih dahulu atau ketik alamat yang lebih lengkap.',
       );
       return;
     }

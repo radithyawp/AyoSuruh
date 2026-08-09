@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../jobs/job_helpers.dart';
+import '../widgets/ayo_snackbar.dart';
+import '../widgets/ayo_avatar.dart';
 import 'chat_helpers.dart';
 import 'chat_service.dart';
 
@@ -91,12 +93,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _scrollToBottom();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pesan belum berhasil dikirim: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Pesan belum berhasil dikirim: $error');
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -215,12 +212,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _scrollToBottom();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto belum berhasil dikirim: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Foto belum berhasil dikirim: $error');
     } finally {
       if (mounted) setState(() => _isUploadingAttachment = false);
     }
@@ -357,15 +349,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       titleSpacing: 0,
       title: Row(
         children: <Widget>[
-          CircleAvatar(
-            radius: 19,
+          AyoAvatar(
+            imageUrl: avatarUrl,
+            size: 38,
             backgroundColor: const Color(0xFFFFE7C5),
-            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                ? NetworkImage(avatarUrl)
-                : null,
-            child: avatarUrl == null || avatarUrl.isEmpty
-                ? const Icon(Icons.person_rounded, color: jobBrownColor)
-                : null,
+            logoPadding: 6,
           ),
           const SizedBox(width: 10),
           Expanded(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
@@ -90,14 +91,14 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
       );
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(action == 'approve' ? 'Mitra berhasil disetujui.' : 'Pengajuan mitra ditolak.')),
-      );
+      if (action == 'approve') {
+        AyoSnackBar.success(context, 'Mitra berhasil disetujui.');
+      } else {
+        AyoSnackBar.info(context, 'Pengajuan Mitra ditolak.');
+      }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Aksi admin gagal: $error'), backgroundColor: Colors.red.shade700),
-      );
+      AyoSnackBar.error(context, 'Aksi admin gagal: $error');
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
@@ -123,9 +124,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
       await _load();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payout belum dapat diproses: $error'), backgroundColor: Colors.red.shade700),
-      );
+      AyoSnackBar.error(context, 'Payout belum dapat diproses: $error');
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
@@ -137,9 +136,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
   }) async {
     final String path = (storagePath ?? '').toString().trim();
     if (path.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title belum tersedia.')),
-      );
+      AyoSnackBar.info(context, '$title belum tersedia.');
       return;
     }
 
@@ -204,11 +201,9 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Dokumen belum dapat dibuka: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Dokumen belum dapat dibuka: $error',
       );
     }
   }
@@ -345,6 +340,13 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
     );
   }
 
+  String _formatDate(dynamic value) {
+    final DateTime? date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    if (date == null) return '-';
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)}/${date.year} ${two(date.hour)}:${two(date.minute)}';
+  }
+
   Widget _applicationsList() {
     if (_applications.isEmpty) return const Center(child: Text('Belum ada pengajuan mitra.'));
     return RefreshIndicator(
@@ -391,6 +393,19 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                 Text('Alamat: ${(row['address'] ?? '-').toString()}', style: const TextStyle(fontSize: 11, height: 1.35)),
                 const SizedBox(height: 3),
                 Text('Rekening: ${(row['bank_name'] ?? '-').toString()} • ${(row['account_number'] ?? '-').toString()}', style: const TextStyle(fontSize: 11)),
+                const SizedBox(height: 4),
+                Text(
+                  (row['contract_version'] ?? '').toString().trim().isEmpty
+                      ? 'Kontrak Mitra: belum tercatat (pengajuan lama)'
+                      : 'Kontrak Mitra v${row['contract_version']} · disetujui ${_formatDate(row['contract_accepted_at'])}',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: (row['contract_version'] ?? '').toString().trim().isEmpty
+                        ? Colors.red.shade700
+                        : const Color(0xFF5C744D),
+                  ),
+                ),
                 if ((row['description'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
                   const SizedBox(height: 5),
                   Text((row['description'] ?? '').toString(), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6D625B))),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-const Color jobBackgroundColor = Color(0xFFFFF9FC);
+const Color jobBackgroundColor = Color(0xFFFFFAF7);
 const Color jobBrownColor = Color(0xFF9A5B00);
 const Color jobDarkBrownColor = Color(0xFF6F4300);
-const Color jobOrangeColor = Color(0xFFFF9800);
+const Color jobOrangeColor = Color(0xFFF6990E);
 const Color jobGreenColor = Color(0xFF5C704B);
 const Color jobCardColor = Color(0xFFFFFFFF);
-const Color jobBorderColor = Color(0xFFE8D5C4);
+const Color jobBorderColor = Color(0xFFE9DDD6);
 
 final NumberFormat _rupiahFormatter = NumberFormat.currency(
   locale: 'id_ID',
@@ -185,6 +185,16 @@ List<Map<String, dynamic>> embeddedBids(Map<String, dynamic> job) {
   return <Map<String, dynamic>>[];
 }
 
+List<String> jobImageUrls(Map<String, dynamic> job) {
+  final dynamic images = job['job_images'];
+  if (images is! List) return <String>[];
+  return images
+      .whereType<Map>()
+      .map((Map image) => (image['image_url'] ?? '').toString().trim())
+      .where((String url) => url.isNotEmpty)
+      .toList();
+}
+
 List<Map<String, dynamic>> embeddedReviews(Map<String, dynamic> job) {
   final dynamic reviews = job['reviews'];
   if (reviews is List) {
@@ -215,7 +225,55 @@ IconData categoryIcon(String value) {
   if (category.contains('tukang') || category.contains('perbaikan')) {
     return Icons.handyman_rounded;
   }
+  if (category.contains('gaya hidup') ||
+      category.contains('konsultasi') ||
+      category.contains('wellness')) {
+    return Icons.self_improvement_rounded;
+  }
   return Icons.grid_view_rounded;
+}
+
+
+String? categoryImageAsset(String value) {
+  final String category = value.toLowerCase();
+  if (category.contains('elektronik')) {
+    return 'assets/images/categories/elektronik.webp';
+  }
+  if (category.contains('antar-jemput')) {
+    return 'assets/images/categories/antar_jemput.webp';
+  }
+  if (category.contains('jasa titip')) {
+    return 'assets/images/categories/jasa_titip.webp';
+  }
+  if (category.contains('kost')) {
+    return 'assets/images/categories/survey_kost.webp';
+  }
+  if (category.contains('administrasi')) {
+    return 'assets/images/categories/administrasi.webp';
+  }
+  if (category.contains('design') || category.contains('coding')) {
+    return 'assets/images/categories/design_coding.webp';
+  }
+  if (category.contains('rumah tangga') || category.contains('bersih')) {
+    return 'assets/images/categories/rumah_tangga.webp';
+  }
+  if (category.contains('otomotif')) {
+    return 'assets/images/categories/otomotif.webp';
+  }
+  if (category.contains('kurir')) {
+    return 'assets/images/categories/kurir.webp';
+  }
+  if (category.contains('tukang') || category.contains('perbaikan')) {
+    return 'assets/images/categories/tukang.webp';
+  }
+  if (category.contains('gaya hidup') ||
+      category.contains('konsultasi') ||
+      category.contains('wellness')) {
+    return 'assets/images/categories/gaya_hidup.webp';
+  }
+
+  // Kategori "Lainnya" sengaja mempertahankan ikon grid 4 kotak.
+  return null;
 }
 
 Color categoryBackground(String value) {
@@ -237,6 +295,11 @@ Color categoryBackground(String value) {
       category.contains('otomotif') ||
       category.contains('tukang')) {
     return const Color(0xFFFFEDCC);
+  }
+  if (category.contains('gaya hidup') ||
+      category.contains('konsultasi') ||
+      category.contains('wellness')) {
+    return const Color(0xFFE8F3DF);
   }
   return const Color(0xFFF2ECE7);
 }

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MitraApplicationService {
@@ -58,6 +59,30 @@ class MitraApplicationService {
       throw StateError('Lokasi Mitra berhasil disimpan, tetapi belum dapat dibaca kembali.');
     }
     return saved;
+  }
+
+  Future<Map<String, dynamic>?> fetchActiveContract() async {
+    final dynamic result = await _client.rpc('get_active_mitra_contract');
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return Map<String, dynamic>.from(result.first as Map);
+    }
+    if (result is Map && result.isNotEmpty) {
+      return Map<String, dynamic>.from(result);
+    }
+    return null;
+  }
+
+  Future<void> acceptActiveContract(String version) async {
+    final String platform = kIsWeb
+        ? 'web'
+        : defaultTargetPlatform.name.toLowerCase();
+    await _client.rpc(
+      'accept_active_mitra_contract',
+      params: <String, dynamic>{
+        'p_contract_version': version.trim(),
+        'p_client_platform': platform,
+      },
+    );
   }
 
   Future<Map<String, dynamic>?> fetchMyApplication() async {
