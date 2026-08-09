@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'chats/chat_detail_page.dart';
-import 'jobs/customer_job_detail_page.dart';
 import 'jobs/job_helpers.dart';
-import 'jobs/mitra_job_detail_page.dart';
 import 'notifications/notification_helpers.dart';
+import 'notifications/notification_router.dart';
 import 'notifications/notification_service.dart';
-import 'mitra/mitra_application_page.dart';
 import 'widgets/home_shortcut_button.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -35,6 +32,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
   String get _activeMode {
     final String value = widget.activeMode.trim().toLowerCase();
+    if (value == 'admin') return 'admin';
     return value == 'mitra' ? 'mitra' : 'customer';
   }
 
@@ -89,59 +87,24 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Future<void> _openNotification(Map<String, dynamic> notification) async {
-    final String notificationId = (notification['id'] ?? '').toString();
-    if (notificationId.isNotEmpty && notification['is_read'] != true) {
-      try {
-        await _notificationService.markAsRead(notificationId);
-      } catch (_) {
-        // Kegagalan status baca tidak boleh menghalangi navigasi utama.
+    try {
+      final bool opened = await NotificationRouter.open(
+        context,
+        notification,
+        activeMode: _activeMode,
+      );
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notifikasi ini belum memiliki halaman tujuan.'),
+          ),
+        );
       }
+    } catch (error) {
+      if (!mounted) return;
+      _showError('Halaman notifikasi belum dapat dibuka: $error');
     }
-
-    if (!mounted) return;
-
-    final String? roomId = _nullableString(notification['room_id']);
-    final String? jobId = _nullableString(notification['job_id']);
-    final String type = (notification['type'] ?? '').toString();
-
-    if (type.startsWith('mitra_application_')) {
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute<void>(
-          builder: (_) => const MitraApplicationStatusPage(),
-        ),
-      );
-      return;
-    }
-
-    if (type == 'chat_message' && roomId != null) {
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute<void>(
-          builder: (_) => ChatDetailPage(roomId: roomId),
-        ),
-      );
-      return;
-    }
-
-    if (jobId != null) {
-      // Akun dual-mode tetap memiliki satu record user. Jangan memakai role
-      // database untuk menentukan detail job karena role tersebut dapat tetap
-      // `mitra` saat UI sedang berada di mode customer. Navigasi harus mengikuti
-      // mode aktif ketika lonceng notifikasi dibuka.
-      final Widget page = _activeMode == 'mitra'
-          ? MitraJobDetailPage(jobId: jobId)
-          : CustomerJobDetailPage(jobId: jobId);
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute<void>(builder: (_) => page),
-      );
-    }
-  }
-
-  String? _nullableString(dynamic value) {
-    final String text = (value ?? '').toString().trim();
-    return text.isEmpty ? null : text;
   }
 
   void _showError(String message) {
@@ -323,9 +286,8 @@ class _NotificationPageState extends State<NotificationPage> {
     final bool isUnread = notification['is_read'] != true;
     final String type = (notification['type'] ?? '').toString();
     final NotificationVisual visual = notificationVisual(type);
-    final bool hasDestination =
-        _nullableString(notification['room_id']) != null ||
-            _nullableString(notification['job_id']) != null;
+    final String? actionLabel =
+        NotificationRouter.actionLabel(notification);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -414,17 +376,26 @@ class _NotificationPageState extends State<NotificationPage> {
                           height: 1.4,
                         ),
                       ),
-                      if (hasDestination) ...<Widget>[
+                      if (actionLabel != null) ...<Widget>[
                         const SizedBox(height: 8),
-                        Text(
-                          type == 'chat_message'
-                              ? 'Buka percakapan'
-                              : 'Lihat pekerjaan',
-                          style: const TextStyle(
-                            color: jobBrownColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              actionLabel,
+                              style: const TextStyle(
+                                color: jobBrownColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 13,
+                              color: jobBrownColor,
+                            ),
+                          ],
                         ),
                       ],
                     ],

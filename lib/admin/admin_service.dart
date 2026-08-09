@@ -56,6 +56,72 @@ class AdminService {
         .toList();
   }
 
+  Future<Map<String, dynamic>> fetchOperationalSummary() async {
+    final dynamic response = await _client.rpc('admin_operational_summary');
+    if (response is List && response.isNotEmpty && response.first is Map) {
+      return Map<String, dynamic>.from(response.first as Map);
+    }
+    if (response is Map) return Map<String, dynamic>.from(response);
+    return <String, dynamic>{};
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAdminJobs({
+    int limit = 100,
+  }) async {
+    final dynamic response = await _client.rpc(
+      'admin_list_jobs',
+      params: <String, dynamic>{'p_limit': limit},
+    );
+    if (response is! List) return <Map<String, dynamic>>[];
+    return response
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAdminPayments({
+    int limit = 100,
+  }) async {
+    final dynamic response = await _client.rpc(
+      'admin_list_payments',
+      params: <String, dynamic>{'p_limit': limit},
+    );
+    if (response is! List) return <Map<String, dynamic>>[];
+    return response
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAdminRefunds({
+    int limit = 100,
+  }) async {
+    final dynamic response = await _client.rpc(
+      'admin_list_refunds',
+      params: <String, dynamic>{'p_limit': limit},
+    );
+    if (response is! List) return <Map<String, dynamic>>[];
+    return response
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<void> processRefund({
+    required String refundId,
+    required String action,
+    String? note,
+  }) async {
+    await _client.rpc(
+      'admin_process_refund',
+      params: <String, dynamic>{
+        'p_refund_id': refundId,
+        'p_action': action,
+        'p_note': note,
+      },
+    );
+  }
+
   Future<void> reviewMitraApplication({
     required String applicationId,
     required String action,

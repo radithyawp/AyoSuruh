@@ -5,7 +5,12 @@ import '../jobs/job_helpers.dart';
 import 'admin_service.dart';
 
 class AdminMitrasPage extends StatefulWidget {
-  const AdminMitrasPage({super.key});
+  const AdminMitrasPage({
+    super.key,
+    this.initialTab = 0,
+  });
+
+  final int initialTab;
 
   @override
   State<AdminMitrasPage> createState() => _AdminMitrasPageState();
@@ -29,7 +34,11 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab == 1 ? 1 : 0,
+    );
     _load();
   }
 
@@ -181,7 +190,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                           child: Center(child: CircularProgressIndicator()),
                         );
                       },
-                      errorBuilder: (_, __, ___) => const Padding(
+                      errorBuilder: (_, _, _) => const Padding(
                         padding: EdgeInsets.all(28),
                         child: Text('Dokumen tidak dapat ditampilkan.'),
                       ),
@@ -209,31 +218,66 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
     required String hint,
     required bool mustFill,
   }) async {
-    final TextEditingController controller = TextEditingController();
+    String value = '';
+    String? validationMessage;
+
     final String? result = await showDialog<String>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          minLines: 3,
-          maxLines: 5,
-          decoration: InputDecoration(hintText: hint),
-        ),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
-              final String value = controller.text.trim();
-              if (mustFill && value.isEmpty) return;
-              Navigator.pop(dialogContext, value);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (
+            BuildContext dialogContext,
+            StateSetter setDialogState,
+          ) {
+            return AlertDialog(
+              title: Text(title),
+              content: TextField(
+                autofocus: true,
+                minLines: 3,
+                maxLines: 5,
+                onChanged: (String text) {
+                  value = text;
+                  if (validationMessage != null && text.trim().isNotEmpty) {
+                    setDialogState(() => validationMessage = null);
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: hint,
+                  errorText: validationMessage,
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final String trimmed = value.trim();
+                    if (mustFill && trimmed.isEmpty) {
+                      setDialogState(
+                        () => validationMessage = 'Alasan wajib diisi.',
+                      );
+                      return;
+                    }
+                    Navigator.pop(dialogContext, trimmed);
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
-    controller.dispose();
+
+    // Future showDialog dapat selesai sebelum animasi reverse route benar-benar
+    // lepas dari tree. Beri satu jeda pendek sebelum halaman induk di-setState
+    // atau direfresh agar dependency dialog tidak ikut ter-deactivate paksa.
+    if (result != null) {
+      await Future<void>.delayed(const Duration(milliseconds: 220));
+    }
+
     return result;
   }
 
@@ -248,6 +292,17 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
               child: Row(
                 children: <Widget>[
+                  if (Navigator.of(context).canPop()) ...<Widget>[
+                    IconButton(
+                      tooltip: 'Kembali',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: _brown,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
                   const Expanded(
                     child: Text(
                       'Manajemen Mitra',

@@ -11,6 +11,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: 'assets/.env');
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANONKEY']!,
+  );
+
   if (!kIsWeb) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -20,13 +27,6 @@ Future<void> main() async {
 
     await NotificationService.instance.initialize();
   }
-
-  await dotenv.load(fileName: 'assets/.env');
-
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANONKEY']!,
-  );
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);

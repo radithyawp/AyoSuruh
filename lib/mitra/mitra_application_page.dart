@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,6 +9,7 @@ import '../location/location_picker_page.dart';
 import '../location/osm_geocoding_service.dart';
 import '../syarat_ketentuan.dart';
 import 'mitra_application_service.dart';
+import 'selfie_camera_page.dart';
 import '../widgets/home_shortcut_button.dart';
 
 const Color _mitraOrange = Color(0xFFF39C12);
@@ -43,6 +42,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   Uint8List? _selfieBytes;
   String? _ktmName;
   String? _selfieName;
+  bool _selfieCapturedFromFrontCamera = false;
   String? _selectedBank;
   bool _termsAccepted = false;
   bool _isLoading = true;
@@ -383,6 +383,39 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     }
   }
 
+  Future<void> _pickSelfieFromFrontCamera() async {
+    try {
+      final SelfieCaptureResult? result =
+          await Navigator.of(context).push<SelfieCaptureResult>(
+        MaterialPageRoute<SelfieCaptureResult>(
+          fullscreenDialog: true,
+          builder: (_) => const SelfieCameraPage(),
+        ),
+      );
+      if (result == null || !mounted) return;
+
+      if (result.bytes.lengthInBytes > 2 * 1024 * 1024) {
+        throw ArgumentError(
+          'Ukuran selfie masih lebih dari 2 MB. Ambil ulang foto dengan pencahayaan yang baik.',
+        );
+      }
+
+      setState(() {
+        _selfieBytes = result.bytes;
+        _selfieName = result.name;
+        _selfieCapturedFromFrontCamera = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Selfie belum dapat diambil: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _submit() async {
     if (_isSubmitting) return;
     final bool valid = _formKey.currentState?.validate() ?? false;
@@ -405,10 +438,24 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       }
     }
 
+    if (!mounted) return;
+
     if (_ktmBytes == null || _selfieBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Foto KTM dan foto selfie wajib diunggah.'),
+          content: Text('Foto KTM dan foto selfie wajib dilengkapi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_selfieCapturedFromFrontCamera) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Selfie wajib diambil langsung menggunakan kamera depan.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -749,19 +796,32 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                           ),
                           const SizedBox(height: 22),
                           const Text(
-                            'Foto Profil Terbaru',
+                            'Selfie Verifikasi',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Wajib diambil langsung dengan kamera depan. Foto dari galeri tidak dapat digunakan.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.45,
+                              color: Color(0xFF66534B),
+                            ),
+                          ),
                           const SizedBox(height: 10),
                           _uploadBox(
                             bytes: _selfieBytes,
-                            title: 'Pilih Foto Selfie',
-                            subtitle: 'Pastikan wajah terlihat jelas',
-                            icon: Icons.account_circle_outlined,
-                            onTap: () => _pickDocument(isKtm: false),
+                            title: _selfieBytes == null
+                                ? 'Ambil Selfie Sekarang'
+                                : 'Ambil Ulang Selfie',
+                            subtitle: _selfieBytes == null
+                                ? 'Kamera depan akan dibuka'
+                                : 'Selfie kamera depan sudah siap',
+                            icon: Icons.camera_front_outlined,
+                            onTap: _pickSelfieFromFrontCamera,
                           ),
                         ],
                       ),
