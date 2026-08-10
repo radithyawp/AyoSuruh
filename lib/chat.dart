@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'chats/chat_detail_page.dart';
 import 'chats/chat_helpers.dart';
 import 'chats/chat_service.dart';
+import 'chats/presence_service.dart';
 import 'jobs/job_helpers.dart';
 import 'notification.dart';
 import 'widgets/ayo_avatar.dart';
@@ -26,9 +27,14 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final ChatService _chatService = ChatService();
   final TextEditingController _searchController = TextEditingController();
+  final PresenceService _presenceService = PresenceService();
 
   StreamSubscription<List<Map<String, dynamic>>>? _messageSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _presenceSubscription;
+  Timer? _presenceFreshnessTimer;
   List<Map<String, dynamic>> _rooms = <Map<String, dynamic>>[];
+  final Map<String, Map<String, dynamic>> _presenceByUser =
+      <String, Map<String, dynamic>>{};
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
@@ -42,11 +48,33 @@ class _ChatPageState extends State<ChatPage> {
       (_) => _loadRooms(silent: true),
       onError: (_) {},
     );
+    _presenceSubscription = _presenceService.visiblePresenceStream().listen(
+      (List<Map<String, dynamic>> rows) {
+        if (!mounted) return;
+        setState(() {
+          _presenceByUser
+            ..clear()
+            ..addEntries(rows.map((row) => MapEntry(
+                  (row['user_id'] ?? '').toString(),
+                  Map<String, dynamic>.from(row),
+                )));
+        });
+      },
+      onError: (_) {},
+    );
+    _presenceFreshnessTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _presenceByUser.isNotEmpty) setState(() {});
+      },
+    );
   }
 
   @override
   void dispose() {
     _messageSubscription?.cancel();
+    _presenceSubscription?.cancel();
+    _presenceFreshnessTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -329,11 +357,32 @@ class _ChatPageState extends State<ChatPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              AyoAvatar(
-                imageUrl: avatarUrl,
-                size: 50,
-                backgroundColor: const Color(0xFFFFE7C5),
-                logoPadding: 8,
+              Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  AyoAvatar(
+                    imageUrl: avatarUrl,
+                    size: 50,
+                    backgroundColor: const Color(0xFFFFE7C5),
+                    logoPadding: 8,
+                  ),
+                  if (_presenceService.isOnline(
+                    _presenceByUser[(room['partner_id'] ?? '').toString()],
+                  ))
+                    Positioned(
+                      right: -1,
+                      bottom: 1,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF38A169),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -343,15 +392,36 @@ class _ChatPageState extends State<ChatPage> {
                     Row(
                       children: <Widget>[
                         Expanded(
-                          child: Text(
-                            partnerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF2F2A28),
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                partnerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF2F2A28),
+                                ),
+                              ),
+                              Text(
+                                _presenceService.presenceLabel(
+                                  _presenceByUser[(room['partner_id'] ?? '').toString()],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 8.8,
+                                  fontWeight: FontWeight.w700,
+                                  color: _presenceService.isOnline(
+                                    _presenceByUser[(room['partner_id'] ?? '').toString()],
+                                  )
+                                      ? const Color(0xFF2F855A)
+                                      : const Color(0xFF9A8F88),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),

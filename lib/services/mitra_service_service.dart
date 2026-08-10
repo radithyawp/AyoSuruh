@@ -31,6 +31,8 @@ class MitraServiceService {
                 'title': row['title'],
                 'description': row['description'],
                 'starting_price': row['starting_price'],
+                'tags': row['tags'] ?? <String>[],
+                'is_bookmarked': row['is_bookmarked'] == true,
                 'is_active': true,
                 'created_at': row['created_at'],
                 'categories': <String, dynamic>{
@@ -63,7 +65,7 @@ class MitraServiceService {
             .from('mitra_services')
             .select('''
               id, mitra_id, category_id, title, description, starting_price,
-              is_active, created_at, updated_at,
+              tags, is_active, created_at, updated_at,
               categories(id, name, icon),
               mitra:users!mitra_services_mitra_id_fkey(id, fullname, avatar_url)
             ''')
@@ -88,7 +90,7 @@ class MitraServiceService {
           .from('mitra_services')
           .select('''
             id, mitra_id, category_id, title, description, starting_price,
-            is_active, created_at, updated_at,
+            tags, is_active, created_at, updated_at,
             categories(id, name, icon)
           ''')
           .eq('mitra_id', _currentUserId)
@@ -149,6 +151,7 @@ class MitraServiceService {
     required String title,
     required String description,
     required num startingPrice,
+    List<String> tags = const <String>[],
   }) async {
     final Map<String, dynamic> inserted = await _client
         .from('mitra_services')
@@ -158,6 +161,7 @@ class MitraServiceService {
           'title': title.trim(),
           'description': description.trim(),
           'starting_price': startingPrice,
+          'tags': _normalizeTags(tags),
           'is_active': true,
         })
         .select('id')
@@ -171,6 +175,7 @@ class MitraServiceService {
     required String title,
     required String description,
     required num startingPrice,
+    List<String> tags = const <String>[],
   }) async {
     await _client
         .from('mitra_services')
@@ -179,6 +184,7 @@ class MitraServiceService {
           'title': title.trim(),
           'description': description.trim(),
           'starting_price': startingPrice,
+          'tags': _normalizeTags(tags),
         })
         .eq('id', serviceId)
         .eq('mitra_id', _currentUserId);
@@ -268,6 +274,57 @@ class MitraServiceService {
         .eq('id', coverId);
   }
 
+  Future<bool> toggleBookmark({
+    required String serviceId,
+    required bool currentlyBookmarked,
+  }) async {
+    if (currentlyBookmarked) {
+      await _client
+          .from('mitra_service_bookmarks')
+          .delete()
+          .eq('user_id', _currentUserId)
+          .eq('service_id', serviceId);
+      return false;
+    }
+
+    await _client.from('mitra_service_bookmarks').insert(<String, dynamic>{
+      'user_id': _currentUserId,
+      'service_id': serviceId,
+    });
+    return true;
+  }
+
+  Future<Map<String, dynamic>?> fetchPublicMitraProfile(String mitraId) async {
+    final dynamic result = await _client.rpc(
+      'get_public_mitra_profile',
+      params: <String, dynamic>{'p_mitra_id': mitraId},
+    );
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return Map<String, dynamic>.from(result.first as Map);
+    }
+    if (result is Map && result.isNotEmpty) {
+      return Map<String, dynamic>.from(result);
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPublicMitraReviews(
+    String mitraId, {
+    int limit = 5,
+  }) async {
+    final dynamic result = await _client.rpc(
+      'get_public_mitra_reviews',
+      params: <String, dynamic>{
+        'p_mitra_id': mitraId,
+        'p_limit': limit,
+      },
+    );
+    if (result is! List) return <Map<String, dynamic>>[];
+    return result.whereType<Map>().map((row) {
+      return Map<String, dynamic>.from(row);
+    }).toList();
+  }
+
   Future<void> setActive(String serviceId, bool isActive) async {
     await _client
         .from('mitra_services')
@@ -294,6 +351,22 @@ class MitraServiceService {
         debugPrint('File gambar jasa belum dapat dibersihkan: $error');
       }
     }
+  }
+
+  List<String> _normalizeTags(List<String> tags) {
+    final List<String> normalized = <String>[];
+    final Set<String> seen = <String>{};
+    for (final String raw in tags) {
+      String tag = raw.trim();
+      while (tag.startsWith('#')) {
+        tag = tag.substring(1).trim();
+      }
+      if (tag.isEmpty) continue;
+      final String key = tag.toLowerCase();
+      if (seen.add(key)) normalized.add(tag.length > 28 ? tag.substring(0, 28) : tag);
+      if (normalized.length >= 8) break;
+    }
+    return normalized;
   }
 
   String _safeImageExtension(String filename) {

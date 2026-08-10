@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../widgets/ayo_snackbar.dart';
 import '../widgets/ayo_avatar.dart';
 import 'chat_helpers.dart';
 import 'chat_service.dart';
+import 'presence_service.dart';
 
 class ChatDetailPage extends StatefulWidget {
   const ChatDetailPage({
@@ -25,6 +27,7 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final ChatService _chatService = ChatService();
+  final PresenceService _presenceService = PresenceService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
@@ -38,20 +41,43 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isUploadingAttachment = false;
   bool _isMarkingRead = false;
   int _lastMessageCount = -1;
+  StreamSubscription<List<Map<String, dynamic>>>? _presenceSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _typingSubscription;
+  Timer? _typingIdleTimer;
+  Timer? _partnerTypingExpiryTimer;
+  Timer? _presenceFreshnessTimer;
+  Map<String, dynamic>? _partnerPresence;
+  bool _partnerTyping = false;
+  bool _selfTyping = false;
 
   @override
   void initState() {
     super.initState();
     _messagesStream = _chatService.messagesStream(widget.roomId);
+    _presenceFreshnessTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _partnerPresence != null) setState(() {});
+      },
+    );
     if (widget.initialRoom != null) {
       _room = Map<String, dynamic>.from(widget.initialRoom!);
       _isLoading = false;
+      _subscribePartnerState();
     }
     _loadHeader();
   }
 
   @override
   void dispose() {
+    _typingIdleTimer?.cancel();
+    _partnerTypingExpiryTimer?.cancel();
+    _presenceFreshnessTimer?.cancel();
+    _presenceSubscription?.cancel();
+    _typingSubscription?.cancel();
+    if (_selfTyping) {
+      unawaited(_chatService.setTyping(roomId: widget.roomId, isTyping: false));
+    }
     _messageController.dispose();
     _scrollController.dispose();
     _messageFocusNode.dispose();
@@ -68,6 +94,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _errorMessage = null;
         _isLoading = false;
       });
+      _subscribePartnerState();
       await _markMessagesRead();
     } catch (error) {
       if (!mounted) return;
@@ -76,6 +103,99 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _subscribePartnerState() {
+    final String partnerId = (_room?['partner_id'] ?? '').toString();
+    if (partnerId.isEmpty) return;
+
+    _presenceSubscription?.cancel();
+    _typingSubscription?.cancel();
+
+    _presenceSubscription = _presenceService.userPresenceStream(partnerId).listen(
+      (List<Map<String, dynamic>> rows) {
+        if (!mounted) return;
+        setState(() {
+          _partnerPresence = rows.isEmpty
+              ? null
+              : Map<String, dynamic>.from(rows.first);
+        });
+      },
+      onError: (_) {},
+    );
+
+    _typingSubscription = _chatService.typingStream(widget.roomId).listen(
+      (List<Map<String, dynamic>> rows) {
+        if (!mounted) return;
+        final DateTime now = DateTime.now().toUtc();
+        final bool typing = rows.any((Map<String, dynamic> row) {
+          if ((row['user_id'] ?? '').toString() != partnerId ||
+              row['is_typing'] != true) {
+            return false;
+          }
+          final DateTime? updatedAt = DateTime.tryParse(
+            (row['updated_at'] ?? '').toString(),
+          )?.toUtc();
+          return updatedAt != null &&
+              now.difference(updatedAt) < const Duration(seconds: 5);
+        });
+        _partnerTypingExpiryTimer?.cancel();
+        if (typing != _partnerTyping) {
+          setState(() => _partnerTyping = typing);
+        }
+        if (typing) {
+          _partnerTypingExpiryTimer = Timer(
+            const Duration(seconds: 5),
+            () {
+              if (mounted && _partnerTyping) {
+                setState(() => _partnerTyping = false);
+              }
+            },
+          );
+        }
+      },
+      onError: (_) {},
+    );
+  }
+
+  void _handleComposerChanged(String value) {
+    final bool shouldType = value.trim().isNotEmpty;
+    _typingIdleTimer?.cancel();
+
+    if (shouldType && !_selfTyping) {
+      _selfTyping = true;
+      unawaited(_chatService.setTyping(
+        roomId: widget.roomId,
+        isTyping: true,
+      ));
+    } else if (!shouldType && _selfTyping) {
+      _selfTyping = false;
+      unawaited(_chatService.setTyping(
+        roomId: widget.roomId,
+        isTyping: false,
+      ));
+    }
+
+    if (shouldType) {
+      _typingIdleTimer = Timer(const Duration(milliseconds: 1600), () {
+        if (!_selfTyping) return;
+        _selfTyping = false;
+        unawaited(_chatService.setTyping(
+          roomId: widget.roomId,
+          isTyping: false,
+        ));
+      });
+    }
+  }
+
+  void _clearTypingState() {
+    _typingIdleTimer?.cancel();
+    if (!_selfTyping) return;
+    _selfTyping = false;
+    unawaited(_chatService.setTyping(
+      roomId: widget.roomId,
+      isTyping: false,
+    ));
   }
 
   Future<void> _sendMessage() async {
@@ -89,6 +209,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         message: message,
       );
       _messageController.clear();
+      _clearTypingState();
       _messageFocusNode.requestFocus();
       _scrollToBottom();
     } catch (error) {
@@ -335,7 +456,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   PreferredSizeWidget _buildAppBar() {
     final String partnerName =
         (_room?['partner_name'] ?? 'Percakapan').toString();
-    final String jobTitle = (_room?['job_title'] ?? '').toString();
     final String? avatarUrl = _room?['partner_avatar_url']?.toString();
 
     return AppBar(
@@ -370,17 +490,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (jobTitle.isNotEmpty)
-                  Text(
-                    jobTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF857870),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
+                Text(
+                  _partnerTyping
+                      ? 'sedang mengetik…'
+                      : _presenceService.presenceLabel(_partnerPresence),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _partnerTyping
+                        ? jobOrangeColor
+                        : _presenceService.isOnline(_partnerPresence)
+                            ? const Color(0xFF2F855A)
+                            : const Color(0xFF857870),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
               ],
             ),
           ),
@@ -869,6 +994,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 maxLines: 4,
                 maxLength: 2000,
                 textCapitalization: TextCapitalization.sentences,
+                onChanged: _handleComposerChanged,
                 onSubmitted: (_) {
                   if (!isBusy) _sendMessage();
                 },

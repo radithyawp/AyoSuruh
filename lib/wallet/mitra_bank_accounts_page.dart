@@ -3,6 +3,7 @@ import '../widgets/ayo_snackbar.dart';
 
 import '../widgets/home_shortcut_button.dart';
 import 'wallet_service.dart';
+import 'wallet_pin_page.dart';
 
 const Color _bankBrown = Color(0xFF8A5300);
 const Color _bankOrange = Color(0xFFFF9800);
@@ -49,6 +50,9 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
   }
 
   Future<void> _openForm([Map<String, dynamic>? account]) async {
+    if (!await ensureWalletPinConfigured(context, _service)) return;
+    if (!mounted) return;
+
     final bool? changed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -62,11 +66,21 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
               required String accountHolder,
               required bool isDefault,
             }) async {
+              final String? pin = await showWalletPinPrompt(
+                context,
+                title: account == null ? 'Tambah Rekening' : 'Ubah Rekening',
+                message: 'Masukkan PIN AyoPay untuk menyimpan perubahan rekening pencairan.',
+              );
+              if (pin == null) {
+                throw const WalletPinException('Perubahan rekening dibatalkan.', code: 'cancelled');
+              }
+
               if (account == null) {
                 await _service.addBankAccount(
                   bankName: bankName,
                   accountNumber: accountNumber,
                   accountHolder: accountHolder,
+                  pin: pin,
                   isDefault: isDefault || _accounts.isEmpty,
                 );
               } else {
@@ -75,6 +89,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                   bankName: bankName,
                   accountNumber: accountNumber,
                   accountHolder: accountHolder,
+                  pin: pin,
                   makeDefault: isDefault,
                 );
               }
@@ -86,12 +101,27 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
 
   Future<void> _setDefault(Map<String, dynamic> account) async {
     if (account['is_default'] == true || _actionLoading) return;
+    if (!await ensureWalletPinConfigured(context, _service)) return;
+    if (!mounted) return;
+    final String? pin = await showWalletPinPrompt(
+      context,
+      title: 'Ganti Rekening Utama',
+      message: 'Masukkan PIN AyoPay untuk mengganti rekening utama pencairan.',
+    );
+    if (pin == null || !mounted) return;
+
     setState(() => _actionLoading = true);
     try {
-      await _service.setDefaultBankAccount(account['id'].toString());
+      await _service.setDefaultBankAccount(
+        account['id'].toString(),
+        pin: pin,
+      );
       await _load();
       if (!mounted) return;
       AyoSnackBar.success(context, 'Rekening utama berhasil diganti.');
+    } on WalletPinException catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(
@@ -125,11 +155,25 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
       ),
     );
     if (confirmed != true) return;
+    if (!await ensureWalletPinConfigured(context, _service)) return;
+    if (!mounted) return;
+    final String? pin = await showWalletPinPrompt(
+      context,
+      title: 'Hapus Rekening',
+      message: 'Masukkan PIN AyoPay untuk menghapus rekening pencairan ini.',
+    );
+    if (pin == null || !mounted) return;
 
     setState(() => _actionLoading = true);
     try {
-      await _service.deleteBankAccount(account['id'].toString());
+      await _service.deleteBankAccount(
+        account['id'].toString(),
+        pin: pin,
+      );
       await _load();
+    } on WalletPinException catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(
@@ -446,6 +490,9 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
         isDefault: _makeDefault,
       );
       if (mounted) Navigator.pop(context, true);
+    } on WalletPinException catch (error) {
+      if (!mounted || error.code == 'cancelled') return;
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(

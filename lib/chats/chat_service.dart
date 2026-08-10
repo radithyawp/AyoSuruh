@@ -110,6 +110,34 @@ class ChatService {
             List<Map<String, dynamic>>.from(rows));
   }
 
+
+  Stream<List<Map<String, dynamic>>> typingStream(String roomId) {
+    return _client
+        .from('chat_typing')
+        .stream(primaryKey: <String>['room_id', 'user_id'])
+        .eq('room_id', roomId)
+        .map((rows) => List<Map<String, dynamic>>.from(rows));
+  }
+
+  Future<void> setTyping({
+    required String roomId,
+    required bool isTyping,
+  }) async {
+    final String now = DateTime.now().toUtc().toIso8601String();
+    try {
+      await _client.from('chat_typing').upsert(<String, dynamic>{
+        'room_id': roomId,
+        'user_id': currentUserId,
+        'is_typing': isTyping,
+        'updated_at': now,
+      });
+    } on PostgrestException catch (error) {
+      final String lower = error.message.toLowerCase();
+      if (lower.contains('chat_typing') || error.code == '42P01') return;
+      rethrow;
+    }
+  }
+
   Future<void> sendMessage({
     required String roomId,
     required String message,

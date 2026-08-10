@@ -26,3 +26,6 @@ entrypoint = "./functions/send-push-notification/index.ts"
 
 [functions.delete-user-account]
 verify_jwt = true
+
+[functions.reset-wallet-pin]
+verify_jwt = true

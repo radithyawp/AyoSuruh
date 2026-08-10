@@ -30,6 +30,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
+  late final TextEditingController _tagsController;
 
   List<Map<String, dynamic>> _categories = <Map<String, dynamic>>[];
   String? _categoryId;
@@ -57,6 +58,12 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     _priceController = TextEditingController(
       text: price > 0 ? price.round().toString() : '',
     );
+    final dynamic rawTags = existing?['tags'];
+    _tagsController = TextEditingController(
+      text: rawTags is List
+          ? rawTags.map((dynamic item) => item.toString()).join(', ')
+          : '',
+    );
     _categoryId = existing?['category_id']?.toString();
     final dynamic rawImages = existing?['service_images'];
     if (rawImages is List) {
@@ -73,6 +80,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -121,6 +129,12 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
         ) ??
         0;
 
+    final List<String> tags = _tagsController.text
+        .split(',')
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList();
+
     setState(() => _saving = true);
     try {
       if (_isEditing) {
@@ -131,6 +145,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
           title: _titleController.text,
           description: _descriptionController.text,
           startingPrice: price,
+          tags: tags,
         );
         for (final Map<String, dynamic> image in _removedImages) {
           await _service.deleteServiceImage(
@@ -151,6 +166,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
           title: _titleController.text,
           description: _descriptionController.text,
           startingPrice: price,
+          tags: tags,
         );
         try {
           await _service.uploadServiceImages(
@@ -521,6 +537,38 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                         (value ?? '').trim().length < 10
                             ? 'Deskripsi minimal 10 karakter.'
                             : null,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Tag Jasa',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _tagsController,
+                    decoration: _decoration(
+                      'Contoh: figma, UI/UX, poster (pisahkan dengan koma)',
+                    ),
+                    validator: (String? value) {
+                      final List<String> tags = (value ?? '')
+                          .split(',')
+                          .map((String item) => item.trim())
+                          .where((String item) => item.isNotEmpty)
+                          .toList();
+                      if (tags.length > 8) return 'Maksimal 8 tag jasa.';
+                      if (tags.any((String tag) => tag.length > 28)) {
+                        return 'Setiap tag maksimal 28 karakter.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 7),
+                  const Text(
+                    'Tag membantu customer menemukan jasa melalui pencarian.',
+                    style: TextStyle(
+                      color: Color(0xFF766A63),
+                      fontSize: 10.5,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   const Text(

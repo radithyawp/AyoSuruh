@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../jobs/job_helpers.dart';
 import 'mitra_bank_accounts_page.dart';
 import 'wallet_service.dart';
+import 'wallet_pin_page.dart';
 import '../widgets/home_shortcut_button.dart';
 
 const Color _walletBrown = Color(0xFF8A5300);
@@ -29,6 +30,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   List<Map<String, dynamic>> _ledger = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _payouts = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _bankAccounts = <Map<String, dynamic>>[];
+  Map<String, dynamic> _pinStatus = <String, dynamic>{};
 
   @override
   void initState() {
@@ -43,6 +45,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         _service.fetchLedger(),
         _service.fetchPayouts(),
         _service.fetchBankAccounts(),
+        _service.fetchPinStatus(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -50,6 +53,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         _ledger = result[1] as List<Map<String, dynamic>>;
         _payouts = result[2] as List<Map<String, dynamic>>;
         _bankAccounts = result[3] as List<Map<String, dynamic>>;
+        _pinStatus = result[4] as Map<String, dynamic>;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -86,6 +90,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       return;
     }
 
+    if (!await ensureWalletPinConfigured(context, _service)) return;
+    if (!mounted) return;
+
     if (_bankAccounts.isEmpty) {
       await _openBankAccounts();
       if (!mounted) return;
@@ -109,10 +116,11 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         availableBalance: available,
         minimumPayout: minimum,
         bankAccount: bank,
-        onSubmit: (num amount) async {
+        onSubmit: (num amount, String pin) async {
           await _service.requestPayout(
             amount: amount,
             bankAccountId: bank['id'].toString(),
+            pin: pin,
           );
         },
       ),
@@ -209,13 +217,24 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       ),
     );
     if (confirmed != true) return;
+    if (!await ensureWalletPinConfigured(context, _service)) return;
+    if (!mounted) return;
+    final String? pin = await showWalletPinPrompt(
+      context,
+      title: 'Konfirmasi Pembatalan',
+      message: 'Masukkan PIN AyoPay untuk membatalkan pencairan dan mengembalikan saldo ditahan.',
+    );
+    if (pin == null || !mounted) return;
 
     setState(() => _isActionLoading = true);
     try {
-      await _service.cancelPayout(payout['id'].toString());
+      await _service.cancelPayout(payout['id'].toString(), pin: pin);
       await _load();
       if (!mounted) return;
       AyoSnackBar.success(context, 'Pencairan berhasil dibatalkan.');
+    } on WalletPinException catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(
@@ -289,6 +308,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
         children: <Widget>[
           _balanceCard(),
+          const SizedBox(height: 14),
+          _walletSecurityCard(),
           const SizedBox(height: 14),
           _heldFundsInfoCard(),
           const SizedBox(height: 14),
@@ -427,6 +448,87 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _walletSecurityCard() {
+    final bool hasPin = _pinStatus['has_pin'] == true;
+    final DateTime? lockedUntil = DateTime.tryParse(
+      (_pinStatus['locked_until'] ?? '').toString(),
+    )?.toLocal();
+    final bool locked =
+        lockedUntil != null && lockedUntil.isAfter(DateTime.now());
+
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: hasPin ? const Color(0xFFEAF4E3) : const Color(0xFFFFF0D9),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: hasPin ? const Color(0xFFC9DDBA) : const Color(0xFFF2D5A8),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              locked
+                  ? Icons.lock_clock_rounded
+                  : hasPin
+                      ? Icons.verified_user_rounded
+                      : Icons.shield_outlined,
+              color: _walletBrown,
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  locked
+                      ? 'PIN AyoPay dikunci sementara'
+                      : hasPin
+                          ? 'PIN AyoPay aktif'
+                          : 'Aktifkan PIN AyoPay',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: _walletBrown,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  locked
+                      ? 'Tunggu masa kunci berakhir atau reset PIN setelah verifikasi akun.'
+                      : 'Melindungi pencairan dan perubahan rekening.',
+                  style: const TextStyle(fontSize: 10.5, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _isActionLoading
+                ? null
+                : () async {
+                    await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute<bool>(
+                        builder: (_) => const WalletPinPage(),
+                      ),
+                    );
+                    if (mounted) await _load();
+                  },
+            child: Text(hasPin ? 'Kelola' : 'Buat PIN'),
           ),
         ],
       ),
@@ -865,7 +967,7 @@ class _PayoutFormSheet extends StatefulWidget {
   final num availableBalance;
   final num minimumPayout;
   final Map<String, dynamic> bankAccount;
-  final Future<void> Function(num amount) onSubmit;
+  final Future<void> Function(num amount, String pin) onSubmit;
 
   @override
   State<_PayoutFormSheet> createState() => _PayoutFormSheetState();
@@ -902,10 +1004,20 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
+    final String? pin = await showWalletPinPrompt(
+      context,
+      title: 'Konfirmasi Pencairan',
+      message: 'Masukkan PIN AyoPay sebelum mengajukan pencairan saldo.',
+    );
+    if (pin == null || !mounted) return;
+
     setState(() => _isSubmitting = true);
     try {
-      await widget.onSubmit(_parseAmount(_amountController.text));
+      await widget.onSubmit(_parseAmount(_amountController.text), pin);
       if (mounted) Navigator.pop(context, true);
+    } on WalletPinException catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(
