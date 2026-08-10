@@ -120,17 +120,37 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
   }
 
   Future<void> _share() async {
-    final String id = (_item['id'] ?? '').toString();
     final String title = (_item['title'] ?? 'Jasa Ayo Suruh').toString();
     final String mitra = (_mitra['fullname'] ?? 'Mitra Ayo Suruh').toString();
-    final String url =
-        'https://madouseixalisphera.github.io/AyoSuruh-Web/?service=$id';
+    final String category = (_category['name'] ?? 'Layanan').toString();
+    final String description = (_item['description'] ?? '').toString().trim();
+    final List<String> tags = _tags.take(4).toList();
     final RenderBox? box = context.findRenderObject() as RenderBox?;
+
+    final StringBuffer message = StringBuffer()
+      ..writeln('✨ $title')
+      ..writeln('oleh $mitra')
+      ..writeln('$category · Mulai ${_currency.format(_price)}');
+
+    if (description.isNotEmpty) {
+      message
+        ..writeln()
+        ..writeln(description);
+    }
+    if (tags.isNotEmpty) {
+      message
+        ..writeln()
+        ..writeln(tags.map((String tag) => '#${tag.replaceAll(' ', '')}').join(' '));
+    }
+    message
+      ..writeln()
+      ..write('Cari "$title" di aplikasi Ayo Suruh.');
+
     await SharePlus.instance.share(
       ShareParams(
         title: title,
         subject: 'Jasa dari Ayo Suruh',
-        text: '$title oleh $mitra\nMulai ${_currency.format(_price)}\n$url',
+        text: message.toString(),
         sharePositionOrigin: box == null
             ? null
             : box.localToGlobal(Offset.zero) & box.size,

@@ -16,9 +16,11 @@ class CustomerJobsPage extends StatefulWidget {
   const CustomerJobsPage({
     super.key,
     this.tutorialKey,
+    this.tutorialPrimaryActionKey,
   });
 
   final Key? tutorialKey;
+  final Key? tutorialPrimaryActionKey;
 
   @override
   State<CustomerJobsPage> createState() => _CustomerJobsPageState();
@@ -156,6 +158,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
       ),
       body: _buildBody(activeJobs, historyJobs),
       floatingActionButton: Padding(
+        key: widget.tutorialPrimaryActionKey,
         padding: const EdgeInsets.only(bottom: 6),
         child: FloatingActionButton.extended(
           heroTag: 'customer-jobs-create-job-fab',

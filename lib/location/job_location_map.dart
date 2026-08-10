@@ -117,7 +117,7 @@ class _JobLocationMapCardState extends State<JobLocationMapCard> {
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.ayosuruh',
+                    userAgentPackageName: 'com.ayosuruh.app',
                     maxNativeZoom: 19,
                   ),
                   MarkerLayer(

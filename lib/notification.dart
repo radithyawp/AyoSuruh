@@ -531,23 +531,18 @@ class _NotificationBellState extends State<NotificationBell> {
                 ),
               );
             },
-            child: Container(
+            child: SizedBox(
               width: 44,
               height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1E6),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFF2DED0)),
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  Icon(
-                    Icons.notifications_none_rounded,
-                    color: widget.color,
-                    size: widget.size,
-                  ),
+              child: Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    Icon(
+                      Icons.notifications_rounded,
+                      color: widget.color,
+                      size: widget.size,
+                    ),
                   if (unreadCount > 0)
                     Positioned(
                       right: -5,
@@ -574,7 +569,8 @@ class _NotificationBellState extends State<NotificationBell> {
                         ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

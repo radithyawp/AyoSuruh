@@ -8,16 +8,19 @@ import 'chats/chat_service.dart';
 import 'chats/presence_service.dart';
 import 'jobs/job_helpers.dart';
 import 'notification.dart';
+import 'services/service_marketplace_page.dart';
 import 'widgets/ayo_avatar.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
     super.key,
     this.tutorialKey,
+    this.firstActionTutorialKey,
     this.activeMode = 'customer',
   });
 
   final Key? tutorialKey;
+  final Key? firstActionTutorialKey;
   final String activeMode;
 
   @override
@@ -124,6 +127,16 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
     await _loadRooms(silent: true);
+  }
+
+  Future<void> _openServiceMarketplace() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const ServiceMarketplacePage(),
+      ),
+    );
+    if (mounted) await _loadRooms(silent: true);
   }
 
   List<Map<String, dynamic>> get _filteredRooms {
@@ -299,9 +312,11 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(height: 7),
                   Text(
-                    _query.isEmpty
-                        ? 'Chat akan tersedia setelah customer memilih mitra untuk suatu pekerjaan.'
-                        : 'Coba gunakan nama customer, mitra, atau judul pekerjaan lainnya.',
+                    _query.isEmpty && widget.activeMode == 'customer'
+                        ? 'Temukan jasa yang kamu butuhkan dari Mitra Ayo Suruh, lalu mulai percakapan dari layanan yang kamu pilih.'
+                        : _query.isEmpty
+                            ? 'Chat akan tersedia setelah kamu terhubung dengan customer melalui suatu pekerjaan.'
+                            : 'Coba gunakan nama customer, mitra, atau judul pekerjaan lainnya.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFF776C65),
@@ -309,6 +324,34 @@ class _ChatPageState extends State<ChatPage> {
                       height: 1.45,
                     ),
                   ),
+                  if (_query.isEmpty && widget.activeMode == 'customer') ...<Widget>[
+                    const SizedBox(height: 18),
+                    KeyedSubtree(
+                      key: widget.firstActionTutorialKey,
+                      child: FilledButton.icon(
+                        onPressed: _openServiceMarketplace,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: jobOrangeColor,
+                          foregroundColor: const Color(0xFF553600),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 13,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.chat_bubble_rounded,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Mulai Chat Pertamamu',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
