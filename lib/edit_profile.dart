@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
+import 'widgets/ayo_avatar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
 
@@ -63,9 +65,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final newAddress = _addressController.text.trim();
 
     if (newName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama lengkap tidak boleh kosong')),
-      );
+      AyoSnackBar.error(context, 'Nama lengkap tidak boleh kosong.');
       return;
     }
 
@@ -75,8 +75,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final user = _supabase.auth.currentUser;
       if (user == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sesi telah berakhir, silakan login kembali.')),
+          AyoSnackBar.error(
+            context,
+            'Sesi telah berakhir, silakan login kembali.',
           );
         }
         return;
@@ -97,18 +98,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil berhasil diperbarui!')),
-        );
+        AyoSnackBar.success(context, 'Profil berhasil diperbarui.');
         // Kembali ke halaman sebelumnya dengan membawa status 'true' agar data di-refresh
         Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint('Error updating profile: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui profil: $e')),
-        );
+        AyoSnackBar.error(context, 'Gagal memperbarui profil: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -211,30 +208,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           alignment: Alignment.bottomRight,
           children: [
             // Lingkaran Foto Profil
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.grey.shade300,
-                image: (avatarUrl != null && avatarUrl.isNotEmpty)
-                    ? DecorationImage(
-                        image: NetworkImage(avatarUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: (avatarUrl == null || avatarUrl.isEmpty)
-                  ? Icon(Icons.person, size: 50, color: Colors.grey.shade600)
-                  : null,
+            AyoAvatar(
+              imageUrl: avatarUrl,
+              size: 100,
+              backgroundColor: const Color(0xFFFFEFE1),
+              logoPadding: 14,
             ),
 
             // Badge Kamera Orange
@@ -246,7 +224,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -314,7 +292,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: primaryBrown.withOpacity(0.5),
+                color: primaryBrown.withValues(alpha: 0.5),
                 width: 1,
               ),
             ),
@@ -365,7 +343,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),

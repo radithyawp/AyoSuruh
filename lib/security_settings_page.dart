@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_preferences.dart';
@@ -14,9 +15,11 @@ class SecuritySettingsPage extends StatefulWidget {
 
 class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   static const Color _brown = Color(0xFF8B5A2B);
+  static const Color _orange = Color(0xFFF39C12);
   static const Color _bg = Color(0xFFFAF6F3);
 
   bool _rememberMe = true;
+  bool _updatingRemember = false;
 
   @override
   void initState() {
@@ -25,8 +28,61 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   }
 
   Future<void> _loadPreference() async {
+    await AuthPreferences.clearLegacyStoredPassword();
     final bool remember = await AuthPreferences.shouldRememberSession();
     if (mounted) setState(() => _rememberMe = remember);
+  }
+
+  Future<void> _setRememberMe(bool value) async {
+    if (_updatingRemember) return;
+    setState(() => _updatingRemember = true);
+    try {
+      await AuthPreferences.saveLoginPreference(
+        rememberMe: value,
+        email: Supabase.instance.client.auth.currentUser?.email,
+      );
+      if (!mounted) return;
+      setState(() => _rememberMe = value);
+      AyoSnackBar.info(
+        context,
+        value
+            ? 'Ingat Saya aktif. Sesi dapat dipulihkan pada perangkat ini.'
+            : 'Ingat Saya nonaktif. Aplikasi akan meminta login pada sesi berikutnya.',
+      );
+    } finally {
+      if (mounted) setState(() => _updatingRemember = false);
+    }
+  }
+
+  Future<void> _forgetThisDevice() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Lupakan perangkat ini?'),
+        content: const Text(
+          'Email yang diingat akan dihapus dan Remember Me dinonaktifkan. Session saat ini tetap aktif sampai kamu logout atau membuka aplikasi kembali dari kondisi cold start.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Lupakan'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await AuthPreferences.clearRememberedLogin();
+    if (!mounted) return;
+    setState(() => _rememberMe = false);
+    AyoSnackBar.success(
+      context,
+      'Data login yang diingat pada perangkat ini sudah dibersihkan.',
+    );
   }
 
   @override
@@ -52,7 +108,6 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           'Keamanan Akun',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
-
         actions: const <Widget>[HomeShortcutButton()],
       ),
       body: ListView(
@@ -73,11 +128,33 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           ),
           const SizedBox(height: 12),
           _infoCard(
-            icon: Icons.phonelink_lock_outlined,
-            title: 'Pemulihan sesi',
-            body: _rememberMe
-                ? 'Ingat Saya aktif. Sesi yang masih valid dapat dipulihkan pada perangkat ini.'
-                : 'Ingat Saya nonaktif. Aplikasi meminta login kembali setelah cold start.',
+            icon: Icons.password_rounded,
+            title: 'Penyimpanan password',
+            body:
+                'Ayo Suruh tidak menyimpan password akun. Penyimpanan password, jika dipilih, ditangani oleh password manager/autofill sistem perangkat.',
+          ),
+          const SizedBox(height: 18),
+          Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SwitchListTile(
+              secondary: const Icon(Icons.phonelink_lock_outlined, color: _brown),
+              title: const Text(
+                'Ingat Saya',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(
+                _rememberMe
+                    ? 'Session Supabase dapat dipulihkan saat aplikasi dibuka kembali.'
+                    : 'Cold start berikutnya akan meminta login kembali.',
+              ),
+              value: _rememberMe,
+              activeThumbColor: _orange,
+              onChanged: _updatingRemember ? null : _setRememberMe,
+            ),
           ),
           const SizedBox(height: 22),
           const Text(
@@ -93,7 +170,9 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               children: <Widget>[
                 ListTile(
@@ -103,16 +182,26 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.push<void>(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const ChangePassword()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ChangePassword(),
+                    ),
                   ),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.phonelink_erase_rounded, color: _brown),
+                  title: const Text('Lupakan perangkat ini'),
+                  subtitle: const Text(
+                    'Hapus email yang diingat dan nonaktifkan pemulihan session.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: _forgetThisDevice,
                 ),
                 const Divider(height: 1, indent: 56),
                 const ListTile(
                   leading: Icon(Icons.fingerprint_rounded, color: Color(0xFF9B8F87)),
                   title: Text('PIN / Biometrik Aplikasi'),
-                  subtitle: Text(
-                    'Disiapkan setelah autentikasi dan session management stabil.',
-                  ),
+                  subtitle: Text('Opsional untuk tahap hardening lanjutan.'),
                   trailing: Chip(label: Text('Roadmap')),
                 ),
               ],
@@ -120,8 +209,12 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Ayo Suruh tidak menyimpan password mentah. Jika perangkat menawarkan penyimpanan password, kredensial dikelola oleh password manager/autofill sistem.',
-            style: TextStyle(fontSize: 11, height: 1.45, color: Color(0xFF746A64)),
+            'Aksi sensitif seperti penghapusan akun divalidasi ulang di server. Akses Admin juga tetap diperiksa oleh RPC Supabase, bukan hanya oleh tampilan aplikasi.',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.45,
+              color: Color(0xFF746A64),
+            ),
           ),
         ],
       ),
@@ -172,7 +265,11 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                 const SizedBox(height: 3),
                 Text(
                   body,
-                  style: const TextStyle(fontSize: 11.5, height: 1.4, color: Color(0xFF6F635C)),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: Color(0xFF6F635C),
+                  ),
                 ),
               ],
             ),

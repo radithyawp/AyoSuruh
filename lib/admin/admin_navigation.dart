@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'admin_dashboard_page.dart';
 import 'admin_mitras_page.dart';
@@ -89,20 +90,23 @@ class _AdminNavigationState extends State<AdminNavigation> {
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: _select,
+        onDestinationSelected: (int index) {
+          HapticFeedback.selectionClick();
+          _select(index);
+        },
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFFE8F0E2),
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const <NavigationDestination>[
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined, color: _brown),
             selectedIcon: Icon(Icons.dashboard_rounded, color: _green),
-            label: 'Dashboard',
+            label: 'Beranda',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline_rounded, color: _brown),
             selectedIcon: Icon(Icons.people_rounded, color: _green),
-            label: 'Users',
+            label: 'Pengguna',
           ),
           NavigationDestination(
             icon: Icon(Icons.handyman_outlined, color: _brown),

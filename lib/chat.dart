@@ -6,9 +6,18 @@ import 'chats/chat_detail_page.dart';
 import 'chats/chat_helpers.dart';
 import 'chats/chat_service.dart';
 import 'jobs/job_helpers.dart';
+import 'notification.dart';
+import 'widgets/ayo_avatar.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+  const ChatPage({
+    super.key,
+    this.tutorialKey,
+    this.activeMode = 'customer',
+  });
+
+  final Key? tutorialKey;
+  final String activeMode;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -110,15 +119,25 @@ class _ChatPageState extends State<ChatPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(18, 14, 18, 4),
-              child: Text(
-                'Chat',
-                style: TextStyle(
-                  color: jobBrownColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 10, 2),
+              child: Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Text(
+                      'Chat',
+                      style: TextStyle(
+                        color: jobBrownColor,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  NotificationBell(
+                    color: jobDarkBrownColor,
+                    activeMode: widget.activeMode,
+                  ),
+                ],
               ),
             ),
             const Padding(
@@ -131,9 +150,11 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-              child: TextField(
+            KeyedSubtree(
+              key: widget.tutorialKey,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+                child: TextField(
                 controller: _searchController,
                 onChanged: (String value) => setState(() => _query = value),
                 decoration: InputDecoration(
@@ -168,6 +189,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
               ),
+            ),
             ),
             Expanded(child: _buildContent()),
           ],
@@ -307,15 +329,11 @@ class _ChatPageState extends State<ChatPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              CircleAvatar(
-                radius: 25,
+              AyoAvatar(
+                imageUrl: avatarUrl,
+                size: 50,
                 backgroundColor: const Color(0xFFFFE7C5),
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl == null || avatarUrl.isEmpty
-                    ? const Icon(Icons.person_rounded, color: jobBrownColor)
-                    : null,
+                logoPadding: 8,
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
@@ -16,6 +17,7 @@ import 'job_progress_widgets.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/network_photo_gallery.dart';
 
 class CustomerJobDetailPage extends StatefulWidget {
   const CustomerJobDetailPage({super.key, required this.jobId});
@@ -122,12 +124,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Chat belum dapat dibuka: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Chat belum dapat dibuka: $error');
     } finally {
       if (mounted) setState(() => _isOpeningChat = false);
     }
@@ -163,20 +160,13 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       await _jobService.confirmJobCompletion(widget.jobId);
       await _loadJob();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pekerjaan dikonfirmasi selesai.'),
-          backgroundColor: jobGreenColor,
-        ),
-      );
+      AyoSnackBar.success(context, 'Pekerjaan dikonfirmasi selesai.');
       await _openRating();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pekerjaan belum dapat dikonfirmasi: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Pekerjaan belum dapat dikonfirmasi: $error',
       );
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
@@ -227,16 +217,12 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       await _jobService.cancelJob(widget.jobId);
       await _loadJob();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pekerjaan berhasil dibatalkan.')),
-      );
+      AyoSnackBar.success(context, 'Pekerjaan berhasil dibatalkan.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pekerjaan belum dapat dibatalkan: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Pekerjaan belum dapat dibatalkan: $error',
       );
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
@@ -347,6 +333,14 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
               ),
             ),
           ),
+          if (jobImageUrls(job).isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            _contentCard(
+              title: 'Foto Pekerjaan',
+              icon: Icons.photo_library_outlined,
+              child: NetworkPhotoGallery(urls: jobImageUrls(job)),
+            ),
+          ],
           const SizedBox(height: 14),
           if (jobLatLng(job) != null) ...<Widget>[
             JobLocationMapCard(job: job),
@@ -703,7 +697,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 width: double.infinity,
                 height: 170,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   height: 120,
                   color: const Color(0xFFF1ECEF),
                   alignment: Alignment.center,

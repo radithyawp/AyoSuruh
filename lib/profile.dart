@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:ayosuruh/services/notification_service.dart';
@@ -18,7 +19,10 @@ import 'location/location_picker_page.dart';
 import 'payments/payment_history_page.dart';
 import 'wallet/mitra_wallet_page.dart';
 import 'wallet/wallet_service.dart';
+import 'tutorial/ayos_tutorial.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'widgets/ayo_pressable.dart';
+import 'widgets/ayo_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -26,11 +30,13 @@ class ProfilePage extends StatefulWidget {
     this.activeMode = 'customer',
     this.canUseMitraMode = false,
     this.onModeChanged,
+    this.tutorialAnchors,
   });
 
   final String activeMode;
   final bool canUseMitraMode;
   final Future<void> Function(String mode)? onModeChanged;
+  final AyosTutorialAnchors? tutorialAnchors;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -203,19 +209,15 @@ class _ProfilePageState extends State<ProfilePage> {
           );
       if (!mounted) return;
       setState(() => _mitraBaseLocation = saved);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lokasi Utama Mitra berhasil diperbarui.'),
-          backgroundColor: Color(0xFF5C744D),
-        ),
+      AyoSnackBar.success(
+        context,
+        'Lokasi Utama Mitra berhasil diperbarui.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lokasi Mitra belum dapat diperbarui: $error'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Lokasi Mitra belum dapat diperbarui: $error',
       );
     }
   }
@@ -341,10 +343,22 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           children: [
             // --- HEADER AVATAR & AKUN (Klik Avatar Untuk Ubah Foto) ---
-            _buildProfileHeader(displayName, email, phone, avatarUrl, isMitra),
+            KeyedSubtree(
+              key: widget.tutorialAnchors?.profileHeader,
+              child: _buildProfileHeader(
+                displayName,
+                email,
+                phone,
+                avatarUrl,
+                isMitra,
+              ),
+            ),
             const SizedBox(height: 18),
             if (widget.canUseMitraMode) ...[
-              _buildModeSwitcher(isMitra),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.profileMode,
+                child: _buildModeSwitcher(isMitra),
+              ),
               const SizedBox(height: 18),
             ] else
               const SizedBox(height: 6),
@@ -353,10 +367,13 @@ class _ProfilePageState extends State<ProfilePage> {
             if (isMitra) ...[
               _buildMitraStatsCard(),
               const SizedBox(height: 16),
-              _buildSaldoCard(
-                title: "PENDAPATAN MITRA",
-                buttonText: "Cairkan",
-                onPressed: _navigateToWallet,
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.profileFinance,
+                child: _buildSaldoCard(
+                  title: "PENDAPATAN MITRA",
+                  buttonText: "Cairkan",
+                  onPressed: _navigateToWallet,
+                ),
               ),
               const SizedBox(height: 16),
               _buildMenuCard(
@@ -376,7 +393,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 _navigateToWallet,
               ),
             ] else ...[
-              _buildSaldoCard(title: "SALDO AYOPAY", buttonText: "Isi Saldo"),
+              KeyedSubtree(
+                key: widget.tutorialAnchors?.profileFinance,
+                child: _buildSaldoCard(
+                  title: "SALDO AYOPAY",
+                  buttonText: "Isi Saldo",
+                ),
+              ),
               const SizedBox(height: 16),
               _buildMenuCard(
                 Icons.history,
@@ -434,11 +457,23 @@ class _ProfilePageState extends State<ProfilePage> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      title: const Row(
-        children: [
-          Icon(Icons.directions_run_rounded, color: _primaryOrange, size: 28),
-          SizedBox(width: 8),
-          Text(
+      title: Row(
+        children: <Widget>[
+          Container(
+            width: 34,
+            height: 34,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEFE1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Image.asset(
+              'assets/images/Logo_Ayo_Suruh.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(width: 9),
+          const Text(
             'Profil',
             style: TextStyle(
               color: _brownColor,
@@ -448,12 +483,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      actions: [
+      actions: <Widget>[
         NotificationBell(
           color: Colors.black87,
-          size: 26,
+          size: 25,
           activeMode: widget.activeMode,
         ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -468,27 +504,18 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       children: [
         // Avatar dengan Badge Kamera (Klik untuk ubah foto)
-        GestureDetector(
+        AyoPressable(
           onTap: _navigateToEditPhoto,
+          haptic: true,
+          pressedScale: 0.965,
           child: Stack(
             alignment: Alignment.bottomRight,
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFFBE4D4),
-                ),
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.grey[200],
-                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                      ? NetworkImage(avatarUrl)
-                      : null,
-                  child: avatarUrl == null || avatarUrl.isEmpty
-                      ? const Icon(Icons.person, size: 55, color: Colors.grey)
-                      : null,
-                ),
+              AyoAvatar(
+                imageUrl: avatarUrl,
+                size: 108,
+                backgroundColor: const Color(0xFFFFEFE1),
+                logoPadding: 18,
               ),
               Container(
                 padding: const EdgeInsets.all(6),
@@ -536,7 +563,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  isMitra ? 'Mode Mitra' : 'Mode Customer',
+                  isMitra ? 'Mitra' : 'Customer',
                   style: TextStyle(
                     color: isMitra ? Colors.green.shade800 : _brownColor,
                     fontSize: 11,
@@ -576,23 +603,22 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildModeSwitcher(bool isMitra) {
-    final String activeLabel = isMitra
-        ? 'Mode Mitra Aktif'
-        : 'Mode Customer Aktif';
+    final String activeLabel = isMitra ? 'Peran aktif: Mitra' : 'Peran aktif: Customer';
     final String description = isMitra
-        ? 'Terima pekerjaan, kirim penawaran, dan perbarui progres.'
-        : 'Pasang pekerjaan, pilih mitra, dan kelola pesananmu.';
-    final String buttonLabel = isMitra ? 'Ke Customer' : 'Ke Mitra';
+        ? 'Terima pekerjaan, kirim penawaran, dan kelola progres.'
+        : 'Buat pekerjaan, pilih Mitra, dan kelola kebutuhanmu.';
+    final String buttonLabel = isMitra ? 'Beralih ke Customer' : 'Beralih ke Mitra';
     final IconData activeIcon = isMitra
         ? Icons.engineering_rounded
         : Icons.person_rounded;
     final IconData buttonIcon = isMitra
         ? Icons.person_outline_rounded
         : Icons.engineering_outlined;
+    final Color accent = isMitra ? const Color(0xFF4B613E) : _brownColor;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isMitra
@@ -604,66 +630,79 @@ class _ProfilePageState extends State<ProfilePage> {
           color: isMitra ? const Color(0xFFCFE2C3) : const Color(0xFFF1D1A0),
         ),
       ),
-      child: Row(
+      child: Column(
         children: <Widget>[
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              activeIcon,
-              color: isMitra ? const Color(0xFF4B613E) : _brownColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  activeLabel,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    height: 1.35,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          FilledButton.icon(
-            onPressed: _isSwitchingMode ? null : () => _switchMode(isMitra),
-            icon: _isSwitchingMode
-                ? const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+                child: Icon(activeIcon, color: accent, size: 22),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      activeLabel,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
                     ),
-                  )
-                : Icon(buttonIcon, size: 17),
-            label: Text(buttonLabel),
-            style: FilledButton.styleFrom(
-              backgroundColor: isMitra ? const Color(0xFF4B613E) : _brownColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-              textStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.2,
+                        height: 1.3,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 11),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              height: 38,
+              child: FilledButton.icon(
+                onPressed: _isSwitchingMode ? null : () => _switchMode(isMitra),
+                icon: _isSwitchingMode
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(buttonIcon, size: 16),
+                label: Text(buttonLabel),
+                style: FilledButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  textStyle: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
           ),
@@ -703,7 +742,7 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -964,7 +1003,7 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../change_password.dart';
@@ -8,7 +10,9 @@ import '../login.dart';
 import '../notification_settings_page.dart';
 import '../syarat_ketentuan.dart';
 import '../security_settings_page.dart';
+import '../services/notification_service.dart';
 import 'admin_service.dart';
+import 'admin_feedback_page.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -25,6 +29,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   final AdminService _service = AdminService();
   Map<String, dynamic> _profile = <String, dynamic>{};
   bool _loading = true;
+  bool _loggingOut = false;
 
   @override
   void initState() {
@@ -46,13 +51,30 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   }
 
   Future<void> _logout() async {
-    await Supabase.instance.client.auth.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
-      (Route<dynamic> route) => false,
-    );
+    if (_loggingOut) return;
+    setState(() => _loggingOut = true);
+
+    if (!kIsWeb) {
+      try {
+        await NotificationService.instance.unregisterCurrentDevice();
+      } catch (error) {
+        debugPrint('Cleanup FCM Admin dilewati: $error');
+      }
+    }
+
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loggingOut = false);
+      AyoSnackBar.error(context, 'Logout Admin belum berhasil: $error');
+    }
   }
 
   void _open(Widget page) {
@@ -107,6 +129,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _tile(Icons.notifications_outlined, 'Pengaturan Notifikasi', () => _open(const NotificationSettingsPage())),
             ]),
             const SizedBox(height: 12),
+            _section('Insight Pengguna', <Widget>[
+              _tile(Icons.rate_review_outlined, 'Masukan Pengguna', () => _open(const AdminFeedbackPage())),
+            ]),
+            const SizedBox(height: 12),
             _section('Informasi', <Widget>[
               _tile(Icons.help_outline_rounded, 'Pusat Bantuan Admin', () => _open(const HelpPage())),
               _tile(Icons.description_outlined, 'Syarat & Ketentuan', () => _open(const SyaratKetentuanPage())),
@@ -116,10 +142,19 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             SizedBox(
               height: 48,
               child: FilledButton.icon(
-                onPressed: _logout,
+                onPressed: _loggingOut ? null : _logout,
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFE0DE), foregroundColor: Colors.red.shade700),
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Keluar Admin', style: TextStyle(fontWeight: FontWeight.w900)),
+                icon: _loggingOut
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout_rounded),
+                label: const Text(
+                  'Keluar Admin',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
               ),
             ),
           ],

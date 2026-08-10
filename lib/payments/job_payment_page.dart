@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -138,12 +139,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       _successMessageShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pembayaran berhasil diverifikasi.'),
-            backgroundColor: paymentGreen,
-          ),
-        );
+        AyoSnackBar.success(context, 'Pembayaran berhasil diverifikasi.');
       });
     }
   }
@@ -181,11 +177,9 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       await _openCheckout();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Transaksi Midtrans belum dapat dibuat: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Transaksi Midtrans belum dapat dibuat: $error',
       );
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -197,9 +191,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     final Uri? uri = Uri.tryParse(rawUrl);
     if (uri == null || !uri.hasScheme) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tautan pembayaran belum tersedia.')),
-      );
+      AyoSnackBar.info(context, 'Tautan pembayaran belum tersedia.');
       return;
     }
 
@@ -209,9 +201,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       webOnlyWindowName: '_blank',
     );
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Halaman Midtrans tidak dapat dibuka.')),
-      );
+      AyoSnackBar.error(context, 'Halaman Midtrans tidak dapat dibuka.');
     }
   }
 
@@ -256,11 +246,9 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       await _loadAttempts();
     } catch (error) {
       if (!silent && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Status belum dapat diperbarui: $error'),
-            backgroundColor: Colors.red.shade700,
-          ),
+        AyoSnackBar.error(
+          context,
+          'Status belum dapat diperbarui: $error',
         );
       }
     } finally {
@@ -875,7 +863,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Pembayaran diproses oleh Midtrans. AyoSuruh tidak menyimpan PIN, nomor kartu, atau kredensial e-wallet kamu.',
+              'Pembayaran diproses oleh Midtrans. Ayo Suruh tidak menyimpan PIN, nomor kartu, atau kredensial e-wallet kamu.',
               style: TextStyle(
                 fontSize: 11,
                 height: 1.45,

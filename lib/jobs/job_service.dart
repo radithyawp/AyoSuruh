@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class JobService {
@@ -86,6 +85,107 @@ class JobService {
         .select('id, fullname, phone, alamat, avatar_url, role')
         .eq('id', currentUserId)
         .maybeSingle();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchJobImages(String jobId) async {
+    try {
+      final dynamic result = await _client
+          .from('job_images')
+          .select('id, job_id, storage_path, sort_order, created_at')
+          .eq('job_id', jobId)
+          .order('sort_order');
+      final List<Map<String, dynamic>> rows =
+          List<Map<String, dynamic>>.from(result as List);
+      return Future.wait<Map<String, dynamic>>(rows.map((row) async {
+        final Map<String, dynamic> image = Map<String, dynamic>.from(row);
+        final String path = (image['storage_path'] ?? '').toString();
+        image['image_url'] = path.isEmpty
+            ? null
+            : await _client.storage
+                .from('job-images')
+                .createSignedUrl(path, 21600);
+        return image;
+      }));
+    } on PostgrestException catch (error) {
+      if (error.message.toLowerCase().contains('job_images')) {
+        debugPrint('Migration job images belum tersedia: $error');
+        return <Map<String, dynamic>>[];
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> uploadJobImages({
+    required String jobId,
+    required List<XFile> images,
+  }) async {
+    if (images.isEmpty) return <Map<String, dynamic>>[];
+    if (images.length > 5) {
+      throw ArgumentError('Maksimal 5 foto untuk satu pekerjaan.');
+    }
+
+    final List<String> uploadedPaths = <String>[];
+    try {
+      for (int index = 0; index < images.length; index++) {
+        final XFile file = images[index];
+        final Uint8List bytes = await file.readAsBytes();
+        if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+          throw StateError('Ukuran setiap foto maksimal 5 MB.');
+        }
+        final String extension = _safeImageExtension(file.name);
+        final String path =
+            '$currentUserId/$jobId/${DateTime.now().microsecondsSinceEpoch}_$index.$extension';
+        await _client.storage.from('job-images').uploadBinary(
+              path,
+              bytes,
+              fileOptions: FileOptions(
+                contentType: _imageMimeType(extension),
+                upsert: false,
+              ),
+            );
+        uploadedPaths.add(path);
+        await _client.from('job_images').insert(<String, dynamic>{
+          'job_id': jobId,
+          'storage_path': path,
+          'sort_order': index,
+        });
+      }
+      return fetchJobImages(jobId);
+    } catch (_) {
+      if (uploadedPaths.isNotEmpty) {
+        try {
+          await _client
+              .from('job_images')
+              .delete()
+              .inFilter('storage_path', uploadedPaths);
+          await _client.storage.from('job-images').remove(uploadedPaths);
+        } catch (cleanupError) {
+          debugPrint('Cleanup foto pekerjaan gagal: $cleanupError');
+        }
+      }
+      rethrow;
+    }
+  }
+
+  String _safeImageExtension(String filename) {
+    final String lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'png';
+    if (lower.endsWith('.webp')) return 'webp';
+    if (lower.endsWith('.heic')) return 'heic';
+    return 'jpg';
+  }
+
+  String _imageMimeType(String extension) {
+    switch (extension) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      default:
+        return 'image/jpeg';
+    }
   }
 
   Future<String> createJob({
@@ -296,6 +396,8 @@ class JobService {
         ''')
         .eq('id', jobId)
         .single();
+
+    result['job_images'] = await fetchJobImages(jobId);
 
     if (!_hasProfile(result['customer'])) {
       final Map<String, dynamic>? customer =

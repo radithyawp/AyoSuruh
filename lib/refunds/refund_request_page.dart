@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
@@ -107,24 +108,14 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
           : await _service.fetchJobRefund(widget.jobId);
       if (!mounted) return;
       setState(() => _refund = refund);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['manual_review'] == true
-                ? 'Permintaan masuk pemeriksaan manual.'
-                : 'Permintaan refund berhasil diproses.',
-          ),
-          backgroundColor: refundStatusColor(refund?['status']),
-        ),
-      );
+      if (result['manual_review'] == true) {
+        AyoSnackBar.info(context, 'Permintaan masuk pemeriksaan manual.');
+      } else {
+        AyoSnackBar.success(context, 'Permintaan refund berhasil diproses.');
+      }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Refund belum dapat diproses: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Refund belum dapat diproses: $error');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

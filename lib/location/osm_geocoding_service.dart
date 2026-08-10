@@ -56,7 +56,7 @@ class OsmGeocodingService {
     final http.Response response = await _client.get(
       uri,
       headers: const <String, String>{
-        'User-Agent': 'AyoSuruh/1.0 (academic MVP; UPI Cibiru)',
+        'User-Agent': 'AyoSuruh/1.0 (https://madouseixalisphera.github.io/AyoSuruh-Web/)',
         'Accept-Language': 'id,en;q=0.8',
         'Accept': 'application/json',
       },
@@ -104,7 +104,7 @@ class OsmGeocodingService {
     final http.Response response = await _client.get(
       uri,
       headers: const <String, String>{
-        'User-Agent': 'AyoSuruh/1.0 (academic MVP; UPI Cibiru)',
+        'User-Agent': 'AyoSuruh/1.0 (https://madouseixalisphera.github.io/AyoSuruh-Web/)',
         'Accept-Language': 'id,en;q=0.8',
         'Accept': 'application/json',
       },

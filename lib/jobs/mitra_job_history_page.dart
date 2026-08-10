@@ -131,7 +131,7 @@ class _MitraJobHistoryPageState extends State<MitraJobHistoryPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 30),
               itemCount: _history.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> job = _history[index];
                 final bool completed = job['status'] == 'completed';

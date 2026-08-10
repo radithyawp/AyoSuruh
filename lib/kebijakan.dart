@@ -64,7 +64,7 @@ class KebijakanPage extends StatelessWidget {
                       ),
                       SizedBox(height: 5),
                       Text(
-                        'Pembaruan: 7 Agustus 2026 · Berlaku untuk MVP Ayo Suruh.',
+                        'Pembaruan terakhir: 9 Agustus 2026.',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF765638),
@@ -129,7 +129,7 @@ class KebijakanPage extends StatelessWidget {
             number: '9',
             title: 'Pilihan dan Hak Pengguna',
             body:
-                'Pengguna dapat memperbarui data profil tertentu, mengubah password, mengatur izin perangkat, dan menghubungi Pusat Dukungan terkait koreksi atau penghapusan data. Permintaan dapat ditinjau dengan mempertimbangkan transaksi yang masih aktif, kewajiban kontraktual mitra, keamanan, dan kebutuhan pencatatan yang sah.',
+                'Pengguna dapat memperbarui data profil tertentu, mengubah password, mengatur izin perangkat, serta menggunakan menu Pengaturan > Kelola / Hapus Akun untuk menonaktifkan atau menghapus akun. Penghapusan dapat ditahan sementara ketika masih ada pekerjaan aktif, refund/dispute, pencairan, saldo mitra, kewajiban kontraktual, keamanan, atau kebutuhan pencatatan transaksi yang sah. Data historis tertentu dapat dipertahankan dalam bentuk yang dianonimkan apabila diperlukan untuk integritas transaksi.',
           ),
           const _PrivacySection(
             number: '10',
@@ -174,7 +174,7 @@ class KebijakanPage extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           const Text(
-            'Catatan: kebijakan ini disusun untuk kebutuhan MVP dan tugas kewirausahaan. Sebelum peluncuran komersial penuh, dokumen legal perlu ditinjau kembali sesuai badan usaha, yurisdiksi, dan proses operasional yang berlaku.',
+            'Kebijakan ini dapat diperbarui untuk menyesuaikan perubahan layanan, keamanan, regulasi, atau mitra pihak ketiga. Perubahan material akan diinformasikan melalui aplikasi atau kanal resmi Ayo Suruh.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 10.5,

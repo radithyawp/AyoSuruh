@@ -158,7 +158,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: SwitchListTile.adaptive(
-        activeColor: _orange,
+        activeThumbColor: _orange,
         value: value,
         onChanged: enabled ? onChanged : null,
         title: Text(

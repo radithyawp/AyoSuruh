@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../jobs/job_helpers.dart';
 import '../jobs/job_service.dart';
 import 'mitra_service_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/ayo_snackbar.dart';
 
 class CreateMitraServicePage extends StatefulWidget {
   const CreateMitraServicePage({
@@ -22,6 +26,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final JobService _jobService = JobService();
   final MitraServiceService _service = MitraServiceService();
+  final ImagePicker _imagePicker = ImagePicker();
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
@@ -30,6 +35,9 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
   String? _categoryId;
   bool _loading = true;
   bool _saving = false;
+  List<Map<String, dynamic>> _existingImages = <Map<String, dynamic>>[];
+  final List<Map<String, dynamic>> _removedImages = <Map<String, dynamic>>[];
+  final List<XFile> _newImages = <XFile>[];
 
   bool get _isEditing => widget.existingService != null;
 
@@ -50,6 +58,13 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
       text: price > 0 ? price.round().toString() : '',
     );
     _categoryId = existing?['category_id']?.toString();
+    final dynamic rawImages = existing?['service_images'];
+    if (rawImages is List) {
+      _existingImages = rawImages
+          .whereType<Map>()
+          .map((Map image) => Map<String, dynamic>.from(image))
+          .toList();
+    }
     _loadCategories();
   }
 
@@ -65,9 +80,15 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     try {
       final List<Map<String, dynamic>> categories =
           await _jobService.fetchCategories();
+      final List<Map<String, dynamic>> images = _isEditing
+          ? await _service.fetchServiceImages(
+              widget.existingService!['id'].toString(),
+            )
+          : <Map<String, dynamic>>[];
       if (!mounted) return;
       setState(() {
         _categories = categories;
+        if (_isEditing) _existingImages = images;
         if (_categoryId == null && categories.isNotEmpty) {
           _categoryId = categories.first['id'].toString();
         }
@@ -87,6 +108,13 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
       _showMessage('Pilih kategori jasa.', error: true);
       return;
     }
+    if (_existingImages.length + _newImages.length < 1) {
+      _showMessage(
+        'Tambahkan minimal 1 foto katalog sebagai cover jasa.',
+        error: true,
+      );
+      return;
+    }
 
     final num price = num.tryParse(
           _priceController.text.replaceAll(RegExp(r'[^0-9]'), ''),
@@ -96,20 +124,43 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     setState(() => _saving = true);
     try {
       if (_isEditing) {
+        final String serviceId = widget.existingService!['id'].toString();
         await _service.updateService(
-          serviceId: widget.existingService!['id'].toString(),
+          serviceId: serviceId,
           categoryId: categoryId,
           title: _titleController.text,
           description: _descriptionController.text,
           startingPrice: price,
         );
+        for (final Map<String, dynamic> image in _removedImages) {
+          await _service.deleteServiceImage(
+            serviceId: serviceId,
+            imageId: image['id'].toString(),
+            storagePath: (image['storage_path'] ?? '').toString(),
+          );
+        }
+        await _service.uploadServiceImages(
+          serviceId: serviceId,
+          images: _newImages,
+          startingOrder: _existingImages.length,
+        );
+        await _service.normalizeServiceCover(serviceId);
       } else {
-        await _service.createService(
+        final String serviceId = await _service.createService(
           categoryId: categoryId,
           title: _titleController.text,
           description: _descriptionController.text,
           startingPrice: price,
         );
+        try {
+          await _service.uploadServiceImages(
+            serviceId: serviceId,
+            images: _newImages,
+          );
+        } catch (_) {
+          await _service.deleteService(serviceId);
+          rethrow;
+        }
       }
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -120,14 +171,240 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     }
   }
 
+  Future<void> _addCatalogPhotos() async {
+    final int currentCount = _existingImages.length + _newImages.length;
+    if (currentCount >= 5 || _saving) return;
+    final String? source = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const ListTile(
+                title: Text(
+                  'Tambah Foto Katalog',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text('Foto pertama akan digunakan sebagai cover jasa.'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Ambil dari Kamera'),
+                onTap: () => Navigator.pop(sheetContext, 'camera'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Pilih dari Galeri'),
+                subtitle: const Text('Bisa memilih beberapa foto sekaligus.'),
+                onTap: () => Navigator.pop(sheetContext, 'gallery'),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted || source == null) return;
+
+    try {
+      final int remaining = 5 - currentCount;
+      if (source == 'camera') {
+        final XFile? image = await _imagePicker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 82,
+          maxWidth: 1600,
+          maxHeight: 1600,
+        );
+        if (image != null && mounted) {
+          setState(() => _newImages.add(image));
+        }
+        return;
+      }
+
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        imageQuality: 82,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (!mounted || images.isEmpty) return;
+      final List<XFile> accepted = images.take(remaining).toList();
+      setState(() => _newImages.addAll(accepted));
+      if (images.length > remaining) {
+        _showMessage(
+          'Maksimal 5 foto katalog. Hanya $remaining foto pertama yang ditambahkan.',
+        );
+      }
+    } catch (error) {
+      _showMessage('Foto katalog belum dapat dipilih: $error', error: true);
+    }
+  }
+
+  Widget _buildCatalogPhotoPicker() {
+    final int count = _existingImages.length + _newImages.length;
+    final int totalItems = count + (count < 5 ? 1 : 0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          count == 0
+              ? 'Minimal 1 cover · maksimal 5 foto'
+              : '$count/5 foto · foto pertama menjadi cover',
+          style: const TextStyle(fontSize: 11, color: Color(0xFF756960)),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: totalItems,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (BuildContext context, int index) {
+              if (index == count) {
+                return InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: _addCatalogPhotos,
+                  child: Container(
+                    width: 104,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF4E3),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: jobOrangeColor),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(Icons.add_photo_alternate_outlined, color: jobBrownColor),
+                        SizedBox(height: 6),
+                        Text(
+                          'Tambah Foto',
+                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final bool existing = index < _existingImages.length;
+              final Map<String, dynamic>? remote =
+                  existing ? _existingImages[index] : null;
+              final XFile? local = existing
+                  ? null
+                  : _newImages[index - _existingImages.length];
+              return Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: SizedBox(
+                      width: 104,
+                      height: 110,
+                      child: existing
+                          ? Image.network(
+                              (remote?['image_url'] ?? '').toString(),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const ColoredBox(
+                                color: Color(0xFFF1ECE8),
+                                child: Icon(Icons.broken_image_outlined),
+                              ),
+                            )
+                          : FutureBuilder<Uint8List>(
+                              future: local!.readAsBytes(),
+                              builder: (
+                                BuildContext context,
+                                AsyncSnapshot<Uint8List> snapshot,
+                              ) {
+                                if (!snapshot.hasData) {
+                                  return const ColoredBox(
+                                    color: Color(0xFFF1ECE8),
+                                    child: Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  );
+                                }
+                                return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                              },
+                            ),
+                    ),
+                  ),
+                  if (index == 0)
+                    Positioned(
+                      left: 7,
+                      bottom: 7,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: const Text(
+                          'COVER',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: -7,
+                    right: -7,
+                    child: Material(
+                      color: Colors.white,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _saving || count <= 1
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (existing) {
+                                    final Map<String, dynamic> removed =
+                                        _existingImages.removeAt(index);
+                                    _removedImages.add(removed);
+                                  } else {
+                                    _newImages.removeAt(
+                                      index - _existingImages.length,
+                                    );
+                                  }
+                                });
+                              },
+                        child: Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: count <= 1 ? Colors.grey : Colors.redAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 7),
+        const Text(
+          'Gunakan foto hasil kerja/portofolio sendiri. Hindari watermark atau data pribadi customer.',
+          style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF81736B)),
+        ),
+      ],
+    );
+  }
+
   void _showMessage(String message, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: error ? Colors.red.shade700 : jobGreenColor,
-      ),
-    );
+    if (error) {
+      AyoSnackBar.error(context, message);
+    } else {
+      AyoSnackBar.success(context, message);
+    }
   }
 
   @override
@@ -152,14 +429,16 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
 
         actions: const <Widget>[HomeShortcutButton()],
       ),
-      body: _loading
+      body: SafeArea(
+        top: false,
+        child: _loading
           ? const Center(
               child: CircularProgressIndicator(color: jobOrangeColor),
             )
           : Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 34),
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
                 children: <Widget>[
                   Container(
                     padding: const EdgeInsets.all(14),
@@ -245,6 +524,13 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
+                    'Foto Katalog Jasa',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildCatalogPhotoPicker(),
+                  const SizedBox(height: 18),
+                  const Text(
                     'Harga Mulai',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -305,6 +591,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                 ],
               ),
             ),
+      ),
     );
   }
 

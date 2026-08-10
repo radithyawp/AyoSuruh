@@ -6,9 +6,14 @@ import 'jobs/job_service.dart';
 import 'jobs/mitra_jobs_page.dart';
 
 class JobPage extends StatefulWidget {
-  const JobPage({super.key, this.role});
+  const JobPage({
+    super.key,
+    this.role,
+    this.tutorialKey,
+  });
 
   final String? role;
+  final Key? tutorialKey;
 
   @override
   State<JobPage> createState() => _JobPageState();
@@ -70,7 +75,7 @@ class _JobPageState extends State<JobPage> {
       );
     }
     return _role == 'mitra'
-        ? const MitraJobsPage()
-        : const CustomerJobsPage();
+        ? MitraJobsPage(tutorialKey: widget.tutorialKey)
+        : CustomerJobsPage(tutorialKey: widget.tutorialKey);
   }
 }

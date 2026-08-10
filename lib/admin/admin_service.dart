@@ -160,6 +160,29 @@ class AdminService {
         .createSignedUrl(path, 600);
   }
 
+  Future<Map<String, dynamic>> fetchFeedbackSummary() async {
+    final dynamic response = await _client.rpc('admin_feedback_summary');
+    if (response is List && response.isNotEmpty && response.first is Map) {
+      return Map<String, dynamic>.from(response.first as Map);
+    }
+    if (response is Map) return Map<String, dynamic>.from(response);
+    return <String, dynamic>{};
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFeedback({
+    int limit = 100,
+  }) async {
+    final dynamic response = await _client.rpc(
+      'admin_list_feedback',
+      params: <String, dynamic>{'p_limit': limit},
+    );
+    if (response is! List) return <Map<String, dynamic>>[];
+    return response
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<Map<String, dynamic>> fetchMyProfile() async {
     final String? userId = _client.auth.currentUser?.id;
     if (userId == null) throw StateError('Admin belum login.');

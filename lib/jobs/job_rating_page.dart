@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 import 'job_helpers.dart';
 import 'job_review_widgets.dart';
@@ -154,9 +155,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
 
   Future<void> _submit() async {
     if (_rating < 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih rating bintang terlebih dahulu.')),
-      );
+      AyoSnackBar.info(context, 'Pilih rating bintang terlebih dahulu.');
       return;
     }
 
@@ -169,20 +168,16 @@ class _JobRatingPageState extends State<JobRatingPage> {
         tags: _selectedTags.toList(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Terima kasih, penilaian berhasil dikirim.'),
-          backgroundColor: jobGreenColor,
-        ),
+      AyoSnackBar.success(
+        context,
+        'Terima kasih, penilaian berhasil dikirim.',
       );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penilaian belum berhasil dikirim: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Penilaian belum berhasil dikirim: $error',
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

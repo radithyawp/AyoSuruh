@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 const Color _cameraOrange = Color(0xFFF39C12);
 const Color _cameraBrown = Color(0xFF8B5A2B);
@@ -156,12 +157,7 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
       );
     } on CameraException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_cameraErrorMessage(error)),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, _cameraErrorMessage(error));
     } finally {
       if (mounted) setState(() => _isCapturing = false);
     }

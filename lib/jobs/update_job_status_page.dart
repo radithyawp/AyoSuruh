@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'job_helpers.dart';
@@ -125,12 +126,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto belum dapat dipilih: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Foto belum dapat dipilih: $error');
     }
   }
 
@@ -140,9 +136,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
     final String? currentStage = currentJobProgressStage(job);
     final String? nextStage = nextJobProgressStage(currentStage);
     if (nextStage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seluruh progres sudah diperbarui.')),
-      );
+      AyoSnackBar.info(context, 'Seluruh progres sudah diperbarui.');
       return;
     }
 
@@ -173,23 +167,17 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       });
       await _loadData();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            nextStage == 'completion_submitted'
-                ? 'Pekerjaan diajukan selesai. Menunggu konfirmasi customer.'
-                : 'Status diperbarui menjadi ${jobProgressLabel(nextStage)}.',
-          ),
-          backgroundColor: jobGreenColor,
-        ),
+      AyoSnackBar.success(
+        context,
+        nextStage == 'completion_submitted'
+            ? 'Pekerjaan diajukan selesai. Menunggu konfirmasi customer.'
+            : 'Status diperbarui menjadi ${jobProgressLabel(nextStage)}.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Status belum berhasil diperbarui: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Status belum berhasil diperbarui: $error',
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -511,7 +499,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                     ? Image.network(
                         latestUrl,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        errorBuilder: (_, _, _) => const Icon(
                           Icons.broken_image_outlined,
                           color: jobBrownColor,
                         ),

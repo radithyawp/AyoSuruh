@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/ayo_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'widgets/home_shortcut_button.dart';
 
@@ -77,19 +78,19 @@ class _HelpPageState extends State<HelpPage> {
       category: 'Mitra',
       question: 'Bagaimana cara menjadi mitra Ayo Suruh?',
       answer:
-          'Ajukan pendaftaran mitra dari menu profil, lengkapi data dan dokumen yang diminta, lalu tunggu proses peninjauan. Setelah disetujui, mode Mitra dapat digunakan.',
+          'Ajukan pendaftaran mitra dari menu profil, lengkapi data dan dokumen yang diminta, lalu tunggu proses peninjauan. Setelah disetujui, akunmu dapat digunakan sebagai Mitra.',
     ),
     _FaqItem(
       category: 'Mitra',
       question: 'Bagaimana cara mengambil pekerjaan?',
       answer:
-          'Pada mode Mitra, buka daftar pekerjaan yang tersedia, pelajari detail kebutuhan customer, lalu kirim penawaran harga, estimasi waktu, dan pesan. Customer akan memilih penawaran yang dianggap paling sesuai.',
+          'Saat menggunakan akun sebagai Mitra, buka pekerjaan yang tersedia, pelajari kebutuhan customer, lalu kirim penawaran harga, estimasi waktu, dan pesan. Customer akan memilih penawaran yang dianggap paling sesuai.',
     ),
     _FaqItem(
       category: 'Mitra',
       question: 'Berapa komisi Ayo Suruh untuk mitra?',
       answer:
-          'Pada model MVP saat ini Ayo Suruh menggunakan komisi platform 6% dari nilai jasa pada transaksi berhasil. Nilai komisi disimpan pada transaksi agar histori tidak berubah jika kebijakan tarif diperbarui di masa depan.',
+          'Ayo Suruh menggunakan komisi platform 6% dari nilai jasa pada transaksi berhasil, kecuali diinformasikan lain pada aplikasi. Nilai komisi dicatat pada transaksi agar histori tetap konsisten jika kebijakan tarif diperbarui.',
     ),
     _FaqItem(
       category: 'Mitra',
@@ -113,7 +114,7 @@ class _HelpPageState extends State<HelpPage> {
       category: 'AyoPay',
       question: 'Bagaimana cara isi saldo AyoPay?',
       answer:
-          'Fitur top up AyoPay masih berada pada tahap pengembangan MVP. Setelah diaktifkan, instruksi metode pembayaran, status top up, dan riwayat saldo akan tersedia langsung di aplikasi.',
+          'Top up AyoPay akan tersedia pada akun dan metode pembayaran yang didukung. Saat aktif, instruksi pembayaran, status top up, dan riwayat saldo akan tersedia langsung di aplikasi.',
     ),
     _FaqItem(
       category: 'Keamanan',
@@ -140,16 +141,12 @@ class _HelpPageState extends State<HelpPage> {
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tautan belum dapat dibuka.')),
-          );
+          AyoSnackBar.error(context, 'Tautan belum dapat dibuka.');
         }
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuka aplikasi tujuan.')),
-        );
+        AyoSnackBar.error(context, 'Gagal membuka aplikasi tujuan.');
       }
     }
   }

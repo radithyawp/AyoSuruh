@@ -9,9 +9,18 @@ import 'jobs/job_service.dart';
 import 'jobs/job_widgets.dart';
 import 'notification.dart';
 import 'services/service_marketplace_page.dart';
+import 'tutorial/ayos_tutorial.dart';
+import 'theme/ayo_theme.dart';
+import 'widgets/ayo_avatar.dart';
+import 'widgets/ayo_category_visual.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  const DashboardPage({
+    super.key,
+    this.tutorialAnchors,
+  });
+
+  final AyosTutorialAnchors? tutorialAnchors;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -169,36 +178,66 @@ class _DashboardPageState extends State<DashboardPage> {
               color: jobOrangeColor,
               onRefresh: _fetchDashboardData,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
                 children: <Widget>[
                   if (_errorMessage != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE0DD),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Sebagian data belum dapat dimuat: $_errorMessage',
-                        style: const TextStyle(fontSize: 11),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFE0DD),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Sebagian data belum dapat dimuat: $_errorMessage',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
                     ),
-                  _buildHeader(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: KeyedSubtree(
+                      key: widget.tutorialAnchors?.homeHeader,
+                      child: _buildHeader(),
+                    ),
+                  ),
                   const SizedBox(height: 18),
-                  _buildSearchBar(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: KeyedSubtree(
+                      key: widget.tutorialAnchors?.homeSearchOrIncome,
+                      child: _buildSearchBar(),
+                    ),
+                  ),
                   const SizedBox(height: 18),
-                  _buildPromoBanner(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: KeyedSubtree(
+                      key: widget.tutorialAnchors?.homePromoOrService,
+                      child: _buildPromoBanner(),
+                    ),
+                  ),
                   const SizedBox(height: 22),
-                  _buildCategorySection(),
+                  KeyedSubtree(
+                    key: widget.tutorialAnchors?.homeCategoriesOrActive,
+                    child: _buildCategorySection(),
+                  ),
                   const SizedBox(height: 22),
-                  _buildRecentJobsSection(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: _buildRecentJobsSection(),
+                  ),
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: FloatingActionButton.extended(
+      floatingActionButton: KeyedSubtree(
+        key: widget.tutorialAnchors?.homePrimaryActionOrAvailable,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: FloatingActionButton.extended(
+          heroTag: 'customer-home-create-job-fab',
           onPressed: () => _openCreateJob(),
           backgroundColor: jobOrangeColor,
           foregroundColor: const Color(0xFF553600),
@@ -208,6 +247,7 @@ class _DashboardPageState extends State<DashboardPage> {
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
+      ),
       ),
     );
   }
@@ -219,7 +259,7 @@ class _DashboardPageState extends State<DashboardPage> {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       title: const Text(
-        'ayo suruh',
+        'Ayo Suruh',
         style: TextStyle(
           color: jobDarkBrownColor,
           fontWeight: FontWeight.w900,
@@ -237,35 +277,43 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildHeader() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Halo, $_userName!',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF302A27),
-                ),
+                'Halo,',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF746A64),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 1),
+              Text(
+                _userName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 17,
+                      height: 1.16,
+                      color: const Color(0xFF302A27),
+                    ),
+              ),
+              const SizedBox(height: 5),
               Row(
                 children: <Widget>[
-                  const Icon(Icons.location_on, size: 14, color: jobBrownColor),
+                  const Icon(Icons.location_on_rounded, size: 15, color: jobBrownColor),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       _userAddress,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF6F645D),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF6F645D),
+                          ),
                     ),
                   ),
                 ],
@@ -274,15 +322,11 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
         const SizedBox(width: 12),
-        CircleAvatar(
-          radius: 23,
-          backgroundColor: const Color(0xFFFFE4BD),
-          backgroundImage: _avatarUrl == null || _avatarUrl!.isEmpty
-              ? null
-              : NetworkImage(_avatarUrl!),
-          child: _avatarUrl == null || _avatarUrl!.isEmpty
-              ? const Icon(Icons.person, color: jobBrownColor)
-              : null,
+        AyoAvatar(
+          imageUrl: _avatarUrl,
+          size: 48,
+          backgroundColor: const Color(0xFFFFEFE1),
+          logoPadding: 7,
         ),
       ],
     );
@@ -416,75 +460,90 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildCategorySection() {
+    Widget categoryTile(Map<String, dynamic> category) {
+      final String name = (category['name'] ?? 'Lainnya').toString();
+      return SizedBox(
+        width: 82,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => _openCreateJob(categoryName: name),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  AyoCategoryImage(
+                    name: name,
+                    width: 72,
+                    height: 72,
+                    radius: 18,
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    name,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontSize: 10.4,
+                          height: 1.08,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF4D433D),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            const Expanded(
-              child: Text(
-                'Kategori Layanan',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: Row(
+            children: <Widget>[
+              const Expanded(
+                child: Text(
+                  'Kategori Layanan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
               ),
-            ),
-            TextButton(
-              onPressed: _showServiceSearch,
-              child: const Text('Lihat semua'),
-            ),
-          ],
+              TextButton(
+                onPressed: _showServiceSearch,
+                child: Text(
+                  'Lihat semua',
+                  style: AyoTypography.link(context, color: AyoColors.coral),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         if (_categories.isEmpty)
-          const Text(
-            'Kategori belum tersedia.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF7C6F67)),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              'Kategori belum tersedia.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF7C6F67)),
+            ),
           )
         else
           SizedBox(
-            height: 92,
+            height: 120,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              physics: const BouncingScrollPhysics(),
               itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> category = _categories[index];
-                final String name = (category['name'] ?? 'Lainnya').toString();
-                return SizedBox(
-                  width: 68,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _openCreateJob(categoryName: name),
-                    child: Column(
-                      children: <Widget>[
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            color: categoryBackground(name),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            categoryIcon(name),
-                            color: jobDarkBrownColor,
-                            size: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          name,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            height: 1.05,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return categoryTile(_categories[index]);
               },
             ),
           ),

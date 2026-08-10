@@ -62,8 +62,8 @@ class _SplashScreenState extends State<SplashScreen> {
       final bool rememberSession =
           await AuthPreferences.shouldRememberSession();
       if (!rememberSession) {
-        // Checkbox Remember Me mengontrol pemulihan sesi pada cold start.
-        // Bila dipilih, credential login disimpan melalui secure storage perangkat.
+        // Checkbox Remember Me mengontrol pemulihan session Supabase pada
+        // cold start. Password tidak disimpan oleh Ayo Suruh.
         await supabase.auth.signOut();
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
@@ -128,7 +128,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 'assets/images/logo.jpeg', // Sesuaikan path gambar kamu
                 width: 480,
                 height: 480,
-                errorBuilder: (_, __, ___) => const Icon(
+                errorBuilder: (_, _, _) => const Icon(
                   Icons.directions_run_rounded,
                   size: 120,
                   color: Color(0xFFF39C12),
@@ -280,7 +280,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 child: Image.asset(
                                   item.imagePath,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => Center(
+                                  errorBuilder: (_, _, _) => Center(
                                     child: Icon(
                                       Icons.image_outlined,
                                       size: 100,

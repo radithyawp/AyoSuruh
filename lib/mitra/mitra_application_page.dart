@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import '../location/location_picker_page.dart';
 import '../location/osm_geocoding_service.dart';
 import '../syarat_ketentuan.dart';
 import 'mitra_application_service.dart';
+import 'mitra_contract_page.dart';
 import 'selfie_camera_page.dart';
 import '../widgets/home_shortcut_button.dart';
 
@@ -45,6 +47,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   bool _selfieCapturedFromFrontCamera = false;
   String? _selectedBank;
   bool _termsAccepted = false;
+  bool _contractAccepted = false;
+  Map<String, dynamic>? _activeContract;
   bool _isLoading = true;
   bool _isSubmitting = false;
   bool _isResolvingAddress = false;
@@ -90,6 +94,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
             ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
             : _service.fetchMyApplication(),
         _service.fetchMitraBaseLocation(),
+        _service.fetchActiveContract(),
       ]);
       final Map<String, dynamic> profile =
           initial[0] as Map<String, dynamic>;
@@ -97,6 +102,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
           initial[1] as Map<String, dynamic>?;
       final Map<String, dynamic>? baseLocation =
           initial[2] as Map<String, dynamic>?;
+      final Map<String, dynamic>? activeContract =
+          initial[3] as Map<String, dynamic>?;
+      _activeContract = activeContract;
 
       _fullnameController.text = (profile['fullname'] ?? '').toString();
       _phoneController.text = _normalizePhone(
@@ -126,11 +134,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Data pendaftaran belum dapat dimuat: $error'),
-            backgroundColor: Colors.red,
-          ),
+        AyoSnackBar.error(
+          context,
+          'Data pendaftaran belum dapat dimuat: $error',
         );
       }
     } finally {
@@ -203,8 +209,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     final String query = _addressController.text.trim();
     if (query.length < 8) {
       if (showMessage && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Alamat terlalu singkat untuk dicari.')),
+        AyoSnackBar.info(
+          context,
+          'Alamat terlalu singkat untuk dicari.',
         );
       }
       return false;
@@ -227,13 +234,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
       if (best == null) {
         if (showMessage && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Alamat belum ditemukan di OpenStreetMap. Tambahkan kecamatan/kota atau pilih titik manual.',
-              ),
-              backgroundColor: _mitraBrown,
-            ),
+          AyoSnackBar.info(
+            context,
+            'Alamat belum ditemukan. Tambahkan kecamatan/kota atau pilih titik manual.',
           );
         }
         return false;
@@ -248,26 +251,17 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         _resolvedAddressText = _addressController.text.trim();
       });
       if (showMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              approximate
-                  ? 'Titik perkiraan ditemukan. Periksa pin di peta sebelum mengirim pengajuan.'
-                  : 'Titik lokasi Mitra berhasil ditemukan.',
-            ),
-            backgroundColor: _mitraGreen,
-          ),
+        AyoSnackBar.info(
+          context,
+          approximate
+              ? 'Titik perkiraan ditemukan. Periksa pin sebelum mengirim pengajuan.'
+              : 'Titik lokasi Mitra berhasil ditemukan.',
         );
       }
       return true;
     } catch (error) {
       if (showMessage && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pencarian lokasi gagal: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AyoSnackBar.error(context, 'Pencarian lokasi gagal: $error');
       }
       return false;
     } finally {
@@ -374,12 +368,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto belum dapat dipilih: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, 'Foto belum dapat dipilih: $error');
     }
   }
 
@@ -407,12 +396,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Selfie belum dapat diambil: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AyoSnackBar.error(context, 'Selfie belum dapat diambil: $error');
     }
   }
 
@@ -426,13 +410,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       final bool resolved = await _resolveMitraAddress(showMessage: false);
       if (!resolved || _selectedPoint == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Lokasi Utama Mitra wajib memiliki titik. Cari otomatis atau pilih titik di peta.',
-            ),
-            backgroundColor: Colors.red,
-          ),
+        AyoSnackBar.error(
+          context,
+          'Lokasi utama Mitra wajib memiliki titik. Cari otomatis atau pilih titik di peta.',
         );
         return;
       }
@@ -441,33 +421,42 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     if (!mounted) return;
 
     if (_ktmBytes == null || _selfieBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Foto KTM dan foto selfie wajib dilengkapi.'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Foto KTM dan foto selfie wajib dilengkapi.',
       );
       return;
     }
 
     if (!_selfieCapturedFromFrontCamera) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Selfie wajib diambil langsung menggunakan kamera depan.',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Selfie wajib diambil langsung menggunakan kamera depan.',
       );
       return;
     }
 
     if (!_termsAccepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Setujui Syarat & Ketentuan terlebih dahulu.'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Setujui Syarat & Ketentuan terlebih dahulu.',
+      );
+      return;
+    }
+
+    final String contractVersion =
+        (_activeContract?['version'] ?? '').toString().trim();
+    if (contractVersion.isEmpty) {
+      AyoSnackBar.error(
+        context,
+        'Kontrak/MoU Mitra aktif belum tersedia.',
+      );
+      return;
+    }
+    if (!_contractAccepted) {
+      AyoSnackBar.error(
+        context,
+        'Baca dan setujui Kontrak/MoU Mitra terlebih dahulu.',
       );
       return;
     }
@@ -486,6 +475,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         documentType: 'selfie',
       );
 
+      await _service.acceptActiveContract(contractVersion);
+
       final Map<String, dynamic> application = await _service.submitApplication(
         fullname: _fullnameController.text,
         phone: '+62${_phoneController.text}',
@@ -499,12 +490,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengajuan mitra berhasil dikirim.'),
-          backgroundColor: _mitraGreen,
-        ),
-      );
+      AyoSnackBar.success(context, 'Pengajuan Mitra berhasil dikirim.');
 
       await Navigator.of(context).pushReplacement<void, void>(
         MaterialPageRoute<void>(
@@ -514,11 +500,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pengajuan belum berhasil dikirim: $error'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Pengajuan belum berhasil dikirim: $error',
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -883,7 +867,72 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
+                    _sectionCard(
+                      icon: Icons.handshake_outlined,
+                      iconColor: _mitraBrown,
+                      title: 'Kontrak / MoU Mitra',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            _activeContract == null
+                                ? 'Kontrak aktif belum dapat dimuat.'
+                                : 'Versi ${_activeContract?['version'] ?? '-'} · ${_activeContract?['title'] ?? 'Kontrak Kemitraan Ayo Suruh'}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: _mitraBrown,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Baca isi kontrak sebelum mengirim pengajuan. Persetujuan akan dicatat bersama versi kontrak dan waktu persetujuan.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.45,
+                              color: Color(0xFF66534B),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: _activeContract == null
+                                ? null
+                                : () => Navigator.push<void>(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => MitraContractPage(
+                                          contract: _activeContract!,
+                                        ),
+                                      ),
+                                    ),
+                            icon: const Icon(Icons.description_outlined),
+                            label: const Text('Baca Kontrak Lengkap'),
+                          ),
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: _contractAccepted,
+                            activeColor: _mitraOrange,
+                            title: Text(
+                              'Saya telah membaca dan menyetujui Kontrak/MoU Mitra versi ${_activeContract?['version'] ?? '-'}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.4,
+                              ),
+                            ),
+                            onChanged: _activeContract == null
+                                ? null
+                                : (bool? value) {
+                                    setState(() {
+                                      _contractAccepted = value ?? false;
+                                    });
+                                  },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -1195,11 +1244,9 @@ class _MitraApplicationStatusPageState
       if (mounted) setState(() => _application = latest);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Status belum dapat diperbarui: $error'),
-            backgroundColor: Colors.red,
-          ),
+        AyoSnackBar.error(
+          context,
+          'Status belum dapat diperbarui: $error',
         );
       }
     } finally {

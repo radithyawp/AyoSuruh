@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 import '../widgets/home_shortcut_button.dart';
 import 'wallet_service.dart';
@@ -90,16 +91,12 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
       await _service.setDefaultBankAccount(account['id'].toString());
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rekening utama berhasil diganti.')),
-      );
+      AyoSnackBar.success(context, 'Rekening utama berhasil diganti.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Rekening utama belum dapat diganti: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Rekening utama belum dapat diganti: $error',
       );
     } finally {
       if (mounted) setState(() => _actionLoading = false);
@@ -135,11 +132,9 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
       await _load();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Rekening belum dapat dihapus: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Rekening belum dapat dihapus: $error',
       );
     } finally {
       if (mounted) setState(() => _actionLoading = false);
@@ -253,7 +248,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(18, 10, 18, 100),
         itemCount: _accounts.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (BuildContext context, int index) {
           final Map<String, dynamic> account = _accounts[index];
           final bool isDefault = account['is_default'] == true;
@@ -453,11 +448,9 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Rekening belum dapat disimpan: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Rekening belum dapat disimpan: $error',
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -527,8 +520,9 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                   controller: _accountController,
                   keyboardType: TextInputType.number,
                   validator: (String? value) {
-                    if ((value ?? '').trim().length < 6)
+                    if ((value ?? '').trim().length < 6) {
                       return 'Nomor rekening belum valid.';
+                    }
                     return null;
                   },
                   decoration: _decoration('Nomor rekening / akun'),
@@ -538,8 +532,9 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                   controller: _holderController,
                   textCapitalization: TextCapitalization.words,
                   validator: (String? value) {
-                    if ((value ?? '').trim().length < 2)
+                    if ((value ?? '').trim().length < 2) {
                       return 'Nama pemilik wajib diisi.';
+                    }
                     return null;
                   },
                   decoration: _decoration('Nama pemilik rekening'),

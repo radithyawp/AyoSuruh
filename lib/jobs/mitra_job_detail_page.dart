@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 
 import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
@@ -15,6 +16,7 @@ import 'job_widgets.dart';
 import 'submit_bid_page.dart';
 import 'update_job_status_page.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/network_photo_gallery.dart';
 
 class MitraJobDetailPage extends StatefulWidget {
   const MitraJobDetailPage({super.key, required this.jobId});
@@ -96,13 +98,9 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
     if (customerId.isNotEmpty &&
         customerId.toLowerCase() == currentUserId.toLowerCase()) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Pekerjaan ini dibuat oleh akunmu sendiri. Buka dari mode Customer untuk melihat penawaran.',
-          ),
-          backgroundColor: jobBrownColor,
-        ),
+      AyoSnackBar.info(
+        context,
+        'Pekerjaan ini dibuat oleh akunmu sendiri. Gunakan akun sebagai Customer untuk melihat penawaran.',
       );
       return;
     }
@@ -144,12 +142,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Chat belum dapat dibuka: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Chat belum dapat dibuka: $error');
     } finally {
       if (mounted) setState(() => _isOpeningChat = false);
     }
@@ -161,20 +154,13 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       await _jobService.startJob(widget.jobId);
       await _loadData();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.'),
-          backgroundColor: jobGreenColor,
-        ),
+      AyoSnackBar.success(
+        context,
+        'Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pekerjaan belum dapat dimulai: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Pekerjaan belum dapat dimulai: $error');
     } finally {
       if (mounted) setState(() => _isStarting = false);
     }
@@ -334,6 +320,13 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
               style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF625750)),
             ),
           ),
+          if (jobImageUrls(job).isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            _card(
+              title: 'Foto dari Customer',
+              child: NetworkPhotoGallery(urls: jobImageUrls(job)),
+            ),
+          ],
           const SizedBox(height: 14),
           _card(
             title: 'Budget Customer',
@@ -412,7 +405,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             _card(
               title: 'Pekerjaan Milik Akunmu',
               child: const Text(
-                'Pekerjaan ini kamu buat sebagai Customer. Kembali ke mode Customer untuk melihat dan memilih penawaran Mitra.',
+                'Pekerjaan ini kamu buat sebagai Customer. Gunakan akun sebagai Customer untuk melihat dan memilih penawaran Mitra.',
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
             ),

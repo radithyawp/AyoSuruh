@@ -40,7 +40,7 @@ class SyaratKetentuanPage extends StatelessWidget {
             number: '1',
             title: 'Penerimaan Ketentuan',
             body:
-                'Dengan membuat akun atau menggunakan Ayo Suruh, pengguna menyatakan telah membaca dan menyetujui ketentuan layanan serta kebijakan privasi yang berlaku. Pada tahap MVP, layanan dikembangkan sebagai proyek kewirausahaan dan terus disempurnakan sebelum peluncuran komersial penuh.',
+                'Dengan membuat akun atau menggunakan Ayo Suruh, pengguna menyatakan telah membaca dan menyetujui ketentuan layanan serta kebijakan privasi yang berlaku. Ayo Suruh dapat memperbarui layanan untuk meningkatkan keamanan, kualitas, dan pengalaman pengguna.',
           ),
           _TermsSection(
             number: '2',
@@ -58,7 +58,7 @@ class SyaratKetentuanPage extends StatelessWidget {
             number: '4',
             title: 'Peran Mitra',
             body:
-                'Mitra wajib memberikan informasi pendaftaran yang benar, mematuhi proses verifikasi dan perjanjian kemitraan yang berlaku, hanya mengambil pekerjaan yang dapat ditangani, menjaga komunikasi profesional, serta menyelesaikan pekerjaan sesuai kesepakatan dengan customer.',
+                'Mitra wajib memberikan informasi pendaftaran yang benar, mematuhi proses verifikasi dan Kontrak/MoU Mitra versi aktif yang disetujui secara elektronik, hanya mengambil pekerjaan yang dapat ditangani, menjaga komunikasi profesional, serta menyelesaikan pekerjaan sesuai kesepakatan dengan customer. Versi dan waktu persetujuan kontrak dicatat oleh sistem.',
           ),
           _TermsSection(
             number: '5',
@@ -70,7 +70,7 @@ class SyaratKetentuanPage extends StatelessWidget {
             number: '6',
             title: 'Komisi Platform 6%',
             body:
-                'Pada model bisnis MVP, Ayo Suruh mengambil komisi platform sebesar 6% dari nilai jasa pada transaksi berhasil. Komisi ini merupakan pendapatan platform dan berbeda dari biaya payment gateway atau biaya pencairan. Nilai komisi disnapshot pada transaksi agar histori tetap konsisten.',
+                'Ayo Suruh mengenakan komisi platform sebesar 6% dari nilai jasa pada transaksi berhasil, kecuali diinformasikan lain pada aplikasi. Komisi platform berbeda dari biaya payment gateway atau biaya pencairan. Nilai komisi dicatat pada transaksi agar histori tetap konsisten.',
             highlight: true,
           ),
           _TermsSection(
@@ -101,7 +101,7 @@ class SyaratKetentuanPage extends StatelessWidget {
             number: '11',
             title: 'Penangguhan dan Penghapusan Akun',
             body:
-                'Ayo Suruh dapat membatasi akun yang terindikasi melanggar ketentuan. Permintaan penghapusan akun dapat memerlukan penyelesaian pekerjaan aktif, transaksi, saldo, refund, atau kewajiban kemitraan terlebih dahulu. Alasan penghapusan dapat dikumpulkan sebagai evaluasi produk apabila pengguna bersedia memberikannya.',
+                'Ayo Suruh dapat membatasi akun yang terindikasi melanggar ketentuan. Pengguna dapat memilih nonaktif sementara atau penghapusan permanen melalui pengaturan akun. Penghapusan dapat memerlukan penyelesaian pekerjaan aktif, transaksi, saldo, refund/dispute, pencairan, atau kewajiban kemitraan terlebih dahulu. Alasan keluar bersifat opsional dan dapat digunakan sebagai evaluasi produk.',
           ),
           _TermsSection(
             number: '12',
@@ -111,13 +111,13 @@ class SyaratKetentuanPage extends StatelessWidget {
           ),
           _TermsSection(
             number: '13',
-            title: 'Batasan Tahap MVP',
+            title: 'Ketersediaan Fitur',
             body:
-                'Beberapa fitur pada build akademik dapat menggunakan sandbox, simulasi, atau proses operasional manual. Ayo Suruh tidak menyatakan fitur tersebut sebagai layanan finansial production-ready sampai integrasi, perizinan, pengujian, dan proses komersialisasi selesai.',
+                'Ketersediaan fitur dapat berbeda menurut akun, wilayah, metode pembayaran, status mitra layanan pihak ketiga, kebutuhan keamanan, dan pemeliharaan sistem. Ayo Suruh dapat membatasi sementara fitur tertentu untuk menjaga keamanan, kualitas layanan, atau kepatuhan yang berlaku.',
           ),
           SizedBox(height: 6),
           Text(
-            'Pembaruan: 7 Agustus 2026. Dokumen ini perlu ditinjau secara legal kembali sebelum peluncuran komersial penuh.',
+            'Pembaruan terakhir: 9 Agustus 2026.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF7C716A)),
           ),

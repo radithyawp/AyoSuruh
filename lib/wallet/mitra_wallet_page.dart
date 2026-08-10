@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
@@ -71,20 +72,16 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
     final num minimum = _number(_summary['minimum_payout']);
 
     if (available < minimum) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Saldo tersedia belum mencapai minimum ${formatRupiah(minimum)}.',
-          ),
-        ),
+      AyoSnackBar.info(
+        context,
+        'Saldo tersedia belum mencapai minimum ${formatRupiah(minimum)}.',
       );
       return;
     }
     if (_summary['active_payout_id'] != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Masih ada pencairan yang sedang diproses.'),
-        ),
+      AyoSnackBar.info(
+        context,
+        'Masih ada pencairan yang sedang diproses.',
       );
       return;
     }
@@ -93,10 +90,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       await _openBankAccounts();
       if (!mounted) return;
       if (_bankAccounts.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tambahkan rekening pencairan terlebih dahulu.'),
-          ),
+        AyoSnackBar.info(
+          context,
+          'Tambahkan rekening pencairan terlebih dahulu.',
         );
         return;
       }
@@ -219,16 +215,12 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       await _service.cancelPayout(payout['id'].toString());
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pencairan berhasil dibatalkan.')),
-      );
+      AyoSnackBar.success(context, 'Pencairan berhasil dibatalkan.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pencairan belum dapat dibatalkan: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Pencairan belum dapat dibatalkan: $error',
       );
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
@@ -916,11 +908,9 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pencairan belum dapat diajukan: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Pencairan belum dapat diajukan: $error',
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

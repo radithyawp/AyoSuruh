@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'create_job_page.dart';
 import 'customer_job_detail_page.dart';
+import '../notification.dart';
+
 import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 
 class CustomerJobsPage extends StatefulWidget {
-  const CustomerJobsPage({super.key});
+  const CustomerJobsPage({
+    super.key,
+    this.tutorialKey,
+  });
+
+  final Key? tutorialKey;
 
   @override
   State<CustomerJobsPage> createState() => _CustomerJobsPageState();
@@ -101,7 +108,15 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: const <Widget>[
+          NotificationBell(
+            color: jobDarkBrownColor,
+            activeMode: 'customer',
+          ),
+          SizedBox(width: 4),
+        ],
         bottom: TabBar(
+          key: widget.tutorialKey,
           controller: _tabController,
           labelColor: jobBrownColor,
           unselectedLabelColor: const Color(0xFF766B65),
@@ -119,12 +134,13 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: FloatingActionButton.extended(
+          heroTag: 'customer-jobs-create-job-fab',
           onPressed: _openCreateJob,
           backgroundColor: jobOrangeColor,
           foregroundColor: const Color(0xFF513300),
           icon: const Icon(Icons.add_rounded),
           label: const Text(
-            'Tambah Pekerjaan',
+            'Buat Pekerjaan',
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
@@ -160,7 +176,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
         _jobList(
           activeJobs,
           emptyTitle: 'Belum ada pekerjaan aktif',
-          emptyDescription: 'Tekan Tambah Pekerjaan untuk mulai mencari mitra.',
+          emptyDescription: 'Tekan Buat Pekerjaan untuk mulai mencari mitra.',
         ),
         _jobList(
           historyJobs,
@@ -188,7 +204,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 100),
               itemCount: jobs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> job = jobs[index];
                 final int bidCount = embeddedBids(job).where((bid) {
