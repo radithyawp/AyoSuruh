@@ -13,6 +13,7 @@ import 'notifications/notification_router.dart';
 import 'services/notification_service.dart' as push_notifications;
 import 'widgets/ayo_pressable.dart';
 import 'widgets/ayo_snackbar.dart';
+import 'chats/presence_service.dart';
 
 class MainNavigation extends StatefulWidget {
   /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
@@ -27,9 +28,10 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends State<MainNavigation> with WidgetsBindingObserver {
   final SupabaseClient _supabase = Supabase.instance.client;
   final AyosTutorialAnchors _tutorialAnchors = AyosTutorialAnchors();
+  final PresenceService _presenceService = PresenceService();
 
   int _currentIndex = 0;
   int _dashboardRefreshTick = 0;
@@ -51,6 +53,9 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_presenceService.start());
 
     AyosTutorial.replayRequest.addListener(_handleTutorialReplayRequest);
 
@@ -74,9 +79,26 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_presenceService.stop());
     AyosTutorial.replayRequest.removeListener(_handleTutorialReplayRequest);
     _notificationTapSubscription?.cancel();
     super.dispose();
+  }
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_presenceService.start());
+      return;
+    }
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_presenceService.stop());
+    }
   }
 
   void _handleTutorialReplayRequest() {

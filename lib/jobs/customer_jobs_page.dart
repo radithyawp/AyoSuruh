@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'create_job_page.dart';
 import 'customer_job_detail_page.dart';
 import '../notification.dart';
+import '../mitra/mitra_application_page.dart';
+import '../mitra/mitra_application_service.dart';
+import 'mitra_job_detail_page.dart';
 
 import 'job_helpers.dart';
 import 'job_service.dart';
@@ -23,16 +27,20 @@ class CustomerJobsPage extends StatefulWidget {
 class _CustomerJobsPageState extends State<CustomerJobsPage>
     with SingleTickerProviderStateMixin {
   final JobService _jobService = JobService();
+  final MitraApplicationService _applicationService = MitraApplicationService();
   late final TabController _tabController;
 
   bool _isLoading = true;
   String? _errorMessage;
   List<Map<String, dynamic>> _jobs = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _opportunities = <Map<String, dynamic>>[];
+  Map<String, dynamic>? _mitraApplication;
+  bool _isActiveMitra = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadJobs();
   }
 
@@ -50,11 +58,26 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
       });
     }
     try {
-      final List<Map<String, dynamic>> jobs =
-          await _jobService.fetchCustomerJobs();
+      final String userId = _jobService.currentUserId;
+      final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
+        _jobService.fetchCustomerJobs(),
+        _jobService.fetchAvailableJobs(),
+        _applicationService.fetchMyApplication(),
+        Supabase.instance.client
+            .from('mitras')
+            .select('is_active')
+            .eq('id', userId)
+            .maybeSingle(),
+      ]);
       if (!mounted) return;
+      final Map<String, dynamic>? mitraRow = result[3] is Map
+          ? Map<String, dynamic>.from(result[3] as Map)
+          : null;
       setState(() {
-        _jobs = jobs;
+        _jobs = result[0] as List<Map<String, dynamic>>;
+        _opportunities = result[1] as List<Map<String, dynamic>>;
+        _mitraApplication = result[2] as Map<String, dynamic>?;
+        _isActiveMitra = mitraRow?['is_active'] == true;
         _isLoading = false;
       });
     } catch (error) {
@@ -125,6 +148,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: const <Widget>[
             Tab(text: 'Aktif'),
+            Tab(text: 'Peluang'),
             Tab(text: 'Riwayat'),
           ],
         ),
@@ -178,12 +202,103 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
           emptyTitle: 'Belum ada pekerjaan aktif',
           emptyDescription: 'Tekan Buat Pekerjaan untuk mulai mencari mitra.',
         ),
+        _opportunityList(),
         _jobList(
           historyJobs,
           emptyTitle: 'Riwayat masih kosong',
           emptyDescription: 'Pekerjaan yang selesai atau dibatalkan akan tampil di sini.',
         ),
       ],
+    );
+  }
+
+  Future<void> _openOpportunity(Map<String, dynamic> job) async {
+    if (_isActiveMitra) {
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute<bool>(
+          builder: (_) => MitraJobDetailPage(jobId: job['id'].toString()),
+        ),
+      );
+      await _loadJobs();
+      return;
+    }
+
+    final String status = (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+    final Widget page = _mitraApplication == null || status == 'rejected'
+        ? MitraApplicationPage(existingApplication: _mitraApplication)
+        : MitraApplicationStatusPage(initialApplication: _mitraApplication);
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    await _loadJobs();
+  }
+
+  Widget _opportunityList() {
+    final String applicationStatus =
+        (_mitraApplication?['status'] ?? '').toString().toLowerCase();
+    final String gateLabel = _isActiveMitra
+        ? 'Lihat Detail'
+        : applicationStatus == 'applied' || applicationStatus == 'approved'
+            ? 'Lihat Status Mitra'
+            : applicationStatus == 'rejected'
+                ? 'Daftar Ulang Mitra'
+                : 'Daftar Mitra untuk Ambil';
+
+    return RefreshIndicator(
+      color: jobOrangeColor,
+      onRefresh: _loadJobs,
+      child: _opportunities.isEmpty
+          ? ListView(
+              children: <Widget>[
+                EmptyJobState(
+                  title: 'Belum ada peluang pekerjaan',
+                  description: 'Pekerjaan terbuka dari customer akan tampil di sini.',
+                  icon: Icons.explore_outlined,
+                ),
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 100),
+              itemCount: _opportunities.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (BuildContext context, int index) {
+                if (index == 0) {
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF4E3),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFF3D8AD)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Icon(Icons.explore_rounded, color: jobBrownColor),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _isActiveMitra
+                                ? 'Kamu sedang melihat peluang dalam peran Customer. Buka detail untuk mengirim penawaran sebagai Mitra.'
+                                : 'Kamu bebas melihat peluang pekerjaan. Untuk mengambil pekerjaan atau mengirim penawaran, aktifkan akun Mitra terlebih dahulu.',
+                            style: const TextStyle(fontSize: 11, height: 1.45),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final Map<String, dynamic> job = _opportunities[index - 1];
+                return JobListCard(
+                  job: job,
+                  trailingLabel: gateLabel,
+                  subtitle:
+                      '${customerName(job)} · ${formatJobDate(job['schedule_date'])}, ${formatJobTime(job['schedule_time'])}',
+                  onTap: () => _openOpportunity(job),
+                );
+              },
+            ),
     );
   }
 

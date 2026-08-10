@@ -6,6 +6,7 @@ import '../jobs/create_job_page.dart';
 import '../jobs/job_helpers.dart';
 import '../jobs/job_service.dart';
 import 'mitra_service_service.dart';
+import 'service_detail_page.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/network_photo_gallery.dart';
 import '../widgets/ayo_avatar.dart';
@@ -34,6 +35,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   String _query = '';
   List<Map<String, dynamic>> _categories = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _services = <Map<String, dynamic>>[];
+  bool _showBookmarkedOnly = false;
 
   @override
   void initState() {
@@ -120,6 +122,38 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     );
   }
 
+  Future<void> _openServiceDetail(Map<String, dynamic> service) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ServiceDetailPage(service: service),
+      ),
+    );
+    await _load();
+  }
+
+  Future<void> _toggleBookmark(Map<String, dynamic> service) async {
+    final String serviceId = (service['id'] ?? '').toString();
+    if (serviceId.isEmpty) return;
+    final bool current = service['is_bookmarked'] == true;
+    try {
+      final bool next = await _service.toggleBookmark(
+        serviceId: serviceId,
+        currentlyBookmarked: current,
+      );
+      if (!mounted) return;
+      setState(() => service['is_bookmarked'] = next);
+      AyoSnackBar.success(
+        context,
+        next ? 'Jasa disimpan ke bookmark.' : 'Jasa dihapus dari bookmark.',
+      );
+    } catch (error) {
+      if (mounted) {
+        AyoSnackBar.error(context, 'Bookmark belum dapat diperbarui: $error');
+      }
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredCategories {
     final String q = _query.trim().toLowerCase();
     if (q.isEmpty) return _categories;
@@ -130,8 +164,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
 
   List<Map<String, dynamic>> get _filteredServices {
     final String q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _services;
     return _services.where((Map<String, dynamic> item) {
+      if (_showBookmarkedOnly && item['is_bookmarked'] != true) return false;
+      if (q.isEmpty) return true;
       final Map<dynamic, dynamic>? category = item['categories'] is Map
           ? item['categories'] as Map<dynamic, dynamic>
           : null;
@@ -143,6 +178,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         (category?['name'] ?? '').toString(),
         (mitra?['fullname'] ?? '').toString(),
         (mitra?['location'] ?? '').toString(),
+        if (item['tags'] is List)
+          ...(item['tags'] as List).map((dynamic tag) => tag.toString()),
       ].join(' ').toLowerCase();
       return haystack.contains(q);
     }).toList();
@@ -339,6 +376,23 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                       height: 1.4,
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilterChip(
+                      selected: _showBookmarkedOnly,
+                      avatar: Icon(
+                        _showBookmarkedOnly
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        size: 17,
+                      ),
+                      label: const Text('Jasa tersimpan'),
+                      onSelected: (bool selected) {
+                        setState(() => _showBookmarkedOnly = selected);
+                      },
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   if (services.isEmpty)
                     Container(
@@ -395,8 +449,15 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         : num.tryParse(service['starting_price']?.toString() ?? '') ?? 0;
     final String currentUserId =
         Supabase.instance.client.auth.currentUser?.id ?? '';
-    final bool isOwnService =
-        currentUserId.isNotEmpty && currentUserId == service['mitra_id']?.toString();
+    final bool isOwnService = currentUserId.isNotEmpty &&
+        currentUserId == service['mitra_id']?.toString();
+    final dynamic rawTags = service['tags'];
+    final List<String> tags = rawTags is List
+        ? rawTags
+            .map((dynamic tag) => tag.toString())
+            .where((String tag) => tag.trim().isNotEmpty)
+            .toList()
+        : <String>[];
     final dynamic rawImages = service['service_images'];
     final List<String> imageUrls = rawImages is List
         ? rawImages
@@ -406,17 +467,23 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             .toList()
         : <String>[];
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 11),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: jobBorderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _openServiceDetail(service),
+          child: Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: jobBorderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
           if (imageUrls.isNotEmpty) ...<Widget>[
             NetworkPhotoGallery(
               urls: imageUrls,
@@ -467,6 +534,19 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   ],
                 ),
               ),
+              IconButton(
+                onPressed: () => _toggleBookmark(service),
+                tooltip: service['is_bookmarked'] == true
+                    ? 'Hapus bookmark'
+                    : 'Simpan jasa',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  service['is_bookmarked'] == true
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: jobBrownColor,
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
@@ -513,6 +593,19 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               color: Color(0xFF685D56),
             ),
           ),
+          if (tags.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: tags.take(4).map((String tag) {
+                return Chip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text('#$tag', style: const TextStyle(fontSize: 9)),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 13),
           Align(
             alignment: Alignment.centerRight,
@@ -533,11 +626,15 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
     );
   }
+
   Widget _serviceMeta({
     required IconData icon,
     required String text,

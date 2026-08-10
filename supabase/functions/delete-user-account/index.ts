@@ -213,6 +213,16 @@ Deno.serve(async (req) => {
       console.warn('Metadata foto katalog belum dapat dibersihkan:', serviceImageRowsError.message);
     }
 
+    for (const table of ['mitra_service_bookmarks', 'chat_typing', 'user_presence']) {
+      const { error: cleanupError } = await admin
+        .from(table)
+        .delete()
+        .eq('user_id', authData.user.id);
+      if (cleanupError && cleanupError.code !== '42P01') {
+        console.warn(`Cleanup ${table} belum berhasil:`, cleanupError.message);
+      }
+    }
+
     const { error: feedbackPrivacyError } = await admin
       .from('app_feedback')
       .update({ allow_followup: false, contact: null })

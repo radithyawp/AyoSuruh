@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_preferences.dart';
 import 'change_password.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'wallet/wallet_pin_page.dart';
 
 class SecuritySettingsPage extends StatefulWidget {
   const SecuritySettingsPage({super.key});
@@ -198,9 +199,27 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                   onTap: _forgetThisDevice,
                 ),
                 const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.shield_rounded, color: _brown),
+                  title: const Text('PIN AyoPay'),
+                  subtitle: const Text(
+                    'Kelola PIN 6 digit untuk pencairan dan rekening.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const WalletPinPage(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, indent: 56),
                 const ListTile(
-                  leading: Icon(Icons.fingerprint_rounded, color: Color(0xFF9B8F87)),
-                  title: Text('PIN / Biometrik Aplikasi'),
+                  leading: Icon(
+                    Icons.fingerprint_rounded,
+                    color: Color(0xFF9B8F87),
+                  ),
+                  title: Text('Biometrik Aplikasi'),
                   subtitle: Text('Opsional untuk tahap hardening lanjutan.'),
                   trailing: Chip(label: Text('Roadmap')),
                 ),
@@ -209,7 +228,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Aksi sensitif seperti penghapusan akun divalidasi ulang di server. Akses Admin juga tetap diperiksa oleh RPC Supabase, bukan hanya oleh tampilan aplikasi.',
+            'Aksi sensitif seperti penghapusan akun dan transaksi AyoPay divalidasi ulang di server. Akses Admin juga tetap diperiksa oleh RPC Supabase, bukan hanya oleh tampilan aplikasi.',
             style: TextStyle(
               fontSize: 11,
               height: 1.45,
