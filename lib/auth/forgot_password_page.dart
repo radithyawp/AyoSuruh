@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key, this.initialEmail});
@@ -17,9 +19,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   bool _isLoading = false;
   bool _emailSent = false;
 
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _background = Color(0xFFFAF6F3);
+  static const Color _orange = Color(0xFFF6990E);
+  static Color get _brown => AyoAdaptiveColors.brown;
 
   @override
   void initState() {
@@ -69,16 +70,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
         ),
-        title: const Text(
+        title: AyoText(
           'Lupa Password',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
@@ -95,14 +96,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 color: const Color(0xFFFFE8C5),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.lock_reset_rounded,
                 size: 38,
                 color: _brown,
               ),
             ),
             const SizedBox(height: 22),
-            const Text(
+            const AyoText(
               'Reset password secara mandiri',
               style: TextStyle(
                 fontSize: 22,
@@ -111,7 +112,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
             ),
             const SizedBox(height: 9),
-            Text(
+            AyoText(
               _emailSent
                   ? 'Email sudah dikirim. Buka tautan dari Supabase/Ayo Suruh, lalu Anda akan kembali ke aplikasi untuk membuat password baru.'
                   : 'Masukkan email akun Ayo Suruh. Kami akan mengirim tautan aman untuk membuat password baru tanpa perlu menghubungi admin.',
@@ -132,8 +133,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   return null;
                 },
                 decoration: InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'nama@email.com',
+                  labelText: AyoI18n.t('Email'),
+                  hintText: AyoI18n.t('nama@email.com'),
                   prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
                   fillColor: Colors.white,
@@ -174,20 +175,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         ),
                       )
                     : const Icon(Icons.send_rounded),
-                label: Text(
+                label: AyoText(
                   _emailSent ? 'Kirim Ulang Tautan' : 'Kirim Tautan Reset',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            const Row(
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Icon(Icons.info_outline_rounded, size: 17, color: _brown),
                 SizedBox(width: 7),
                 Expanded(
-                  child: Text(
+                  child: AyoText(
                     'Fitur ini tetap dapat digunakan walaupun konfirmasi email saat registrasi tidak diwajibkan. Email reset password tetap harus dapat diterima oleh pemilik akun.',
                     style: TextStyle(fontSize: 11.5, color: Color(0xFF746760)),
                   ),

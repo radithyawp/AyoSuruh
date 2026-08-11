@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -10,9 +12,8 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
 
   bool _master = true;
   bool _jobs = true;
@@ -48,16 +49,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
         ),
-        title: const Text(
+        title: AyoText(
           'Pengaturan Notifikasi',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
@@ -72,18 +73,24 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 Container(
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFE9C9),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : const Color(0xFFFFE9C9),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Row(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Icon(Icons.notifications_active_outlined, color: _brown),
                       SizedBox(width: 10),
                       Expanded(
-                        child: Text(
+                        child: AyoText(
                           'Preferensi ini sudah disimpan di aplikasi. Pengiriman push ke sistem Android/iOS akan mengikuti preferensi ini setelah Firebase Cloud Messaging diaktifkan.',
-                          style: TextStyle(fontSize: 11.5, height: 1.4, color: Color(0xFF67503D)),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ],
@@ -154,18 +161,25 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }) {
     return Card(
       elevation: 0,
-      color: enabled ? Colors.white : const Color(0xFFF1ECE9),
+      color: enabled
+          ? Theme.of(context).colorScheme.surface
+          : Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : const Color(0xFFF1ECE9),
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(color: Theme.of(context).colorScheme.outline),
+      ),
       child: SwitchListTile.adaptive(
         activeThumbColor: _orange,
         value: value,
         onChanged: enabled ? onChanged : null,
-        title: Text(
+        title: AyoText(
           title,
           style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 10.8)),
+        subtitle: AyoText(subtitle, style: const TextStyle(fontSize: 10.8)),
       ),
     );
   }

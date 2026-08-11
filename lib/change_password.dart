@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class ChangePassword extends StatefulWidget {
   const ChangePassword({super.key});
@@ -14,8 +16,8 @@ class _ChangePasswordPageState extends State<ChangePassword> {
   final _formKey = GlobalKey<FormState>();
 
   // Warna Tema (Konsisten dengan Aplikasi)
-  final Color primaryBrown = const Color(0xFF8B5A2B);
-  final Color primaryOrange = const Color(0xFFF39C12);
+  Color get primaryBrown => AyoAdaptiveColors.brown;
+  final Color primaryOrange = const Color(0xFFF6990E);
   final Color bgGrey = const Color(0xFFFAF7F7);
   final Color fieldBorder = const Color(0xFFE8DCD5);
 
@@ -86,15 +88,15 @@ class _ChangePasswordPageState extends State<ChangePassword> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: primaryBrown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
+        title: AyoText(
           'Ganti Kata Sandi',
           style: TextStyle(
             color: primaryBrown,
@@ -130,21 +132,21 @@ class _ChangePasswordPageState extends State<ChangePassword> {
               const SizedBox(height: 20),
 
               // Title & Subtitle
-              const Text(
+              AyoText(
                 'Keamanan Akun',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
+              AyoText(
                 'Perbarui kata sandi Anda secara berkala\nuntuk menjaga akun tetap aman.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
               ),
@@ -157,7 +159,7 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                 controller: _currentPasswordController,
                 obscureText: _obscureCurrent,
                 decoration: _buildInputDecoration(
-                  hintText: 'Masukan kata sandi lama',
+                  hintText: AyoI18n.t('Masukan kata sandi lama'),
                   isObscured: _obscureCurrent,
                   onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent),
                 ),
@@ -177,7 +179,7 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                 controller: _newPasswordController,
                 obscureText: _obscureNew,
                 decoration: _buildInputDecoration(
-                  hintText: 'Minimal 8 karakter',
+                  hintText: AyoI18n.t('Minimal 8 karakter'),
                   isObscured: _obscureNew,
                   onToggle: () => setState(() => _obscureNew = !_obscureNew),
                 ),
@@ -210,11 +212,11 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
+                      child: AyoText(
                         'Gunakan minimal 8 karakter dengan kombinasi huruf besar, huruf kecil, dan angka.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface,
                           height: 1.3,
                         ),
                       ),
@@ -231,7 +233,7 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirm,
                 decoration: _buildInputDecoration(
-                  hintText: 'Ulangi kata sandi baru',
+                  hintText: AyoI18n.t('Ulangi kata sandi baru'),
                   isObscured: _obscureConfirm,
                   onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
                 ),
@@ -268,7 +270,7 @@ class _ChangePasswordPageState extends State<ChangePassword> {
                           children: const [
                             Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
                             SizedBox(width: 8),
-                            Text(
+                            AyoText(
                               'Simpan Perubahan',
                               style: TextStyle(
                                 fontSize: 16,
@@ -292,12 +294,12 @@ class _ChangePasswordPageState extends State<ChangePassword> {
   Widget _buildInputLabel(String label) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Text(
+      child: AyoText(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );

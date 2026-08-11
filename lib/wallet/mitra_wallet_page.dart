@@ -7,9 +7,12 @@ import 'mitra_bank_accounts_page.dart';
 import 'wallet_service.dart';
 import 'wallet_pin_page.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/ayo_empty_state.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _walletBrown = Color(0xFF8A5300);
-const Color _walletOrange = Color(0xFFFF9800);
+Color get _walletBrown => AyoAdaptiveColors.brown;
+const Color _walletOrange = Color(0xFFF6990E);
 const Color _walletBackground = Color(0xFFFFF9FC);
 const Color _walletGreen = Color(0xFF5E774F);
 
@@ -150,7 +153,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
             children: <Widget>[
-              const Text(
+              AyoText(
                 'Pilih Rekening Pencairan',
                 style: TextStyle(
                   fontSize: 18,
@@ -163,18 +166,18 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                 final bool isDefault = account['is_default'] == true;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Color(0xFFFFE9C7),
                     child: Icon(
                       Icons.account_balance_rounded,
                       color: _walletBrown,
                     ),
                   ),
-                  title: Text(
+                  title: AyoText(
                     (account['bank_name'] ?? 'Rekening').toString(),
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
-                  subtitle: Text(
+                  subtitle: AyoText(
                     '${_maskAccount(account['account_number'])} · ${(account['account_holder'] ?? '').toString()}',
                   ),
                   trailing: isDefault
@@ -200,23 +203,23 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Batalkan pencairan?'),
-        content: const Text(
+        title: const AyoText('Batalkan pencairan?'),
+        content: const AyoText(
           'Saldo yang sedang ditahan akan dikembalikan ke saldo tersedia.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Kembali'),
+            child: const AyoText('Kembali'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Batalkan Pencairan'),
+            child: const AyoText('Batalkan Pencairan'),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
     if (!await ensureWalletPinConfigured(context, _service)) return;
     if (!mounted) return;
     final String? pin = await showWalletPinPrompt(
@@ -249,16 +252,16 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _walletBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _walletBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, true),
-          icon: const Icon(Icons.arrow_back_rounded, color: _walletBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: _walletBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Dompet Mitra',
           style: TextStyle(
             color: _walletBrown,
@@ -286,15 +289,15 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.account_balance_wallet_outlined,
                 size: 54,
                 color: _walletBrown,
               ),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center),
+              AyoText(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 14),
-              FilledButton(onPressed: _load, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _load, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -339,14 +342,14 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: <Color>[Color(0xFF8A5300), Color(0xFFB87516)],
+          colors: <Color>[Color(0xFF6E481F), Color(0xFFB87516)],
         ),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          const AyoText(
             'SALDO TERSEDIA',
             style: TextStyle(
               color: Colors.white70,
@@ -355,7 +358,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             ),
           ),
           const SizedBox(height: 5),
-          Text(
+          AyoText(
             formatRupiah(available),
             style: const TextStyle(
               color: Colors.white,
@@ -364,7 +367,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             ),
           ),
           const SizedBox(height: 7),
-          Text(
+          AyoText(
             'Pendapatan bersih setelah komisi platform $platformFeeLabel%.',
             style: const TextStyle(
               color: Colors.white70,
@@ -406,7 +409,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                 ),
               ),
               icon: const Icon(Icons.account_balance_rounded),
-              label: Text(
+              label: AyoText(
                 'Cairkan Saldo · Min. ${formatRupiah(minimum)}',
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
@@ -426,17 +429,17 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       ),
       child: Row(
         children: <Widget>[
-          Icon(icon, color: Colors.white, size: 18),
+          Icon(icon, color: Theme.of(context).colorScheme.surface, size: 18),
           const SizedBox(width: 7),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   label,
                   style: const TextStyle(color: Colors.white70, fontSize: 10),
                 ),
-                Text(
+                AyoText(
                   formatRupiah(amount),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -494,19 +497,19 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   locked
                       ? 'PIN AyoPay dikunci sementara'
                       : hasPin
                           ? 'PIN AyoPay aktif'
                           : 'Aktifkan PIN AyoPay',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
                     color: _walletBrown,
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
+                AyoText(
                   locked
                       ? 'Tunggu masa kunci berakhir atau reset PIN setelah verifikasi akun.'
                       : 'Melindungi pencairan dan perubahan rekening.',
@@ -528,7 +531,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                     );
                     if (mounted) await _load();
                   },
-            child: Text(hasPin ? 'Kelola' : 'Buat PIN'),
+            child: AyoText(hasPin ? 'Kelola' : 'Buat PIN'),
           ),
         ],
       ),
@@ -551,12 +554,12 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
               Icon(Icons.lock_clock_outlined, color: _walletBrown, size: 21),
               SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: AyoText(
                   'Tentang saldo Pending & Ditahan',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
@@ -567,13 +570,13 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
+          AyoText(
             'Pending ${formatRupiah(pending)} adalah pendapatan pekerjaan yang '
             'masih melewati masa hold sebelum menjadi saldo tersedia.',
             style: const TextStyle(fontSize: 11.5, height: 1.45),
           ),
           const SizedBox(height: 7),
-          Text(
+          AyoText(
             held > 0
                 ? 'Ditahan ${formatRupiah(held)} sedang dikunci untuk proses '
                     'pencairan dan tidak dapat diajukan lagi sampai pencairan '
@@ -599,9 +602,9 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                   ),
                   const SizedBox(width: 7),
                   Expanded(
-                    child: Text(
-                      'Status pencairan aktif: ${_payoutStatusLabel(activeStatus)}',
-                      style: const TextStyle(
+                    child: AyoText(
+                      'Status pencairan aktif: ${AyoI18n.t(_payoutStatusLabel(activeStatus))}',
+                      style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         color: _walletBrown,
@@ -613,11 +616,11 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             ),
           ],
           const SizedBox(height: 8),
-          const Text(
+          AyoText(
             'Jika transaksi direfund setelah pendapatan tercatat, sistem dapat '
             'membuat penyesuaian ledger. Kasus yang dananya sudah masuk proses '
             'pencairan akan ditinjau admin.',
-            style: TextStyle(fontSize: 10.5, height: 1.4, color: Colors.black54),
+            style: TextStyle(fontSize: 10.5, height: 1.4, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -641,7 +644,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (bank == null)
-            const Text(
+            const AyoText(
               'Belum ada rekening pencairan. Tambahkan rekening sebelum mengajukan pencairan saldo.',
               style: TextStyle(fontSize: 12, height: 1.4),
             )
@@ -654,7 +657,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Text(
+                          AyoText(
                             (bank['bank_name'] ?? '').toString(),
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
@@ -672,23 +675,23 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Text(
+                      AyoText(
                         _maskAccount(bank['account_number']),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      Text(
+                      AyoText(
                         (bank['account_holder'] ?? '').toString(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.black54,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(
+                AyoText(
                   '${_bankAccounts.length} tersimpan',
-                  style: const TextStyle(fontSize: 10.5, color: Colors.black45),
+                  style: TextStyle(fontSize: 10.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
                 ),
               ],
             ),
@@ -699,7 +702,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             child: OutlinedButton.icon(
               onPressed: _openBankAccounts,
               icon: const Icon(Icons.edit_outlined, size: 18),
-              label: Text(
+              label: AyoText(
                 bank == null ? 'Tambah Rekening' : 'Kelola / Ganti Rekening',
               ),
               style: OutlinedButton.styleFrom(
@@ -745,12 +748,12 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
+                      AyoText(
                         formatRupiah(payout['amount']),
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
-                      Text(
-                        '${_payoutStatusLabel(status)}${date == null ? '' : ' · ${DateFormat('dd MMM, HH:mm').format(date)}'}',
+                      AyoText(
+                        '${AyoI18n.t(_payoutStatusLabel(status))}${date == null ? '' : ' · ${DateFormat('dd MMM, HH:mm').format(date)}'}',
                         style: TextStyle(
                           fontSize: 11,
                           color: _payoutStatusColor(status),
@@ -764,7 +767,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                     onPressed: _isActionLoading
                         ? null
                         : () => _cancelPayout(payout),
-                    child: const Text('Batalkan'),
+                    child: const AyoText('Batalkan'),
                   ),
               ],
             ),
@@ -779,9 +782,14 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
       title: 'Mutasi Saldo',
       icon: Icons.swap_vert_rounded,
       child: _ledger.isEmpty
-          ? const Text(
-              'Belum ada pendapatan yang masuk ke dompet.',
-              style: TextStyle(fontSize: 12),
+          ? AyoEmptyState(
+              compact: true,
+              assetPath: 'assets/images/ayos/ayos_earnings.png',
+              badgeIcon: Icons.account_balance_wallet_outlined,
+              title: AyoI18n.t('Belum ada aktivitas saldo'),
+              description: AyoI18n.t(
+                'Pendapatan, pencairan, voucher, dan penyesuaian saldo akan muncul di sini.',
+              ),
             )
           : Column(
               children: _ledger.take(20).map((Map<String, dynamic> row) {
@@ -805,17 +813,17 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                       size: 19,
                     ),
                   ),
-                  title: Text(
+                  title: AyoText(
                     _ledgerLabel((row['entry_type'] ?? '').toString()),
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  subtitle: Text(
-                    '${(row['description'] ?? '').toString()}${date == null ? '' : '\n${DateFormat('dd MMM yyyy, HH:mm').format(date)}'}',
+                  subtitle: AyoText(
+                    '${AyoI18n.t((row['description'] ?? '').toString())}${date == null ? '' : '\n${DateFormat('dd MMM yyyy, HH:mm').format(date)}'}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 10.5),
                   ),
-                  trailing: Text(
+                  trailing: AyoText(
                     '${positive ? '+' : '-'}${formatRupiah(amount.abs())}',
                     style: TextStyle(
                       color: positive ? _walletGreen : Colors.red.shade700,
@@ -835,13 +843,13 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         color: const Color(0xFFFFEBCB),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(Icons.science_outlined, color: _walletBrown),
           SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AyoText(
               'Pencairan saat ini memakai provider mock untuk pengujian. '
               'Saldo dan status tercatat nyata di database, tetapi belum ada '
               'transfer otomatis ke rekening sampai layanan payout Production aktif.',
@@ -861,7 +869,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(19),
         border: Border.all(color: const Color(0xFFEEDFD5)),
       ),
@@ -872,7 +880,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
             children: <Widget>[
               Icon(icon, color: _walletBrown, size: 20),
               const SizedBox(width: 8),
-              Text(
+              AyoText(
                 title,
                 style: const TextStyle(
                   fontSize: 15,
@@ -1065,7 +1073,7 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                AyoText(
                   'Ajukan Pencairan',
                   style: TextStyle(
                     fontSize: 21,
@@ -1074,22 +1082,22 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   'Saldo tersedia ${formatRupiah(widget.availableBalance)}',
-                  style: const TextStyle(color: Colors.black54),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFE6DAD2)),
                   ),
                   child: Row(
                     children: <Widget>[
-                      const Icon(
+                      Icon(
                         Icons.account_balance_rounded,
                         color: _walletBrown,
                       ),
@@ -1098,17 +1106,17 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(
+                            AyoText(
                               (bank['bank_name'] ?? 'Rekening').toString(),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            Text(
+                            AyoText(
                               '${_mask(bank['account_number'])} · ${(bank['account_holder'] ?? '').toString()}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.black54,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -1132,7 +1140,7 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                     return null;
                   },
                   decoration: InputDecoration(
-                    labelText: 'Nominal pencairan',
+                    labelText: AyoI18n.t('Nominal pencairan'),
                     prefixText: 'Rp ',
                     filled: true,
                     fillColor: Colors.white,
@@ -1174,7 +1182,7 @@ class _PayoutFormSheetState extends State<_PayoutFormSheet> {
                             ),
                           )
                         : const Icon(Icons.send_rounded),
-                    label: const Text(
+                    label: const AyoText(
                       'Ajukan Pencairan',
                       style: TextStyle(fontWeight: FontWeight.w900),
                     ),

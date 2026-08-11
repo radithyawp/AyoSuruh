@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminMitrasPage extends StatefulWidget {
   const AdminMitrasPage({
@@ -19,10 +21,9 @@ class AdminMitrasPage extends StatefulWidget {
 
 class _AdminMitrasPageState extends State<AdminMitrasPage>
     with SingleTickerProviderStateMixin {
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFF5F784F);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final AdminService _service = AdminService();
   late final TabController _tabController;
@@ -156,7 +157,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                   child: Row(
                     children: <Widget>[
                       Expanded(
-                        child: Text(
+                        child: AyoText(
                           title,
                           style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
@@ -189,7 +190,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                       },
                       errorBuilder: (_, _, _) => const Padding(
                         padding: EdgeInsets.all(28),
-                        child: Text('Dokumen tidak dapat ditampilkan.'),
+                        child: AyoText('Dokumen tidak dapat ditampilkan.'),
                       ),
                     ),
                   ),
@@ -225,7 +226,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
             StateSetter setDialogState,
           ) {
             return AlertDialog(
-              title: Text(title),
+              title: AyoText(title),
               content: TextField(
                 autofocus: true,
                 minLines: 3,
@@ -244,7 +245,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Batal'),
+                  child: const AyoText('Batal'),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -257,7 +258,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                     }
                     Navigator.pop(dialogContext, trimmed);
                   },
-                  child: const Text('Simpan'),
+                  child: const AyoText('Simpan'),
                 ),
               ],
             );
@@ -279,7 +280,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -289,29 +290,29 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                 children: <Widget>[
                   if (Navigator.of(context).canPop()) ...<Widget>[
                     IconButton(
-                      tooltip: 'Kembali',
+                      tooltip: AyoI18n.t('Kembali'),
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.arrow_back_rounded,
                         color: _brown,
                       ),
                     ),
                     const SizedBox(width: 2),
                   ],
-                  const Expanded(
-                    child: Text(
+                  Expanded(
+                    child: AyoText(
                       'Manajemen Mitra',
                       style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _brown),
                     ),
                   ),
-                  IconButton(onPressed: _actionLoading ? null : _load, icon: const Icon(Icons.refresh_rounded, color: _brown)),
+                  IconButton(onPressed: _actionLoading ? null : _load, icon: Icon(Icons.refresh_rounded, color: _brown)),
                 ],
               ),
             ),
             TabBar(
               controller: _tabController,
               labelColor: _brown,
-              unselectedLabelColor: Colors.black45,
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
               indicatorColor: _orange,
               tabs: const <Tab>[
                 Tab(text: 'Verifikasi'),
@@ -321,7 +322,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.all(10),
-                child: Text(_error!, style: TextStyle(color: Colors.red.shade700, fontSize: 11)),
+                child: AyoText(_error!, style: TextStyle(color: Colors.red.shade700, fontSize: 11)),
               ),
             Expanded(
               child: _loading
@@ -347,8 +348,20 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
     return '${two(date.day)}/${two(date.month)}/${date.year} ${two(date.hour)}:${two(date.minute)}';
   }
 
+  String _identityTypeLabel(Object? raw) {
+    final String type = (raw ?? '').toString().toLowerCase();
+    return switch (type) {
+      'ktp' => 'KTP',
+      'sim' => 'SIM',
+      'passport' => AyoI18n.isEnglish ? 'Passport' : 'Paspor',
+      'kitas_kitap' => 'KITAS / KITAP',
+      'other' => AyoI18n.isEnglish ? 'Other legal photo ID' : 'Identitas legal lain',
+      _ => AyoI18n.isEnglish ? 'Photo ID' : 'Identitas berfoto',
+    };
+  }
+
   Widget _applicationsList() {
-    if (_applications.isEmpty) return const Center(child: Text('Belum ada pengajuan mitra.'));
+    if (_applications.isEmpty) return const Center(child: AyoText('Belum ada pengajuan mitra.'));
     return RefreshIndicator(
       color: _orange,
       onRefresh: _load,
@@ -363,7 +376,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(17),
               border: Border.all(color: const Color(0xFFEDE3DC)),
             ),
@@ -372,7 +385,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const CircleAvatar(
+                    CircleAvatar(
                       backgroundColor: Color(0xFFFFE8C6),
                       child: Icon(Icons.badge_outlined, color: _brown),
                     ),
@@ -381,8 +394,8 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text((row['fullname'] ?? 'Calon Mitra').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
-                          Text((row['email'] ?? '-').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF71665F))),
+                          AyoText((row['fullname'] ?? 'Calon Mitra').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
+                          AyoText((row['email'] ?? '-').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF71665F))),
                         ],
                       ),
                     ),
@@ -390,11 +403,11 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                   ],
                 ),
                 const SizedBox(height: 10),
-                Text('Alamat: ${(row['address'] ?? '-').toString()}', style: const TextStyle(fontSize: 11, height: 1.35)),
+                AyoText('Alamat: ${(row['address'] ?? '-').toString()}', style: const TextStyle(fontSize: 11, height: 1.35)),
                 const SizedBox(height: 3),
-                Text('Rekening: ${(row['bank_name'] ?? '-').toString()} • ${(row['account_number'] ?? '-').toString()}', style: const TextStyle(fontSize: 11)),
+                AyoText('Rekening: ${(row['bank_name'] ?? '-').toString()} • ${(row['account_number'] ?? '-').toString()}', style: const TextStyle(fontSize: 11)),
                 const SizedBox(height: 4),
-                Text(
+                AyoText(
                   (row['contract_version'] ?? '').toString().trim().isEmpty
                       ? 'Kontrak Mitra: belum tercatat (pengajuan lama)'
                       : 'Kontrak Mitra v${row['contract_version']} · disetujui ${_formatDate(row['contract_accepted_at'])}',
@@ -408,8 +421,19 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                 ),
                 if ((row['description'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
                   const SizedBox(height: 5),
-                  Text((row['description'] ?? '').toString(), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6D625B))),
+                  AyoText((row['description'] ?? '').toString(), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6D625B))),
                 ],
+                const SizedBox(height: 8),
+                AyoText(
+                  AyoI18n.isEnglish
+                      ? 'Verification check: confirm the UPI student card, then manually compare the verification selfie with the portrait on the selected legal photo ID before approving.'
+                      : 'Pemeriksaan verifikasi: pastikan KTM UPI valid, lalu cocokkan selfie verifikasi secara manual dengan pas foto pada identitas legal yang dipilih sebelum menyetujui.',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    color: Color(0xFF6D625B),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 7,
@@ -417,19 +441,31 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                   children: <Widget>[
                     OutlinedButton.icon(
                       onPressed: () => _previewDocument(
-                        title: 'KTM / Identitas Mitra',
+                        title: AyoI18n.isEnglish ? 'UPI Student Card (KTM)' : 'KTM UPI',
                         storagePath: row['ktm_url'],
                       ),
-                      icon: const Icon(Icons.badge_outlined, size: 17),
-                      label: const Text('Lihat KTM'),
+                      icon: const Icon(Icons.school_outlined, size: 17),
+                      label: AyoText(AyoI18n.isEnglish ? 'View KTM' : 'Lihat KTM'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => _previewDocument(
-                        title: 'Selfie Mitra',
+                        title: '${AyoI18n.isEnglish ? 'Photo ID' : 'Identitas Berfoto'} · ${_identityTypeLabel(row['identity_document_type'])}',
+                        storagePath: row['identity_document_url'],
+                      ),
+                      icon: const Icon(Icons.badge_outlined, size: 17),
+                      label: AyoText(
+                        AyoI18n.isEnglish
+                            ? 'View ${_identityTypeLabel(row['identity_document_type'])}'
+                            : 'Lihat ${_identityTypeLabel(row['identity_document_type'])}',
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _previewDocument(
+                        title: AyoI18n.isEnglish ? 'Partner Verification Selfie' : 'Selfie Verifikasi Mitra',
                         storagePath: row['selfie_url'],
                       ),
                       icon: const Icon(Icons.face_retouching_natural, size: 17),
-                      label: const Text('Lihat Selfie'),
+                      label: AyoText(AyoI18n.isEnglish ? 'View Selfie' : 'Lihat Selfie'),
                     ),
                   ],
                 ),
@@ -441,7 +477,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                         child: OutlinedButton(
                           onPressed: _actionLoading ? null : () => _reviewApplication(row, 'reject'),
                           style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700),
-                          child: const Text('Tolak'),
+                          child: const AyoText('Tolak'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -449,7 +485,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                         child: FilledButton(
                           onPressed: _actionLoading ? null : () => _reviewApplication(row, 'approve'),
                           style: FilledButton.styleFrom(backgroundColor: _orange),
-                          child: const Text('Setujui'),
+                          child: const AyoText('Setujui'),
                         ),
                       ),
                     ],
@@ -464,7 +500,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
   }
 
   Widget _payoutList() {
-    if (_payouts.isEmpty) return const Center(child: Text('Belum ada permintaan pencairan.'));
+    if (_payouts.isEmpty) return const Center(child: AyoText('Belum ada permintaan pencairan.'));
     return RefreshIndicator(
       color: _orange,
       onRefresh: _load,
@@ -480,7 +516,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(17),
               border: Border.all(color: const Color(0xFFEDE3DC)),
             ),
@@ -498,9 +534,9 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text((row['mitra_name'] ?? 'Mitra').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
+                          AyoText((row['mitra_name'] ?? 'Mitra').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
                           if (date != null)
-                            Text(DateFormat('dd MMM yyyy, HH:mm').format(date), style: const TextStyle(fontSize: 9.5, color: Colors.black45)),
+                            AyoText(DateFormat('dd MMM yyyy, HH:mm').format(date), style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78))),
                         ],
                       ),
                     ),
@@ -508,9 +544,9 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                   ],
                 ),
                 const SizedBox(height: 10),
-                Text(formatRupiah(row['amount']), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _brown)),
-                Text('${(row['bank_name'] ?? '').toString()} • ${(row['account_number'] ?? '').toString()}', style: const TextStyle(fontSize: 11)),
-                Text((row['account_holder'] ?? '').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF71665F))),
+                AyoText(formatRupiah(row['amount']), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _brown)),
+                AyoText('${(row['bank_name'] ?? '').toString()} • ${(row['account_number'] ?? '').toString()}', style: const TextStyle(fontSize: 11)),
+                AyoText((row['account_holder'] ?? '').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF71665F))),
                 if (active) ...<Widget>[
                   const SizedBox(height: 12),
                   Wrap(
@@ -518,12 +554,12 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                     runSpacing: 7,
                     children: <Widget>[
                       if (status == 'requested')
-                        OutlinedButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'review'), child: const Text('Review')),
+                        OutlinedButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'review'), child: const AyoText('Review')),
                       if (status == 'requested' || status == 'under_review')
-                        FilledButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'approve'), style: FilledButton.styleFrom(backgroundColor: _orange), child: const Text('Approve')),
+                        FilledButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'approve'), style: FilledButton.styleFrom(backgroundColor: _orange), child: const AyoText('Approve')),
                       if (status == 'approved' || status == 'processing')
-                        FilledButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'paid'), style: FilledButton.styleFrom(backgroundColor: _green), child: const Text('Tandai Paid')),
-                      OutlinedButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'reject'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700), child: const Text('Tolak')),
+                        FilledButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'paid'), style: FilledButton.styleFrom(backgroundColor: _green), child: const AyoText('Tandai Paid')),
+                      OutlinedButton(onPressed: _actionLoading ? null : () => _processPayout(row, 'reject'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700), child: const AyoText('Tolak')),
                     ],
                   ),
                 ],
@@ -544,7 +580,7 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
-      child: Text(status.replaceAll('_', ' '), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color)),
+      child: AyoText(status.replaceAll('_', ' '), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color)),
     );
   }
 }

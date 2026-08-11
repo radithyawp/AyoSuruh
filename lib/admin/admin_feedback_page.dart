@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminFeedbackPage extends StatefulWidget {
   const AdminFeedbackPage({super.key});
@@ -10,10 +12,9 @@ class AdminFeedbackPage extends StatefulWidget {
 }
 
 class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
-  static const Color _brown = Color(0xFF7B4B00);
+  static Color get _brown => AyoAdaptiveColors.brown;
   static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFF5F784F);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final AdminService _service = AdminService();
   Map<String, dynamic> _summary = <String, dynamic>{};
@@ -117,15 +118,15 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Masukan Pengguna',
           style: TextStyle(color: _brown, fontSize: 19, fontWeight: FontWeight.w900),
         ),
@@ -172,7 +173,7 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
                         const Icon(Icons.auto_awesome_rounded, color: _green),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
+                          child: AyoText(
                             'Fitur paling sering dipilih: ${(_summary['top_feature'] ?? 'Belum ada data').toString()}',
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: _green),
                           ),
@@ -183,22 +184,22 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
                   const SizedBox(height: 18),
                   Row(
                     children: <Widget>[
-                      const Expanded(
-                        child: Text('Jawaban Terbaru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _brown)),
+                      Expanded(
+                        child: AyoText('Jawaban Terbaru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _brown)),
                       ),
                       PopupMenuButton<String>(
                         initialValue: _filter,
                         onSelected: (String value) => setState(() => _filter = value),
                         itemBuilder: (_) => const <PopupMenuEntry<String>>[
-                          PopupMenuItem(value: 'all', child: Text('Semua')),
-                          PopupMenuItem(value: 'bug', child: Text('Ada bug')),
-                          PopupMenuItem(value: 'detractor', child: Text('NPS 0–6')),
-                          PopupMenuItem(value: 'followup', child: Text('Boleh follow-up')),
+                          PopupMenuItem(value: 'all', child: AyoText('Semua')),
+                          PopupMenuItem(value: 'bug', child: AyoText('Ada bug')),
+                          PopupMenuItem(value: 'detractor', child: AyoText('NPS 0–6')),
+                          PopupMenuItem(value: 'followup', child: AyoText('Boleh follow-up')),
                         ],
                         child: Chip(
                           avatar: const Icon(Icons.filter_list_rounded, size: 16),
-                          label: Text(_filterLabel(), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800)),
-                          backgroundColor: Colors.white,
+                          label: AyoText(_filterLabel(), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800)),
+                          backgroundColor: Theme.of(context).colorScheme.surface,
                           side: const BorderSide(color: Color(0xFFE8DCD4)),
                         ),
                       ),
@@ -243,18 +244,18 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Suara Pengguna', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
+                AyoText('Suara Pengguna', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
                 SizedBox(height: 4),
-                Text('Feedback langsung dari aplikasi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+                AyoText('Feedback langsung dari aplikasi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
-              Text('$total jawaban', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+              AyoText('$total jawaban', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
               const SizedBox(height: 3),
-              Text('NPS ${nps.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w700)),
+              AyoText('NPS ${nps.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w700)),
             ],
           ),
         ],
@@ -266,7 +267,7 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -283,8 +284,8 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: _brown)),
-                Text(label, style: const TextStyle(fontSize: 9.8, color: Color(0xFF786E68))),
+                AyoText(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: _brown)),
+                AyoText(label, style: const TextStyle(fontSize: 9.8, color: Color(0xFF786E68))),
               ],
             ),
           ),
@@ -316,11 +317,11 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
           backgroundColor: bug ? const Color(0xFFFFE0DE) : const Color(0xFFEAF2E5),
           child: Icon(bug ? Icons.bug_report_outlined : Icons.rate_review_outlined, color: bug ? Colors.red.shade700 : _green),
         ),
-        title: Text(
+        title: AyoText(
           (row['fullname'] ?? 'Pengguna').toString(),
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: _brown),
+          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: _brown),
         ),
-        subtitle: Text(
+        subtitle: AyoText(
           '${_roleLabel((row['role'] ?? 'customer').toString())} · ${_formatDate(row['created_at'])}',
           style: const TextStyle(fontSize: 9.8, color: Color(0xFF786E68)),
         ),
@@ -330,7 +331,7 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
             color: nps >= 9 ? const Color(0xFFEAF2E5) : (nps <= 6 ? const Color(0xFFFFE0DE) : const Color(0xFFFFEFD4)),
             borderRadius: BorderRadius.circular(99),
           ),
-          child: Text('NPS $nps', style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: _brown)),
+          child: AyoText('NPS $nps', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: _brown)),
         ),
         children: <Widget>[
           _row('Email akun', (row['email'] ?? '-').toString()),
@@ -355,8 +356,8 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          SizedBox(width: 105, child: Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF7D726C)))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: _brown))),
+          SizedBox(width: 105, child: AyoText(label, style: const TextStyle(fontSize: 10, color: Color(0xFF7D726C)))),
+          Expanded(child: AyoText(value, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: _brown))),
         ],
       ),
     );
@@ -371,9 +372,9 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(label, style: const TextStyle(fontSize: 9.8, fontWeight: FontWeight.w900, color: _brown)),
+          AyoText(label, style: TextStyle(fontSize: 9.8, fontWeight: FontWeight.w900, color: _brown)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF665D57))),
+          AyoText(value, style: const TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF665D57))),
         ],
       ),
     );
@@ -382,12 +383,12 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
   Widget _empty() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFEDE3DC))),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFEDE3DC))),
       child: const Column(
         children: <Widget>[
           Icon(Icons.forum_outlined, size: 38, color: Color(0xFFAA9D94)),
           SizedBox(height: 8),
-          Text('Belum ada feedback pada filter ini.', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF746A64))),
+          AyoText('Belum ada feedback pada filter ini.', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF746A64))),
         ],
       ),
     );
@@ -397,7 +398,7 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: const Color(0xFFFFE6E4), borderRadius: BorderRadius.circular(14)),
-      child: Text(message, style: TextStyle(fontSize: 10.5, color: Colors.red.shade800)),
+      child: AyoText(message, style: TextStyle(fontSize: 10.5, color: Colors.red.shade800)),
     );
   }
 }

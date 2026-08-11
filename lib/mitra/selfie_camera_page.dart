@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import '../widgets/ayo_snackbar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _cameraOrange = Color(0xFFF39C12);
-const Color _cameraBrown = Color(0xFF8B5A2B);
+const Color _cameraOrange = Color(0xFFF6990E);
+Color get _cameraBrown => AyoAdaptiveColors.brown;
 
 class SelfieCaptureResult {
   const SelfieCaptureResult({required this.bytes, required this.name});
@@ -173,7 +175,7 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: const AyoText(
           'Selfie Verifikasi',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -199,7 +201,7 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
               color: const Color(0xFF111111),
               child: Column(
                 children: <Widget>[
-                  const Text(
+                  const AyoText(
                     'Pastikan wajah terlihat jelas, pencahayaan cukup, dan seluruh wajah berada di dalam bingkai.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -279,7 +281,7 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
               size: 54,
             ),
             const SizedBox(height: 16),
-            Text(
+            AyoText(
               _errorMessage ?? 'Kamera depan belum siap.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, height: 1.4),
@@ -288,7 +290,7 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
             FilledButton.icon(
               onPressed: _initializeFrontCamera,
               icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
+              label: const AyoText('Coba Lagi'),
               style: FilledButton.styleFrom(backgroundColor: _cameraOrange),
             ),
           ],

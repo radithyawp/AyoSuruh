@@ -1,15 +1,17 @@
+import 'package:ayosuruh/account/account_management_page.dart';
+import 'package:ayosuruh/change_password.dart';
+import 'package:ayosuruh/feedback/app_feedback_page.dart';
 import 'package:ayosuruh/kebijakan.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import 'package:ayosuruh/notification_settings_page.dart';
+import 'package:ayosuruh/security_settings_page.dart';
+import 'package:ayosuruh/settings/app_settings.dart';
+import 'package:ayosuruh/syarat_ketentuan.dart';
+import 'package:ayosuruh/tentang_ayosuruh.dart';
+import 'package:ayosuruh/tutorial/ayos_tutorial.dart';
+import 'package:ayosuruh/widgets/home_shortcut_button.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'syarat_ketentuan.dart';
-import 'change_password.dart';
-import 'tentang_ayosuruh.dart';
-import 'security_settings_page.dart';
-import 'notification_settings_page.dart';
-import 'tutorial/ayos_tutorial.dart';
-import 'widgets/home_shortcut_button.dart';
-import 'account/account_management_page.dart';
-import 'feedback/app_feedback_page.dart';
 
 class PengaturanPage extends StatefulWidget {
   const PengaturanPage({super.key});
@@ -19,17 +21,12 @@ class PengaturanPage extends StatefulWidget {
 }
 
 class _PengaturanPageState extends State<PengaturanPage> {
-  final Color primaryBrown = const Color(0xFF8B5A2B);
-  final Color bgGrey = const Color(0xFFFAF7F7);
-  final Color cardBg = Colors.white;
-  final Color profileBg = const Color(0xFFF7F2F2);
-  final Color logoutBg = const Color(0xFFFDE8E8);
-  final Color logoutText = const Color(0xFFB71C1C);
-
   String _userName = 'Pengguna';
   String _userEmail = 'email@domain.com';
   String? _avatarUrl;
   bool _isLoading = true;
+
+  AppSettingsController get _settings => AppSettingsController.instance;
 
   @override
   void initState() {
@@ -37,14 +34,13 @@ class _PengaturanPageState extends State<PengaturanPage> {
     _loadUserProfile();
   }
 
-  // Mengambil data profil user dari Supabase
   Future<void> _loadUserProfile() async {
     try {
-      final supabase = Supabase.instance.client;
-      final currentUser = supabase.auth.currentUser;
+      final SupabaseClient supabase = Supabase.instance.client;
+      final User? currentUser = supabase.auth.currentUser;
 
       if (currentUser != null) {
-        final userData = await supabase
+        final Map<String, dynamic>? userData = await supabase
             .from('users')
             .select('fullname, avatar_url')
             .eq('id', currentUser.id)
@@ -52,45 +48,22 @@ class _PengaturanPageState extends State<PengaturanPage> {
 
         if (mounted) {
           setState(() {
-            _userName = userData?['fullname'] ?? currentUser.email?.split('@').first ?? 'Pengguna';
+            _userName = userData?['fullname']?.toString() ??
+                currentUser.email?.split('@').first ??
+                'Pengguna';
             _userEmail = currentUser.email ?? 'email@domain.com';
-            _avatarUrl = userData?['avatar_url'];
+            _avatarUrl = userData?['avatar_url']?.toString();
             _isLoading = false;
           });
         }
-      } else {
-        if (mounted) setState(() => _isLoading = false);
+      } else if (mounted) {
+        setState(() => _isLoading = false);
       }
-    } catch (e) {
-      debugPrint('Error loading user profile: $e');
+    } catch (error) {
+      debugPrint('Error loading user profile: $error');
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-    Future<void> _navigateToChangePassword() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ChangePassword()),
-    );
-  }
-
-    Future<void> _navigateToSyarat() async {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SyaratKetentuanPage() ));
-    }
-
-    Future<void> _navigateToTentang() async {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const TentangAyoSuruhPage()));
-    }
-
-    Future<void> _navigtateToKebijakan() async {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const KebijakanPage()));
-    }
 
   Future<void> _showTutorialAgain() async {
     final String mode = (Supabase.instance.client.auth.currentUser
@@ -100,45 +73,238 @@ class _PengaturanPageState extends State<PengaturanPage> {
     await AyosTutorial.show(context, mode: mode);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgGrey,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: primaryBrown),
-          onPressed: () => Navigator.pop(context),
+  Future<void> _showLanguagePicker() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AyoText(
+                  'Bahasa Aplikasi',
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                AyoText(
+                  'Pilih bahasa yang digunakan di seluruh Ayo Suruh.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 14),
+                _choiceTile<AyoLanguage>(
+                  context: sheetContext,
+                  value: AyoLanguage.indonesia,
+                  selectedValue: _settings.language,
+                  icon: Icons.language_rounded,
+                  title: 'Indonesia',
+                  subtitle: 'Bahasa Indonesia',
+                  onSelected: (AyoLanguage value) async {
+                    Navigator.pop(sheetContext);
+                    await _settings.setLanguage(value);
+                    if (mounted) setState(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                _choiceTile<AyoLanguage>(
+                  context: sheetContext,
+                  value: AyoLanguage.english,
+                  selectedValue: _settings.language,
+                  icon: Icons.translate_rounded,
+                  title: 'English',
+                  subtitle: 'English (US)',
+                  onSelected: (AyoLanguage value) async {
+                    Navigator.pop(sheetContext);
+                    await _settings.setLanguage(value);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showThemePicker() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AyoText(
+                  'Tema Aplikasi',
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                AyoText(
+                  'Pilih tampilan terang, gelap, atau ikuti pengaturan perangkat.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 14),
+                _choiceTile<ThemeMode>(
+                  context: sheetContext,
+                  value: ThemeMode.system,
+                  selectedValue: _settings.themeMode,
+                  icon: Icons.brightness_auto_rounded,
+                  title: 'Ikuti sistem',
+                  subtitle: 'Menyesuaikan tampilan perangkat',
+                  onSelected: _selectTheme,
+                ),
+                const SizedBox(height: 8),
+                _choiceTile<ThemeMode>(
+                  context: sheetContext,
+                  value: ThemeMode.light,
+                  selectedValue: _settings.themeMode,
+                  icon: Icons.light_mode_outlined,
+                  title: 'Mode Terang',
+                  subtitle: 'Latar terang dan kontras hangat',
+                  onSelected: _selectTheme,
+                ),
+                const SizedBox(height: 8),
+                _choiceTile<ThemeMode>(
+                  context: sheetContext,
+                  value: ThemeMode.dark,
+                  selectedValue: _settings.themeMode,
+                  icon: Icons.dark_mode_outlined,
+                  title: 'Mode Gelap',
+                  subtitle: 'Nyaman digunakan di lingkungan redup',
+                  onSelected: _selectTheme,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _selectTheme(ThemeMode value) async {
+    Navigator.of(context).pop();
+    await _settings.setThemeMode(value);
+    if (mounted) setState(() {});
+  }
+
+  Widget _choiceTile<T>({
+    required BuildContext context,
+    required T value,
+    required T selectedValue,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Future<void> Function(T value) onSelected,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final bool selected = value == selectedValue;
+    return Material(
+      color: selected
+          ? theme.colorScheme.primary.withValues(alpha: 0.10)
+          : theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: selected ? theme.colorScheme.primary : theme.colorScheme.outline,
+          width: selected ? 1.4 : 1,
         ),
-        title: Text(
-          'Pengaturan',
-          style: TextStyle(
-            color: primaryBrown,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => onSelected(value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                icon,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    AyoText(
+                      title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AyoText(subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 160),
+                child: selected
+                    ? Icon(
+                        Icons.check_circle_rounded,
+                        key: const ValueKey<String>('selected'),
+                        color: theme.colorScheme.primary,
+                      )
+                    : const SizedBox(
+                        key: ValueKey<String>('unselected'),
+                        width: 24,
+                        height: 24,
+                      ),
+              ),
+            ],
           ),
         ),
-        titleSpacing: 0,
+      ),
+    );
+  }
 
+  String get _languageLabel =>
+      _settings.language == AyoLanguage.english ? 'English' : 'Indonesia';
+
+  String get _themeLabel => switch (_settings.themeMode) {
+        ThemeMode.light => 'Mode Terang',
+        ThemeMode.dark => 'Mode Gelap',
+        ThemeMode.system => 'Ikuti sistem',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: AyoText('Pengaturan', style: theme.textTheme.titleLarge),
+        titleSpacing: 0,
         actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryBrown))
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Card
-                  _buildProfileCard(),
+                children: <Widget>[
+                  _buildProfileCard(theme),
                   const SizedBox(height: 24),
-
-                  // Section: KEAMANAN
-                  _buildSectionTitle('KEAMANAN'),
+                  _buildSectionTitle(theme, 'KEAMANAN'),
                   const SizedBox(height: 8),
-                  _buildCardGroup([
+                  _buildCardGroup(theme, <Widget>[
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.shield_outlined,
                       title: 'Keamanan Akun',
                       onTap: () => Navigator.push<void>(
@@ -148,16 +314,19 @@ class _PengaturanPageState extends State<PengaturanPage> {
                         ),
                       ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.lock_outline,
                       title: 'Ganti Password',
-                      onTap: () {
-                        _navigateToChangePassword();
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const ChangePassword()),
+                      ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.manage_accounts_outlined,
                       title: 'Kelola / Hapus Akun',
                       onTap: () => Navigator.push<void>(
@@ -169,11 +338,27 @@ class _PengaturanPageState extends State<PengaturanPage> {
                     ),
                   ]),
                   const SizedBox(height: 20),
-
-                  _buildSectionTitle('PREFERENSI'),
+                  _buildSectionTitle(theme, 'PREFERENSI'),
                   const SizedBox(height: 8),
-                  _buildCardGroup([
+                  _buildCardGroup(theme, <Widget>[
                     _buildSettingTile(
+                      theme: theme,
+                      icon: Icons.language_rounded,
+                      title: 'Bahasa',
+                      subtitle: _languageLabel,
+                      onTap: _showLanguagePicker,
+                    ),
+                    _buildDivider(theme),
+                    _buildSettingTile(
+                      theme: theme,
+                      icon: Icons.contrast_rounded,
+                      title: 'Tampilan',
+                      subtitle: _themeLabel,
+                      onTap: _showThemePicker,
+                    ),
+                    _buildDivider(theme),
+                    _buildSettingTile(
+                      theme: theme,
                       icon: Icons.notifications_none_outlined,
                       title: 'Pengaturan Notifikasi',
                       onTap: () => Navigator.push<void>(
@@ -183,20 +368,20 @@ class _PengaturanPageState extends State<PengaturanPage> {
                         ),
                       ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.auto_awesome_outlined,
                       title: 'Tutorial Aplikasi',
                       onTap: _showTutorialAgain,
                     ),
                   ]),
                   const SizedBox(height: 20),
-
-                  // Section: INFORMASI
-                  _buildSectionTitle('INFORMASI'),
+                  _buildSectionTitle(theme, 'INFORMASI'),
                   const SizedBox(height: 8),
-                  _buildCardGroup([
+                  _buildCardGroup(theme, <Widget>[
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.rate_review_outlined,
                       title: 'Kritik & Saran',
                       onTap: () => Navigator.push<void>(
@@ -206,40 +391,42 @@ class _PengaturanPageState extends State<PengaturanPage> {
                         ),
                       ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.description_outlined,
                       title: 'Syarat & Ketentuan',
-                      onTap: () {
-                        _navigateToSyarat();
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const SyaratKetentuanPage()),
+                      ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.verified_user_outlined,
                       title: 'Kebijakan Privasi',
-                      onTap: () {
-                        _navigtateToKebijakan();
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const KebijakanPage()),
+                      ),
                     ),
-                    _buildDivider(),
+                    _buildDivider(theme),
                     _buildSettingTile(
+                      theme: theme,
                       icon: Icons.info_outline,
                       title: 'Tentang Ayo Suruh',
-                      onTap: () {
-                        _navigateToTentang();
-                      },
+                      onTap: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const TentangAyoSuruhPage()),
+                      ),
                     ),
                   ]),
                   const SizedBox(height: 32),
-                  // Version Footer
                   Center(
-                    child: Text(
+                    child: AyoText(
                       'Versi 1.0.0 (Build 1)',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
+                      style: theme.textTheme.bodySmall,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -249,48 +436,47 @@ class _PengaturanPageState extends State<PengaturanPage> {
     );
   }
 
-  // Widget Kartu Profil Us
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: profileBg,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Row(
-        children: [
+        children: <Widget>[
           CircleAvatar(
-            radius: 26,
-            backgroundColor: Colors.orange.shade100,
+            radius: 27,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
             backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
                 ? NetworkImage(_avatarUrl!)
                 : null,
             child: _avatarUrl == null || _avatarUrl!.isEmpty
-                ? Icon(Icons.person, color: primaryBrown, size: 30)
+                ? Padding(
+                    padding: const EdgeInsets.all(7),
+                    child: Image.asset(
+                      'assets/images/Logo_Ayo_Suruh.png',
+                      fit: BoxFit.contain,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+              children: <Widget>[
+                AyoText(
                   _userName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                  style: theme.textTheme.titleSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
+                const SizedBox(height: 3),
+                AyoText(
                   _userEmail,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: theme.textTheme.bodySmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -302,66 +488,73 @@ class _PengaturanPageState extends State<PengaturanPage> {
     );
   }
 
-  // Judul Bagian / Section Header
-  Widget _buildSectionTitle(String title) {
-    return Text(
+  Widget _buildSectionTitle(ThemeData theme, String title) {
+    return AyoText(
       title,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: primaryBrown.withValues(alpha: 0.9),
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.8,
       ),
     );
   }
 
-  // Container Pembungkus Item
-  Widget _buildCardGroup(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildCardGroup(ThemeData theme, List<Widget> children) {
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: theme.colorScheme.outline),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(children: children),
     );
   }
 
-  // Item List Tile
   Widget _buildSettingTile({
+    required ThemeData theme,
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    String? subtitle,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
-          children: [
-            Icon(icon, color: primaryBrown, size: 22),
-            const SizedBox(width: 14),
+          children: <Widget>[
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+            ),
+            const SizedBox(width: 13),
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  AyoText(
+                    title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 2),
+                    AyoText(subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                ],
               ),
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: primaryBrown.withValues(alpha: 0.6),
-              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 21,
             ),
           ],
         ),
@@ -369,14 +562,12 @@ class _PengaturanPageState extends State<PengaturanPage> {
     );
   }
 
-  // Garis Pemisah
-  Widget _buildDivider() {
+  Widget _buildDivider(ThemeData theme) {
     return Divider(
       height: 1,
       thickness: 1,
-      color: Colors.grey.shade100,
-      indent: 52,
+      color: theme.colorScheme.outlineVariant,
+      indent: 66,
     );
   }
-
 }

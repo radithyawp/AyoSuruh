@@ -10,12 +10,13 @@ import 'login.dart';
 import 'syarat_ketentuan.dart';
 import 'theme/ayo_theme.dart';
 import 'widgets/ayo_pressable.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 // Konstanta Warna
 const Color kPrimaryColor = Color(0xFFF6990E); // Warna Orange Utama
-const Color kTitleColor = Color(0xFF6E481F); // Warna Cokelat Judul
-const Color kInputBgColor = Color(0xFFFFFBF8); // Background Textfield
-const Color kBackgroundColor = Color(0xFFFFFAF7); // Background Screen
+Color get kTitleColor => AyoAdaptiveColors.brown; // Warna Cokelat Judul
+Color get kInputBgColor => AyoAdaptiveColors.surfaceRaised; // Background Textfield
+Color get kBackgroundColor => AyoAdaptiveColors.canvas; // Background Screen
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -195,7 +196,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -213,7 +214,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                AyoText(
                   'Ayo Suruh',
                   style: TextStyle(
                     fontSize: 26,
@@ -222,7 +223,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AyoText(
                   'Butuh bantuan? Ayo suruh kami!',
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
@@ -232,7 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -247,16 +248,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        AyoText(
                           'Daftar Akun Baru',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
+                        AyoText(
                           'Lengkapi data diri Anda untuk memulai.',
                           style: TextStyle(
                             fontSize: 12,
@@ -270,7 +271,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _fullNameCtrl,
-                          hintText: 'Masukkan nama lengkap',
+                          hintText: AyoI18n.t('Masukkan nama lengkap'),
                           icon: Icons.person_outline_rounded,
                           bgColor: kInputBgColor,
                           validator: (val) {
@@ -287,7 +288,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _emailCtrl,
-                          hintText: 'contoh@email.com',
+                          hintText: AyoI18n.t('contoh@email.com'),
                           icon: Icons.email_outlined,
                           bgColor: kInputBgColor,
                           keyboardType: TextInputType.emailAddress,
@@ -312,7 +313,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _phoneCtrl,
-                          hintText: 'Contoh: 08123456789',
+                          hintText: AyoI18n.t('Contoh: 08123456789'),
                           icon: Icons.phone_outlined,
                           bgColor: kInputBgColor,
                           keyboardType: TextInputType.phone,
@@ -337,7 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _passwordCtrl,
-                          hintText: 'Min. 8 karakter',
+                          hintText: AyoI18n.t('Min. 8 karakter'),
                           icon: Icons.lock_outline_rounded,
                           bgColor: kInputBgColor,
                           obscureText: _obscurePassword,
@@ -372,7 +373,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _confirmPasswordCtrl,
-                          hintText: 'Ulangi password',
+                          hintText: AyoI18n.t('Ulangi password'),
                           icon: Icons.lock_reset_rounded,
                           bgColor: kInputBgColor,
                           obscureText: _obscureConfirmPassword,
@@ -426,7 +427,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text(
+                                : const AyoText(
                                     'Daftar',
                                     style: TextStyle(
                                       fontSize: 15,
@@ -445,7 +446,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
                               ),
-                              child: Text(
+                              child: AyoText(
                                 'atau',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -473,20 +474,31 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Image.network(
-                                  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png',
+                                Image.asset(
+                                  'assets/images/google_g.png',
                                   height: 18,
-                                  errorBuilder: (_, _, _) => const Icon(
-                                    Icons.g_mobiledata,
-                                    color: Colors.red,
-                                    size: 24,
+                                  width: 18,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: Center(
+                                      child: Text(
+                                        'G',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF4285F4),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
+                                AyoText(
                                   'Daftar dengan Google',
                                   style: TextStyle(
-                                    color: Colors.black87,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -506,7 +518,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    AyoText(
                       'Sudah punya akun? ',
                       style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
@@ -519,7 +531,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           MaterialPageRoute(builder: (_) => const LoginPage()),
                         );
                       },
-                      child: Text(
+                      child: AyoText(
                         'Masuk',
                         style: AyoTypography.link(
                           context,
@@ -538,7 +550,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
-                      Text(
+                      AyoText(
                         'Dengan mendaftar, Anda menyetujui ',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
@@ -550,7 +562,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             builder: (_) => const SyaratKetentuanPage(),
                           ),
                         ),
-                        child: const Text(
+                        child: AyoText(
                           'Syarat & Ketentuan',
                           style: TextStyle(
                             fontSize: 11,
@@ -560,7 +572,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                       ),
-                      Text(
+                      AyoText(
                         ' serta ',
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
@@ -571,7 +583,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             builder: (_) => const KebijakanPage(),
                           ),
                         ),
-                        child: const Text(
+                        child: AyoText(
                           'Kebijakan Privasi',
                           style: TextStyle(
                             fontSize: 11,
@@ -581,7 +593,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                       ),
-                      Text(
+                      AyoText(
                         ' kami.',
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
@@ -598,12 +610,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   /* ---------- HELPER WIDGETS ---------- */
   Widget _buildLabel(String text) {
-    return Text(
+    return AyoText(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: Colors.black87,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

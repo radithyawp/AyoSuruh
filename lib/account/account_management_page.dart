@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth/auth_preferences.dart';
 import '../login.dart';
 import '../widgets/home_shortcut_button.dart';
 import 'account_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AccountManagementPage extends StatefulWidget {
   const AccountManagementPage({super.key});
@@ -15,9 +16,8 @@ class AccountManagementPage extends StatefulWidget {
 }
 
 class _AccountManagementPageState extends State<AccountManagementPage> {
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
 
   final AccountService _service = AccountService();
   final TextEditingController _noteController = TextEditingController();
@@ -60,9 +60,11 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _loading = false);
-      AyoSnackBar.error(
-        context,
-        'Status akun belum dapat dimuat: $error',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AyoText('Status akun belum dapat dimuat: $error'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -107,18 +109,18 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Nonaktifkan sementara?'),
-        content: const Text(
+        title: const AyoText('Nonaktifkan sementara?'),
+        content: const AyoText(
           'Kamu akan keluar dari Ayo Suruh dan profil Mitra tidak ditampilkan sampai akun diaktifkan kembali. Login berikutnya akan mengaktifkan akun kembali.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Batal'),
+            child: const AyoText('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Nonaktifkan'),
+            child: const AyoText('Nonaktifkan'),
           ),
         ],
       ),
@@ -137,7 +139,9 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, '$error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: AyoText('$error'), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => _processing = false);
     }
@@ -158,16 +162,16 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
       builder: (BuildContext dialogContext) => StatefulBuilder(
         builder: (BuildContext context, StateSetter setDialogState) =>
             AlertDialog(
-          title: const Text('Hapus akun permanen?'),
+          title: const AyoText('Hapus akun permanen?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              const AyoText(
                 'Identitas login dan data profil pribadi akan dihapus. Riwayat transaksi yang wajib dipertahankan dapat tetap tersimpan dalam bentuk akun yang dianonimkan.',
               ),
               const SizedBox(height: 16),
-              const Text(
+              const AyoText(
                 'Ketik persis HAPUS untuk melanjutkan:',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
@@ -179,10 +183,10 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                 onChanged: (String value) {
                   setDialogState(() => confirmationText = value);
                 },
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: 'HAPUS',
-                  helperText: 'Huruf besar/kecil harus sama persis.',
+                  hintText: AyoI18n.t('HAPUS'),
+                  helperText: AyoI18n.t('Huruf besar/kecil harus sama persis.'),
                 ),
               ),
             ],
@@ -190,14 +194,14 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal'),
+              child: const AyoText('Batal'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               onPressed: confirmationText == 'HAPUS'
                   ? () => Navigator.pop(dialogContext, true)
                   : null,
-              child: const Text('Hapus Permanen'),
+              child: const AyoText('Hapus Permanen'),
             ),
           ],
         ),
@@ -220,7 +224,9 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
       if (!mounted) return;
       await _load();
       if (!mounted) return;
-      AyoSnackBar.error(context, '$error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: AyoText('$error'), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => _processing = false);
     }
@@ -231,8 +237,8 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
     showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(
+        title: AyoText(title),
+        content: AyoText(
           blockers.isEmpty
               ? 'Periksa kembali status akun dan coba beberapa saat lagi.'
               : blockers.map((String item) => '• $item').join('\n'),
@@ -240,7 +246,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Mengerti'),
+            child: const AyoText('Mengerti'),
           ),
         ],
       ),
@@ -269,16 +275,16 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
         ),
-        title: const Text(
+        title: AyoText(
           'Kelola Akun',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
@@ -295,7 +301,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                   const SizedBox(height: 18),
                   _readinessCard(),
                   const SizedBox(height: 20),
-                  const Text(
+                  AyoText(
                     'Sebelum pergi, boleh cerita kenapa?',
                     style: TextStyle(
                       color: _brown,
@@ -304,12 +310,20 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  const AyoText(
                     'Opsional. Jawaban ini membantu kami memperbaiki Ayo Suruh.',
                     style: TextStyle(fontSize: 12, color: Color(0xFF766A63)),
                   ),
                   const SizedBox(height: 12),
-                  ..._reasons.map(_reasonTile),
+                  RadioGroup<String>(
+                    groupValue: _reasonCode,
+                    onChanged: (String? value) {
+                      setState(() => _reasonCode = value);
+                    },
+                    child: Column(
+                      children: _reasons.map(_reasonTile).toList(),
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _noteController,
@@ -317,8 +331,8 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                     maxLines: 5,
                     maxLength: 600,
                     decoration: InputDecoration(
-                      labelText: 'Catatan tambahan (opsional)',
-                      hintText: 'Apa yang bisa kami perbaiki?',
+                      labelText: AyoI18n.t('Catatan tambahan (opsional)'),
+                      hintText: AyoI18n.t('Apa yang bisa kami perbaiki?'),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -330,11 +344,11 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                   OutlinedButton.icon(
                     onPressed: _processing ? null : _deactivate,
                     icon: const Icon(Icons.pause_circle_outline_rounded),
-                    label: const Text('Nonaktifkan Sementara'),
+                    label: const AyoText('Nonaktifkan Sementara'),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
                       foregroundColor: _brown,
-                      side: const BorderSide(color: _brown),
+                      side: BorderSide(color: _brown),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -350,14 +364,14 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
                             ),
                           )
                         : const Icon(Icons.delete_forever_outlined),
-                    label: const Text('Hapus Akun Permanen'),
+                    label: const AyoText('Hapus Akun Permanen'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
                       backgroundColor: Colors.red.shade700,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  const AyoText(
                     'Ayo Suruh tidak membuat tombol hapus menjadi sulit ditemukan. Penghapusan hanya ditahan ketika masih ada pekerjaan, refund/dispute, pencairan, atau saldo Mitra yang harus diselesaikan.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -379,13 +393,13 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
         color: const Color(0xFFFFEED8),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(Icons.manage_accounts_outlined, color: _brown),
           SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: AyoText(
               'Kamu bisa berhenti sementara atau menghapus akun secara permanen. Sebelum penghapusan, sistem memeriksa kewajiban transaksi agar hak Customer dan Mitra tetap terlindungi.',
               style: TextStyle(fontSize: 12.5, height: 1.5),
             ),
@@ -401,7 +415,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: canDelete ? const Color(0xFFCFE2C3) : const Color(0xFFFFD6D1),
@@ -418,13 +432,13 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: AyoText(
                   canDelete ? 'Akun siap dihapus' : 'Ada yang perlu diselesaikan',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
               IconButton(
-                tooltip: 'Periksa ulang',
+                tooltip: AyoI18n.t('Periksa ulang'),
                 onPressed: _load,
                 icon: const Icon(Icons.refresh_rounded),
               ),
@@ -435,7 +449,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
             ...blockers.map(
               (String item) => Padding(
                 padding: const EdgeInsets.only(bottom: 5),
-                child: Text('• $item', style: const TextStyle(fontSize: 12)),
+                child: AyoText('• $item', style: const TextStyle(fontSize: 12)),
               ),
             ),
           ],
@@ -458,7 +472,7 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
 
   Widget _amountChip(String label, dynamic value) {
     return Chip(
-      label: Text('$label · ${_rupiah(value)}'),
+      label: AyoText('$label · ${_rupiah(value)}'),
       backgroundColor: const Color(0xFFF8F3EF),
       side: BorderSide.none,
     );
@@ -477,11 +491,9 @@ class _AccountManagementPageState extends State<AccountManagementPage> {
       ),
       child: RadioListTile<String>(
         value: item['code']!,
-        groupValue: _reasonCode,
         activeColor: _orange,
         dense: true,
-        title: Text(item['label']!, style: const TextStyle(fontSize: 13)),
-        onChanged: (String? value) => setState(() => _reasonCode = value),
+        title: AyoText(item['label']!, style: const TextStyle(fontSize: 13)),
       ),
     );
   }

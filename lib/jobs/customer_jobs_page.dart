@@ -11,6 +11,7 @@ import 'mitra_job_detail_page.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class CustomerJobsPage extends StatefulWidget {
   const CustomerJobsPage({
@@ -125,7 +126,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
         backgroundColor: jobBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: AyoText(
           'Pekerjaan',
           style: TextStyle(
             color: jobDarkBrownColor,
@@ -133,7 +134,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
             fontWeight: FontWeight.w800,
           ),
         ),
-        actions: const <Widget>[
+        actions: <Widget>[
           NotificationBell(
             color: jobDarkBrownColor,
             activeMode: 'customer',
@@ -144,14 +145,14 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
           key: widget.tutorialKey,
           controller: _tabController,
           labelColor: jobBrownColor,
-          unselectedLabelColor: const Color(0xFF766B65),
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           indicatorColor: jobBrownColor,
           indicatorSize: TabBarIndicatorSize.tab,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-          tabs: const <Widget>[
-            Tab(text: 'Aktif'),
-            Tab(text: 'Peluang'),
-            Tab(text: 'Riwayat'),
+          tabs: <Widget>[
+            Tab(text: AyoI18n.t('Aktif')),
+            Tab(text: AyoI18n.t('Peluang')),
+            Tab(text: AyoI18n.t('Riwayat')),
           ],
         ),
 
@@ -166,7 +167,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
           backgroundColor: jobOrangeColor,
           foregroundColor: const Color(0xFF513300),
           icon: const Icon(Icons.add_rounded),
-          label: const Text(
+          label: const AyoText(
             'Buat Pekerjaan',
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
@@ -278,10 +279,10 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const Icon(Icons.explore_rounded, color: jobBrownColor),
+                        Icon(Icons.explore_rounded, color: jobBrownColor),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
+                          child: AyoText(
                             _isActiveMitra
                                 ? 'Kamu sedang melihat peluang dalam peran Customer. Buka detail untuk mengirim penawaran sebagai Mitra.'
                                 : 'Kamu bebas melihat peluang pekerjaan. Untuk mengambil pekerjaan atau mengirim penawaran, aktifkan akun Mitra terlebih dahulu.',

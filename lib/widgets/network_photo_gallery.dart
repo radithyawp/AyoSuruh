@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class NetworkPhotoGallery extends StatefulWidget {
   const NetworkPhotoGallery({
@@ -76,7 +77,7 @@ class _NetworkPhotoGalleryState extends State<NetworkPhotoGallery> {
                         color: Colors.black.withValues(alpha: 0.58),
                         borderRadius: BorderRadius.circular(99),
                       ),
-                      child: Text(
+                      child: AyoText(
                         '${_index + 1}/${widget.urls.length}',
                         style: const TextStyle(
                           color: Colors.white,
@@ -167,7 +168,7 @@ class _NetworkPhotoGalleryState extends State<NetworkPhotoGallery> {
                       Positioned(
                         top: 16,
                         right: 18,
-                        child: Text(
+                        child: AyoText(
                           '${viewerIndex + 1}/${widget.urls.length}',
                           style: const TextStyle(
                             color: Colors.white,

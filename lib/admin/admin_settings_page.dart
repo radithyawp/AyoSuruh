@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../change_password.dart';
@@ -13,6 +12,8 @@ import '../security_settings_page.dart';
 import '../services/notification_service.dart';
 import 'admin_service.dart';
 import 'admin_feedback_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -22,9 +23,8 @@ class AdminSettingsPage extends StatefulWidget {
 }
 
 class _AdminSettingsPageState extends State<AdminSettingsPage> {
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
-  static const Color _background = Color(0xFFFFFAFD);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
 
   final AdminService _service = AdminService();
   Map<String, dynamic> _profile = <String, dynamic>{};
@@ -73,7 +73,12 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _loggingOut = false);
-      AyoSnackBar.error(context, 'Logout Admin belum berhasil: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AyoText('Logout Admin belum berhasil: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -84,19 +89,19 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
           children: <Widget>[
-            const Text(
+            AyoText(
               'Pengaturan Admin',
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _brown),
             ),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEDE3DC))),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEDE3DC))),
               child: Row(
                 children: <Widget>[
                   CircleAvatar(
@@ -104,7 +109,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     backgroundColor: const Color(0xFFFFE8C5),
                     backgroundImage: (_profile['avatar_url'] ?? '').toString().isEmpty ? null : NetworkImage(_profile['avatar_url'].toString()),
                     child: (_profile['avatar_url'] ?? '').toString().isEmpty
-                        ? const Icon(Icons.admin_panel_settings_rounded, color: _brown, size: 30)
+                        ? Icon(Icons.admin_panel_settings_rounded, color: _brown, size: 30)
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -114,8 +119,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text((_profile['fullname'] ?? 'Admin').toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                              Text((_profile['email'] ?? '').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF70655E))),
+                              AyoText((_profile['fullname'] ?? 'Admin').toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                              AyoText((_profile['email'] ?? '').toString(), style: const TextStyle(fontSize: 10.5, color: Color(0xFF70655E))),
                             ],
                           ),
                   ),
@@ -151,7 +156,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.logout_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Keluar Admin',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
@@ -165,13 +170,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   Widget _section(String title, List<Widget> children) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEDE3DC))),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEDE3DC))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 13, 14, 6),
-            child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: _brown)),
+            child: AyoText(title.toUpperCase(), style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: _brown)),
           ),
           ...children,
         ],
@@ -182,7 +187,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   Widget _tile(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: _orange),
-      title: Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+      title: AyoText(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
       trailing: const Icon(Icons.chevron_right_rounded, size: 20),
       onTap: onTap,
     );

@@ -4,6 +4,7 @@ import 'jobs/customer_jobs_page.dart';
 import 'jobs/job_helpers.dart';
 import 'jobs/job_service.dart';
 import 'jobs/mitra_jobs_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobPage extends StatefulWidget {
   const JobPage({
@@ -59,11 +60,11 @@ class _JobPageState extends State<JobPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Icon(Icons.error_outline_rounded, size: 52, color: jobBrownColor),
+                Icon(Icons.error_outline_rounded, size: 52, color: jobBrownColor),
                 const SizedBox(height: 12),
-                Text(_errorMessage!, textAlign: TextAlign.center),
+                AyoText(_errorMessage!, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _loadRole, child: const Text('Coba Lagi')),
+                FilledButton(onPressed: _loadRole, child: const AyoText('Coba Lagi')),
               ],
             ),
           ),
@@ -71,7 +72,7 @@ class _JobPageState extends State<JobPage> {
       );
     }
     if (_role == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: jobBackgroundColor,
         body: Center(child: CircularProgressIndicator(color: jobOrangeColor)),
       );

@@ -13,10 +13,11 @@ import 'mitra_application_service.dart';
 import 'mitra_contract_page.dart';
 import 'selfie_camera_page.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _mitraOrange = Color(0xFFF39C12);
-const Color _mitraBrown = Color(0xFF8B5A2B);
-const Color _mitraBackground = Color(0xFFFCF8FC);
+const Color _mitraOrange = Color(0xFFF6990E);
+Color get _mitraBrown => AyoAdaptiveColors.brown;
 const Color _mitraInput = Color(0xFFF7F2F7);
 const Color _mitraGreen = Color(0xFF5C744D);
 
@@ -41,11 +42,14 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   final TextEditingController _accountController = TextEditingController();
 
   Uint8List? _ktmBytes;
+  Uint8List? _identityBytes;
   Uint8List? _selfieBytes;
   String? _ktmName;
+  String? _identityName;
   String? _selfieName;
   bool _selfieCapturedFromFrontCamera = false;
   String? _selectedBank;
+  String? _selectedIdentityType;
   bool _termsAccepted = false;
   bool _contractAccepted = false;
   Map<String, dynamic>? _activeContract;
@@ -70,6 +74,27 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     'Lainnya',
   ];
 
+  static const List<String> _identityTypes = <String>[
+    'ktp',
+    'sim',
+    'passport',
+    'kitas_kitap',
+    'other',
+  ];
+
+  String _identityTypeLabel(String type) {
+    return switch (type) {
+      'ktp' => 'KTP',
+      'sim' => 'SIM',
+      'passport' => AyoI18n.isEnglish ? 'Passport' : 'Paspor',
+      'kitas_kitap' => 'KITAS / KITAP',
+      _ =>
+        AyoI18n.isEnglish
+            ? 'Other legal photo ID'
+            : 'Identitas legal berfoto lainnya',
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -88,16 +113,17 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
   Future<void> _loadInitialData() async {
     try {
-      final List<dynamic> initial = await Future.wait<dynamic>(<Future<dynamic>>[
-        _service.fetchMyProfile(),
-        widget.existingApplication != null
-            ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
-            : _service.fetchMyApplication(),
-        _service.fetchMitraBaseLocation(),
-        _service.fetchActiveContract(),
-      ]);
-      final Map<String, dynamic> profile =
-          initial[0] as Map<String, dynamic>;
+      final List<dynamic> initial = await Future.wait<dynamic>(
+        <Future<dynamic>>[
+          _service.fetchMyProfile(),
+          widget.existingApplication != null
+              ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
+              : _service.fetchMyApplication(),
+          _service.fetchMitraBaseLocation(),
+          _service.fetchActiveContract(),
+        ],
+      );
+      final Map<String, dynamic> profile = initial[0] as Map<String, dynamic>;
       final Map<String, dynamic>? application =
           initial[1] as Map<String, dynamic>?;
       final Map<String, dynamic>? baseLocation =
@@ -110,11 +136,12 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       _phoneController.text = _normalizePhone(
         (profile['phone'] ?? '').toString(),
       );
-      _addressController.text = (baseLocation?['address'] ??
-              application?['address'] ??
-              profile['alamat'] ??
-              '')
-          .toString();
+      _addressController.text =
+          (baseLocation?['address'] ??
+                  application?['address'] ??
+                  profile['alamat'] ??
+                  '')
+              .toString();
       final double? latitude = double.tryParse(
         baseLocation?['latitude']?.toString() ?? '',
       );
@@ -131,6 +158,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       final String? savedBank = application?['bank_name']?.toString();
       if (savedBank != null && _banks.contains(savedBank)) {
         _selectedBank = savedBank;
+      }
+
+      final String? savedIdentityType = application?['identity_document_type']
+          ?.toString();
+      if (savedIdentityType != null &&
+          _identityTypes.contains(savedIdentityType)) {
+        _selectedIdentityType = savedIdentityType;
       }
     } catch (error) {
       if (mounted) {
@@ -209,10 +243,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     final String query = _addressController.text.trim();
     if (query.length < 8) {
       if (showMessage && mounted) {
-        AyoSnackBar.info(
-          context,
-          'Alamat terlalu singkat untuk dicari.',
-        );
+        AyoSnackBar.info(context, 'Alamat terlalu singkat untuk dicari.');
       }
       return false;
     }
@@ -223,8 +254,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       OsmGeocodingResult? best;
       bool approximate = false;
       for (int index = 0; index < candidates.length; index++) {
-        final List<OsmGeocodingResult> results =
-            await _geocodingService.search(candidates[index]);
+        final List<OsmGeocodingResult> results = await _geocodingService.search(
+          candidates[index],
+        );
         if (results.isNotEmpty) {
           best = results.first;
           approximate = index > 0;
@@ -293,7 +325,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   Future<void> _pickDocument({required bool isKtm}) async {
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -305,18 +337,18 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                const AyoText(
                   'Pilih sumber foto',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 14),
                 ListTile(
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Color(0xFFFFF0DD),
                     child: Icon(Icons.camera_alt_outlined, color: _mitraBrown),
                   ),
-                  title: const Text('Kamera'),
-                  subtitle: const Text('Ambil foto langsung'),
+                  title: const AyoText('Kamera'),
+                  subtitle: const AyoText('Ambil foto langsung'),
                   onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
                 ),
                 ListTile(
@@ -327,8 +359,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       color: _mitraGreen,
                     ),
                   ),
-                  title: const Text('Galeri'),
-                  subtitle: const Text('Pilih foto dari perangkat'),
+                  title: const AyoText('Galeri'),
+                  subtitle: const AyoText('Pilih foto dari perangkat'),
                   onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
                 ),
               ],
@@ -362,8 +394,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
           _ktmBytes = bytes;
           _ktmName = picked.name;
         } else {
-          _selfieBytes = bytes;
-          _selfieName = picked.name;
+          _identityBytes = bytes;
+          _identityName = picked.name;
         }
       });
     } catch (error) {
@@ -374,13 +406,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
   Future<void> _pickSelfieFromFrontCamera() async {
     try {
-      final SelfieCaptureResult? result =
-          await Navigator.of(context).push<SelfieCaptureResult>(
-        MaterialPageRoute<SelfieCaptureResult>(
-          fullscreenDialog: true,
-          builder: (_) => const SelfieCameraPage(),
-        ),
-      );
+      final SelfieCaptureResult? result = await Navigator.of(context)
+          .push<SelfieCaptureResult>(
+            MaterialPageRoute<SelfieCaptureResult>(
+              fullscreenDialog: true,
+              builder: (_) => const SelfieCameraPage(),
+            ),
+          );
       if (result == null || !mounted) return;
 
       if (result.bytes.lengthInBytes > 2 * 1024 * 1024) {
@@ -420,10 +452,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
     if (!mounted) return;
 
-    if (_ktmBytes == null || _selfieBytes == null) {
+    if (_ktmBytes == null ||
+        _identityBytes == null ||
+        _selectedIdentityType == null ||
+        _selfieBytes == null) {
       AyoSnackBar.error(
         context,
-        'Foto KTM dan foto selfie wajib dilengkapi.',
+        'KTM UPI, kartu identitas berfoto, dan selfie verifikasi wajib dilengkapi.',
       );
       return;
     }
@@ -437,20 +472,15 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     }
 
     if (!_termsAccepted) {
-      AyoSnackBar.error(
-        context,
-        'Setujui Syarat & Ketentuan terlebih dahulu.',
-      );
+      AyoSnackBar.error(context, 'Setujui Syarat & Ketentuan terlebih dahulu.');
       return;
     }
 
-    final String contractVersion =
-        (_activeContract?['version'] ?? '').toString().trim();
+    final String contractVersion = (_activeContract?['version'] ?? '')
+        .toString()
+        .trim();
     if (contractVersion.isEmpty) {
-      AyoSnackBar.error(
-        context,
-        'Kontrak/MoU Mitra aktif belum tersedia.',
-      );
+      AyoSnackBar.error(context, 'Kontrak/MoU Mitra aktif belum tersedia.');
       return;
     }
     if (!_contractAccepted) {
@@ -466,8 +496,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     try {
       final String ktmPath = await _service.uploadDocument(
         bytes: _ktmBytes!,
-        originalName: _ktmName ?? 'ktm.jpg',
+        originalName: _ktmName ?? 'ktm-upi.jpg',
         documentType: 'ktm',
+      );
+      final String identityDocumentPath = await _service.uploadDocument(
+        bytes: _identityBytes!,
+        originalName: _identityName ?? 'photo-identity.jpg',
+        documentType: 'photo_identity',
       );
       final String selfiePath = await _service.uploadDocument(
         bytes: _selfieBytes!,
@@ -486,6 +521,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         bankName: _selectedBank!,
         accountNumber: _accountController.text,
         ktmPath: ktmPath,
+        identityDocumentPath: identityDocumentPath,
+        identityDocumentType: _selectedIdentityType!,
         selfiePath: selfiePath,
       );
 
@@ -500,10 +537,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(
-        context,
-        'Pengajuan belum berhasil dikirim: $error',
-      );
+      AyoSnackBar.error(context, 'Pengajuan belum berhasil dikirim: $error');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -512,15 +546,15 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _mitraBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _mitraBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _mitraBrown),
+          icon: Icon(Icons.arrow_back, color: _mitraBrown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Daftar Jadi Mitra',
           style: TextStyle(
             color: _mitraBrown,
@@ -548,7 +582,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                         color: const Color(0xFFFFE5C6),
                         borderRadius: BorderRadius.circular(22),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Icon(
@@ -557,7 +591,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             color: _mitraBrown,
                           ),
                           SizedBox(width: 7),
-                          Text(
+                          AyoText(
                             'Bergabung sebagai Mitra terverifikasi',
                             style: TextStyle(color: _mitraBrown),
                           ),
@@ -565,7 +599,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    const AyoText(
                       'Ayo Bantu Sesama!',
                       style: TextStyle(
                         fontSize: 28,
@@ -574,8 +608,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang handal dan terpercaya.',
+                    const AyoText(
+                      'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang andal dan terpercaya.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -613,13 +647,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _mitraInput,
                                   border: Border(
                                     bottom: BorderSide(color: _mitraBrown),
                                   ),
                                 ),
-                                child: const Text(
+                                child: const AyoText(
                                   '+62',
                                   style: TextStyle(fontSize: 16),
                                 ),
@@ -674,7 +708,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                       ? null
                                       : _resolveMitraAddress,
                                   icon: _isResolvingAddress
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 17,
                                           height: 17,
                                           child: CircularProgressIndicator(
@@ -683,7 +717,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                           ),
                                         )
                                       : const Icon(Icons.auto_fix_high_rounded),
-                                  label: const Text('Tentukan Otomatis'),
+                                  label: const AyoText('Tentukan Otomatis'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: _mitraBrown,
                                     side: const BorderSide(color: _mitraOrange),
@@ -695,7 +729,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                 child: FilledButton.tonalIcon(
                                   onPressed: _pickMitraLocationOnMap,
                                   icon: const Icon(Icons.map_outlined),
-                                  label: const Text('Pilih di Peta'),
+                                  label: const AyoText('Pilih di Peta'),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: const Color(0xFFFFEBD0),
                                     foregroundColor: _mitraBrown,
@@ -727,7 +761,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                 ),
                                 const SizedBox(width: 9),
                                 Expanded(
-                                  child: Text(
+                                  child: AyoText(
                                     _selectedPoint == null
                                         ? 'Titik lokasi wajib ditentukan agar Customer dapat melihat jarak Mitra dari lokasi pekerjaan.'
                                         : 'Titik Lokasi Utama Mitra sudah siap. Lokasi ini dapat diubah kembali dari Profil Mitra.',
@@ -752,26 +786,104 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Text(
-                            'Foto KTM',
-                            style: TextStyle(
+                          AyoText(
+                            AyoI18n.isEnglish
+                                ? 'UPI Student Card (KTM)'
+                                : 'KTM UPI',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          AyoText(
+                            AyoI18n.isEnglish
+                                ? 'Required to confirm that the applicant is a UPI student. A portrait photo on the KTM is not required.'
+                                : 'Wajib untuk memastikan pendaftar adalah mahasiswa UPI. Pas foto pada KTM tidak wajib.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.45,
+                              color: Color(0xFF66534B),
                             ),
                           ),
                           const SizedBox(height: 10),
                           _uploadBox(
                             bytes: _ktmBytes,
-                            title: 'Klik untuk unggah',
-                            subtitle: 'Format JPG, PNG (Maks 2MB)',
-                            icon: Icons.cloud_upload_outlined,
+                            title: AyoI18n.isEnglish
+                                ? 'Upload UPI Student Card'
+                                : 'Unggah KTM UPI',
+                            subtitle: AyoI18n.isEnglish
+                                ? 'JPG or PNG (Max 2MB)'
+                                : 'Format JPG, PNG (Maks 2MB)',
+                            icon: Icons.school_outlined,
                             onTap: () => _pickDocument(isKtm: true),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(16, 10, 0, 0),
-                            child: Text(
-                              'Pastikan data terbaca jelas\nBukan hasil scan atau fotokopi berwarna',
-                              style: TextStyle(
+                          const SizedBox(height: 22),
+                          AyoText(
+                            AyoI18n.isEnglish
+                                ? 'Photo Identity Document'
+                                : 'Kartu Identitas Berfoto',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          AyoText(
+                            AyoI18n.isEnglish
+                                ? 'Used by the admin to manually compare your identity portrait with your verification selfie.'
+                                : 'Digunakan admin untuk mencocokkan pas foto identitas dengan selfie verifikasi secara manual.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.45,
+                              color: Color(0xFF66534B),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedIdentityType,
+                            isExpanded: true,
+                            decoration: _inputDecoration(
+                              AyoI18n.isEnglish
+                                  ? 'Select identity type'
+                                  : 'Pilih jenis identitas',
+                            ),
+                            items: _identityTypes
+                                .map(
+                                  (String type) => DropdownMenuItem<String>(
+                                    value: type,
+                                    child: AyoText(_identityTypeLabel(type)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (String? value) {
+                              setState(() => _selectedIdentityType = value);
+                            },
+                            validator: (String? value) => value == null
+                                ? (AyoI18n.isEnglish
+                                      ? 'Choose a photo identity type.'
+                                      : 'Pilih jenis kartu identitas berfoto.')
+                                : null,
+                          ),
+                          const SizedBox(height: 10),
+                          _uploadBox(
+                            bytes: _identityBytes,
+                            title: AyoI18n.isEnglish
+                                ? 'Upload Photo ID'
+                                : 'Unggah Identitas Berfoto',
+                            subtitle: AyoI18n.isEnglish
+                                ? 'KTP / SIM / Passport / other legal photo ID · max. 2 MB'
+                                : 'KTP / SIM / Paspor / identitas legal lain · maks. 2 MB',
+                            icon: Icons.badge_outlined,
+                            onTap: () => _pickDocument(isKtm: false),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
+                            child: AyoText(
+                              AyoI18n.isEnglish
+                                  ? 'Use a valid legal identity document with a clear portrait photo. Ayo Suruh does not require the UPI KTM itself to contain a portrait photo.'
+                                  : 'Gunakan identitas legal yang masih berlaku dan memiliki pas foto yang jelas. KTM UPI tidak diwajibkan memiliki pas foto.',
+                              style: const TextStyle(
                                 fontSize: 12,
                                 height: 1.65,
                                 color: Color(0xFF66534B),
@@ -779,7 +891,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             ),
                           ),
                           const SizedBox(height: 22),
-                          const Text(
+                          const AyoText(
                             'Selfie Verifikasi',
                             style: TextStyle(
                               fontSize: 16,
@@ -787,11 +899,22 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          const Text(
+                          const AyoText(
                             'Wajib diambil langsung dengan kamera depan. Foto dari galeri tidak dapat digunakan.',
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.45,
+                              color: Color(0xFF66534B),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          AyoText(
+                            AyoI18n.isEnglish
+                                ? 'The admin will compare your selfie with the portrait on the selected photo ID and use the UPI KTM to confirm student eligibility.'
+                                : 'Admin akan mencocokkan selfie dengan pas foto pada identitas yang dipilih dan menggunakan KTM UPI untuk memastikan status mahasiswa.',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              height: 1.4,
                               color: Color(0xFF66534B),
                             ),
                           ),
@@ -827,7 +950,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                 .map(
                                   (String bank) => DropdownMenuItem<String>(
                                     value: bank,
-                                    child: Text(bank),
+                                    child: AyoText(bank),
                                   ),
                                 )
                                 .toList(),
@@ -856,7 +979,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             },
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          const AyoText(
                             '*Pastikan nama pemilik rekening sama dengan nama pendaftar',
                             style: TextStyle(
                               fontSize: 12,
@@ -875,18 +998,18 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
+                          AyoText(
                             _activeContract == null
                                 ? 'Kontrak aktif belum dapat dimuat.'
                                 : 'Versi ${_activeContract?['version'] ?? '-'} · ${_activeContract?['title'] ?? 'Kontrak Kemitraan Ayo Suruh'}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: _mitraBrown,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          const AyoText(
                             'Baca isi kontrak sebelum mengirim pengajuan. Persetujuan akan dicatat bersama versi kontrak dan waktu persetujuan.',
                             style: TextStyle(
                               fontSize: 12,
@@ -899,22 +1022,22 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             onPressed: _activeContract == null
                                 ? null
                                 : () => Navigator.push<void>(
-                                      context,
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => MitraContractPage(
-                                          contract: _activeContract!,
-                                        ),
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => MitraContractPage(
+                                        contract: _activeContract!,
                                       ),
                                     ),
+                                  ),
                             icon: const Icon(Icons.description_outlined),
-                            label: const Text('Baca Kontrak Lengkap'),
+                            label: const AyoText('Baca Kontrak Lengkap'),
                           ),
                           CheckboxListTile(
                             contentPadding: EdgeInsets.zero,
                             controlAffinity: ListTileControlAffinity.leading,
                             value: _contractAccepted,
                             activeColor: _mitraOrange,
-                            title: Text(
+                            title: AyoText(
                               'Saya telah membaca dan menyetujui Kontrak/MoU Mitra versi ${_activeContract?['version'] ?? '-'}',
                               style: const TextStyle(
                                 fontSize: 12.5,
@@ -948,7 +1071,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             padding: const EdgeInsets.only(top: 10),
                             child: Wrap(
                               children: <Widget>[
-                                const Text(
+                                const AyoText(
                                   'Saya menyetujui ',
                                   style: TextStyle(
                                     color: Color(0xFF66534B),
@@ -963,7 +1086,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                           const SyaratKetentuanPage(),
                                     ),
                                   ),
-                                  child: const Text(
+                                  child: AyoText(
                                     'Syarat & Ketentuan',
                                     style: TextStyle(
                                       color: _mitraBrown,
@@ -972,7 +1095,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                     ),
                                   ),
                                 ),
-                                const Text(
+                                const AyoText(
                                   ' menjadi mitra Ayo Suruh dan bersedia menjaga kualitas layanan.',
                                   style: TextStyle(
                                     color: Color(0xFF66534B),
@@ -1012,7 +1135,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                 ),
                               )
                             : const Icon(Icons.send_outlined),
-                        label: Text(
+                        label: AyoText(
                           _isSubmitting ? 'Mengirim...' : 'Kirim Pendaftaran',
                           style: const TextStyle(
                             fontSize: 18,
@@ -1022,9 +1145,14 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    AyoText(
                       'Proses verifikasi membutuhkan waktu 1–3 hari kerja.',
-                      style: TextStyle(fontSize: 12, color: Colors.black45),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
+                      ),
                     ),
                   ],
                 ),
@@ -1043,7 +1171,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF1EAE6)),
         boxShadow: const <BoxShadow>[
@@ -1066,10 +1194,14 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                   color: iconColor,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, color: Colors.white, size: 21),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.surface,
+                  size: 21,
+                ),
               ),
               const SizedBox(width: 12),
-              Text(
+              AyoText(
                 title,
                 style: const TextStyle(
                   fontSize: 22,
@@ -1089,9 +1221,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   Widget _fieldLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
-      child: Text(
+      child: AyoText(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           color: _mitraBrown,
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -1172,11 +1304,11 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                     top: 8,
                     right: 8,
                     child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
                         shape: BoxShape.circle,
                       ),
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(6),
                         child: Icon(
                           Icons.edit_outlined,
@@ -1193,7 +1325,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                 children: <Widget>[
                   Icon(icon, size: 42, color: _mitraBrown),
                   const SizedBox(height: 10),
-                  Text(
+                  AyoText(
                     title,
                     style: const TextStyle(
                       fontSize: 15,
@@ -1202,9 +1334,14 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  AyoText(
                     subtitle,
-                    style: const TextStyle(fontSize: 11, color: Colors.black45),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
+                    ),
                   ),
                 ],
               ),
@@ -1244,10 +1381,7 @@ class _MitraApplicationStatusPageState
       if (mounted) setState(() => _application = latest);
     } catch (error) {
       if (mounted) {
-        AyoSnackBar.error(
-          context,
-          'Status belum dapat diperbarui: $error',
-        );
+        AyoSnackBar.error(context, 'Status belum dapat diperbarui: $error');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -1284,15 +1418,15 @@ class _MitraApplicationStatusPageState
         : 'Tim kami sedang memeriksa identitas dan dokumenmu. Proses biasanya membutuhkan waktu 1–3 hari kerja.';
 
     return Scaffold(
-      backgroundColor: _mitraBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _mitraBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _mitraBrown),
+          icon: Icon(Icons.arrow_back, color: _mitraBrown),
           onPressed: () => Navigator.pop(context, true),
         ),
-        title: const Text(
+        title: AyoText(
           'Status Pendaftaran Mitra',
           style: TextStyle(
             color: _mitraBrown,
@@ -1303,10 +1437,10 @@ class _MitraApplicationStatusPageState
         actions: <Widget>[
           const HomeShortcutButton(),
           IconButton(
-            tooltip: 'Perbarui status',
+            tooltip: AyoI18n.t('Perbarui status'),
             onPressed: _isLoading ? null : _refresh,
             icon: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
@@ -1314,7 +1448,7 @@ class _MitraApplicationStatusPageState
                       color: _mitraBrown,
                     ),
                   )
-                : const Icon(Icons.refresh_rounded, color: _mitraBrown),
+                : Icon(Icons.refresh_rounded, color: _mitraBrown),
           ),
         ],
       ),
@@ -1326,7 +1460,7 @@ class _MitraApplicationStatusPageState
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(22, 30, 22, 28),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: const Color(0xFFF0E8E2)),
               ),
@@ -1342,7 +1476,7 @@ class _MitraApplicationStatusPageState
                     child: Icon(statusIcon, size: 48, color: statusColor),
                   ),
                   const SizedBox(height: 20),
-                  Text(
+                  AyoText(
                     title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -1352,7 +1486,7 @@ class _MitraApplicationStatusPageState
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
+                  AyoText(
                     description,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -1387,14 +1521,14 @@ class _MitraApplicationStatusPageState
                       children: <Widget>[
                         Icon(Icons.info_outline, color: Colors.red),
                         SizedBox(width: 8),
-                        Text(
+                        AyoText(
                           'Catatan Verifikasi',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    AyoText(
                       _application!['review_notes'].toString(),
                       style: const TextStyle(height: 1.5),
                     ),
@@ -1430,7 +1564,7 @@ class _MitraApplicationStatusPageState
                       ? Icons.edit_note_rounded
                       : Icons.refresh_rounded,
                 ),
-                label: Text(
+                label: AyoText(
                   approved
                       ? 'Masuk Dashboard Mitra'
                       : rejected
@@ -1465,7 +1599,7 @@ class _MitraApplicationStatusPageState
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFF0E8E2)),
       ),
@@ -1483,7 +1617,7 @@ class _MitraApplicationStatusPageState
           _detailRow(
             'Dokumen',
             _application?['ktm'] != null && _application?['selfie'] != null
-                ? 'KTM dan selfie terunggah'
+                ? 'Identitas dan selfie terunggah'
                 : 'Belum lengkap',
           ),
         ],
@@ -1496,11 +1630,16 @@ class _MitraApplicationStatusPageState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.black54)),
+          child: AyoText(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
+          child: AyoText(
             value,
             textAlign: TextAlign.right,
             style: const TextStyle(fontWeight: FontWeight.w600),

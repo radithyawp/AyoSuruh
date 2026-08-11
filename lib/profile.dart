@@ -26,6 +26,8 @@ import 'tutorial/ayos_tutorial.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/ayo_pressable.dart';
 import 'widgets/ayo_avatar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -59,9 +61,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isSwitchingMode = false;
 
   // Warna-warna Utama Ayo Suruh
-  static const Color _primaryOrange = Color(0xFFF39C12);
-  static const Color _brownColor = Color(0xFF8B5A2B);
-  static const Color _bgGrey = Color(0xFFFAF6F3);
+  static const Color _primaryOrange = Color(0xFFF6990E);
+  static Color get _brownColor => AyoAdaptiveColors.brown;
 
   @override
   void initState() {
@@ -298,15 +299,15 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: AyoText(
           'Keluar Akun',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+        content: const AyoText('Apakah Anda yakin ingin keluar dari aplikasi?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: Colors.grey[700])),
+            child: AyoText('Batal', style: TextStyle(color: Colors.grey[700])),
           ),
           ElevatedButton(
             onPressed: () {
@@ -320,7 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+            child: const AyoText('Keluar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -358,8 +359,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(child: CircularProgressIndicator(color: _primaryOrange)),
       );
     }
@@ -371,7 +372,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final bool isMitra = widget.activeMode == 'mitra' && widget.canUseMitraMode;
 
     return Scaffold(
-      backgroundColor: _bgGrey,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
@@ -480,7 +481,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 20),
 
             // --- FOOTER VERSI ---
-            Text(
+            AyoText(
               'Ayo Suruh v2.4.0',
               style: TextStyle(
                 color: Colors.grey[500],
@@ -516,7 +517,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(width: 9),
-          const Text(
+          AyoText(
             'Profil',
             style: TextStyle(
               color: _brownColor,
@@ -528,7 +529,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       actions: <Widget>[
         NotificationBell(
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
           size: 25,
           activeMode: widget.activeMode,
         ),
@@ -565,7 +566,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 decoration: BoxDecoration(
                   color: _primaryOrange,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                 ),
                 child: const Icon(
                   Icons.camera_alt,
@@ -585,13 +586,13 @@ class _ProfilePageState extends State<ProfilePage> {
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
+                  child: AyoText(
                     name,
                     maxLines: 1,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -605,7 +606,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       : const Color(0xFFFFE8C2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
+                child: AyoText(
                   isMitra ? 'Mitra' : 'Customer',
                   style: TextStyle(
                     color: isMitra ? Colors.green.shade800 : _brownColor,
@@ -618,11 +619,11 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         const SizedBox(height: 2),
-        Text(email, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        AyoText(email, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         const SizedBox(height: 4),
-        Text(
+        AyoText(
           phone,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: _brownColor,
@@ -657,20 +658,32 @@ class _ProfilePageState extends State<ProfilePage> {
     final IconData buttonIcon = isMitra
         ? Icons.person_outline_rounded
         : Icons.engineering_outlined;
-    final Color accent = isMitra ? const Color(0xFF4B613E) : _brownColor;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color accent = isMitra
+        ? (dark ? AyoColors.green : const Color(0xFF4B613E))
+        : (dark ? AyoColors.orange : _brownColor);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isMitra
-              ? const <Color>[Color(0xFFEAF3E4), Color(0xFFF7FAF5)]
-              : const <Color>[Color(0xFFFFE8C5), Color(0xFFFFF7EA)],
+          colors: dark
+              ? <Color>[
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                  Theme.of(context).colorScheme.surface,
+                ]
+              : isMitra
+                  ? const <Color>[Color(0xFFEAF3E4), Color(0xFFF7FAF5)]
+                  : const <Color>[Color(0xFFFFE8C5), Color(0xFFFFF7EA)],
         ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isMitra ? const Color(0xFFCFE2C3) : const Color(0xFFF1D1A0),
+          color: dark
+              ? Theme.of(context).colorScheme.outline
+              : isMitra
+                  ? const Color(0xFFCFE2C3)
+                  : const Color(0xFFF1D1A0),
         ),
       ),
       child: Column(
@@ -682,7 +695,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: dark
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                      : Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(activeIcon, color: accent, size: 22),
@@ -692,23 +707,23 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       activeLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.2,
                         height: 1.3,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -733,7 +748,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       )
                     : Icon(buttonIcon, size: 16),
-                label: Text(buttonLabel),
+                label: AyoText(buttonLabel),
                 style: FilledButton.styleFrom(
                   backgroundColor: accent,
                   foregroundColor: Colors.white,
@@ -781,7 +796,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -796,10 +811,12 @@ class _ProfilePageState extends State<ProfilePage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFDF0E6),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  : const Color(0xFFFDF0E6),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.account_balance_wallet_outlined,
               color: _brownColor,
               size: 26,
@@ -810,21 +827,21 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AyoText(
                   title,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AyoText(
                   'Rp $saldo',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -832,15 +849,19 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           ElevatedButton.icon(
             onPressed: onPressed,
-            icon: const Icon(
+            icon: Icon(
               Icons.add_circle_outline,
               size: 16,
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AyoDarkColors.canvas
+                  : Colors.white,
             ),
-            label: Text(
+            label: AyoText(
               buttonText,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AyoDarkColors.canvas
+                    : Colors.white,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
@@ -869,23 +890,23 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                Text(
+                AyoText(
                   '$pekerjaanSelesai',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: _brownColor,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                AyoText(
                   'Pekerjaan Selesai',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -896,7 +917,7 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -904,7 +925,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 const Icon(Icons.star, color: Colors.amber, size: 22),
                 const SizedBox(width: 6),
-                Text(
+                AyoText(
                   '$rating',
                   style: const TextStyle(
                     fontSize: 18,
@@ -946,10 +967,18 @@ class _ProfilePageState extends State<ProfilePage> {
       background = const Color(0xFFFFD8D8);
     }
 
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color bannerBackground = dark
+        ? Color.alphaBlend(
+            background.withValues(alpha: 0.12),
+            Theme.of(context).colorScheme.surfaceContainerHighest,
+          )
+        : background;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: background,
+        color: bannerBackground,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Material(
@@ -967,23 +996,23 @@ class _ProfilePageState extends State<ProfilePage> {
               color: Colors.black.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.black87),
+            child: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
           ),
-          title: Text(
+          title: AyoText(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          subtitle: Text(
+          subtitle: AyoText(
             subtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
           ),
-          trailing: const Icon(
+          trailing: Icon(
             Icons.arrow_forward_rounded,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           onTap: _navigateToMitraApplication,
         ),
@@ -1003,25 +1032,27 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: ready
-              ? const Color(0xFFF0F6EC)
-              : const Color(0xFFFFF0DD),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : ready
+                  ? const Color(0xFFF0F6EC)
+                  : const Color(0xFFFFF0DD),
           child: Icon(
             ready ? Icons.location_on_rounded : Icons.location_off_outlined,
             color: ready ? const Color(0xFF5C744D) : _brownColor,
           ),
         ),
-        title: const Text(
+        title: const AyoText(
           'Lokasi Utama Mitra',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(
+        subtitle: AyoText(
           ready
               ? address
               : 'Lengkapi titik lokasi agar jarak muncul pada penawaran Customer.',
@@ -1029,7 +1060,7 @@ class _ProfilePageState extends State<ProfilePage> {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 11.5,
-            color: ready ? Colors.black54 : _brownColor,
+            color: ready ? Theme.of(context).colorScheme.onSurfaceVariant : _brownColor,
           ),
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
@@ -1042,7 +1073,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1062,15 +1093,17 @@ class _ProfilePageState extends State<ProfilePage> {
             vertical: 4,
           ),
           leading: CircleAvatar(
-            backgroundColor: const Color(0xFFF7F3F0),
-            child: Icon(icon, color: Colors.black87, size: 20),
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.surfaceContainerHighest
+                : const Color(0xFFF7F3F0),
+            child: Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 20),
           ),
-          title: Text(
+          title: AyoText(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
@@ -1099,7 +1132,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: OutlinedButton.icon(
         onPressed: _showLogoutConfirmationDialog,
         icon: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
-        label: const Text(
+        label: const AyoText(
           'Log out',
           style: TextStyle(
             color: Colors.red,

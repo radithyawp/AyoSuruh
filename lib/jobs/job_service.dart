@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -202,6 +200,10 @@ class JobService {
     String? newAddress,
     double? latitude,
     double? longitude,
+    String? destinationAddressId,
+    String? newDestinationAddress,
+    double? destinationLatitude,
+    double? destinationLongitude,
     String? preferredMitraId,
   }) async {
     if (preferredMitraId != null &&
@@ -242,6 +244,38 @@ class JobService {
       throw ArgumentError('Alamat pekerjaan wajib dipilih atau diisi.');
     }
 
+    final bool requiresRouteDestination = normalizedWorkMode == 'mobile';
+    String? finalDestinationAddressId =
+        requiresRouteDestination ? destinationAddressId : null;
+
+    if (requiresRouteDestination &&
+        (finalDestinationAddressId == null || finalDestinationAddressId.isEmpty) &&
+        newDestinationAddress != null &&
+        newDestinationAddress.trim().isNotEmpty) {
+      final Map<String, dynamic> insertedDestination = await _client
+          .from('addresses')
+          .insert(<String, dynamic>{
+            'user_id': currentUserId,
+            'label': 'Tujuan Pekerjaan',
+            'address': newDestinationAddress.trim(),
+            'latitude': destinationLatitude,
+            'longitude': destinationLongitude,
+            'is_default': false,
+          })
+          .select('id')
+          .single();
+      finalDestinationAddressId = insertedDestination['id'].toString();
+    }
+
+    if (requiresRouteDestination &&
+        (finalDestinationAddressId == null || finalDestinationAddressId.isEmpty)) {
+      throw ArgumentError('Alamat tujuan wajib dipilih atau diisi.');
+    }
+    if (requiresRouteDestination &&
+        (destinationLatitude == null || destinationLongitude == null)) {
+      throw ArgumentError('Titik tujuan wajib dipilih pada peta.');
+    }
+
     final String dateValue = scheduleDate.toIso8601String().split('T').first;
     final Map<String, dynamic> insertedJob = await _client
         .from('jobs')
@@ -255,6 +289,12 @@ class JobService {
           'address_id': finalAddressId,
           'latitude': requiresPhysicalLocation ? latitude : null,
           'longitude': requiresPhysicalLocation ? longitude : null,
+          'destination_address_id':
+              requiresRouteDestination ? finalDestinationAddressId : null,
+          'destination_latitude':
+              requiresRouteDestination ? destinationLatitude : null,
+          'destination_longitude':
+              requiresRouteDestination ? destinationLongitude : null,
           'schedule_date': dateValue,
           'schedule_time': scheduleTime,
           'status': 'posted',
@@ -278,10 +318,11 @@ class JobService {
         .from('jobs')
         .select('''
           id, customer_id, category_id, title, description, budget,
-          address_id, latitude, longitude, schedule_date, schedule_time,
+          address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
-          addresses(id, label, address, latitude, longitude),
+          addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+          destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
           mitra:users!jobs_mitra_id_fkey(id, fullname, avatar_url),
           bids(id, status, price),
           reviews(id, rating, review, tags, created_at)
@@ -296,10 +337,11 @@ class JobService {
         .from('jobs')
         .select('''
           id, customer_id, category_id, title, description, budget,
-          address_id, latitude, longitude, schedule_date, schedule_time,
+          address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
-          addresses(id, label, address, latitude, longitude),
+          addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+          destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
           bids(id, mitra_id, status)
         ''')
@@ -318,8 +360,13 @@ class JobService {
           jobs!bids_job_id_fkey(
             id, customer_id, title, description, budget, schedule_date,
             schedule_time, status, progress_stage, work_mode, created_at, mitra_id,
+            address_id, latitude, longitude, destination_address_id,
+            destination_latitude, destination_longitude,
             categories(id, name, icon),
-            addresses(id, label, address, latitude, longitude),
+            addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+            destination_address:addresses!jobs_destination_address_id_fkey(
+              id, label, address, latitude, longitude
+            ),
             customer:users!jobs_customer_id_fkey(id, fullname, avatar_url)
           )
         ''')
@@ -342,10 +389,11 @@ class JobService {
         .from('jobs')
         .select('''
           id, customer_id, category_id, title, description, budget,
-          address_id, latitude, longitude, schedule_date, schedule_time,
+          address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
-          addresses(id, label, address, latitude, longitude),
+          addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+          destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
           reviews(id, rating, review, tags, created_at)
         ''')
@@ -360,10 +408,11 @@ class JobService {
         .from('jobs')
         .select('''
           id, customer_id, category_id, title, description, budget,
-          address_id, latitude, longitude, schedule_date, schedule_time,
+          address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
-          addresses(id, label, address, latitude, longitude),
+          addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+          destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url)
         ''')
         .eq('mitra_id', currentUserId)
@@ -397,10 +446,11 @@ class JobService {
         .from('jobs')
         .select('''
           id, customer_id, category_id, title, description, budget,
-          address_id, latitude, longitude, schedule_date, schedule_time,
+          address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
-          addresses(id, label, address, latitude, longitude),
+          addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
+          destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url, phone),
           mitra:users!jobs_mitra_id_fkey(id, fullname, avatar_url, phone),
           bids(id, mitra_id, price, estimated_time, message, status, created_at),

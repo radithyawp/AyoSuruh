@@ -1,5 +1,5 @@
 name: ayosuruh
-description: "A new Flutter project."
+description: "Ayo Suruh - platform layanan jasa yang menghubungkan Customer dan Mitra."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -40,7 +42,7 @@ dependencies:
   camera: ^0.12.0+2
   dotenv: ^4.2.0
   google_fonts: ^8.2.1
-  intl: ^0.20.3
+  intl: ^0.20.2
   url_launcher: ^6.3.2
   flutter_map: ^8.3.1
   latlong2: ^0.10.1

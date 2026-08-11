@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/ayo_snackbar.dart';
 
 import 'feedback_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AppFeedbackPage extends StatefulWidget {
   const AppFeedbackPage({super.key});
@@ -11,10 +13,9 @@ class AppFeedbackPage extends StatefulWidget {
 }
 
 class _AppFeedbackPageState extends State<AppFeedbackPage> {
-  static const Color _brown = Color(0xFF7B4B00);
+  static Color get _brown => AyoAdaptiveColors.brown;
   static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFFA4B792);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final FeedbackService _service = FeedbackService();
   final PageController _pageController = PageController();
@@ -175,7 +176,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 8),
-              const Text(
+              AyoText(
                 'Makasih sudah bantu AYOS!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -185,7 +186,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              const AyoText(
                 'Masukanmu sudah tersimpan dan akan dipakai untuk memperbaiki Ayo Suruh.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -200,7 +201,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                 child: FilledButton(
                   onPressed: () => Navigator.pop(dialogContext),
                   style: FilledButton.styleFrom(backgroundColor: _orange),
-                  child: const Text(
+                  child: const AyoText(
                     'Selesai',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -223,15 +224,15 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: _submitting ? null : _back,
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
         ),
-        title: const Text(
+        title: AyoText(
           'Kritik & Saran',
           style: TextStyle(
             color: _brown,
@@ -262,9 +263,9 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text(
+                      AyoText(
                         '${_step + 1}/3',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
                           color: _brown,
@@ -282,11 +283,11 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                         fit: BoxFit.contain,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(
+                            AyoText(
                               'Bantu AYOS bikin Ayo Suruh lebih baik 👋',
                               style: TextStyle(
                                 fontSize: 15.5,
@@ -296,7 +297,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                               ),
                             ),
                             SizedBox(height: 4),
-                            Text(
+                            AyoText(
                               'Sekitar 2–3 menit. Jawabanmu tidak akan dipublikasikan ke pengguna lain.',
                               style: TextStyle(
                                 fontSize: 10.8,
@@ -325,8 +326,8 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
                 border: Border(top: BorderSide(color: Color(0xFFF0E7E2))),
               ),
               child: SizedBox(
@@ -355,7 +356,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                               ? Icons.send_rounded
                               : Icons.arrow_forward_rounded,
                         ),
-                  label: Text(
+                  label: AyoText(
                     _step == 2 ? 'Kirim Masukan' : 'Lanjut',
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
@@ -447,7 +448,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
           final bool selected = _features.contains(feature);
           return FilterChip(
             selected: selected,
-            label: Text(feature),
+            label: AyoText(feature),
             avatar: Icon(
               selected ? Icons.check_rounded : Icons.add_rounded,
               size: 16,
@@ -482,7 +483,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
         const SizedBox(height: 12),
         _textArea(
           controller: _bugController,
-          label: 'Ceritakan bug yang kamu temukan',
+          label: AyoI18n.t('Ceritakan bug yang kamu temukan'),
           hint: 'Contoh: saat menekan tombol X, halaman menjadi merah...',
           maxLength: 700,
         ),
@@ -498,7 +499,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       ),
       _textArea(
         controller: _likedController,
-        label: 'Apa yang paling kamu sukai dari Ayo Suruh?',
+        label: AyoI18n.t('Apa yang paling kamu sukai dari Ayo Suruh?'),
         hint:
             'Ceritakan fitur, tampilan, atau pengalaman yang menurutmu paling membantu.',
         maxLength: 600,
@@ -506,7 +507,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       const SizedBox(height: 14),
       _textArea(
         controller: _improvementController,
-        label: 'Apa yang paling perlu kami perbaiki?',
+        label: AyoI18n.t('Apa yang paling perlu kami perbaiki?'),
         hint:
             'Boleh tentang fitur, kecepatan, desain, keamanan, pembayaran, atau hal lain.',
         maxLength: 800,
@@ -540,7 +541,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                         color: selected ? _orange : const Color(0xFFE8DCD4),
                       ),
                     ),
-                    child: Text(
+                    child: AyoText(
                       '$index',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
@@ -560,7 +561,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
         contentPadding: EdgeInsets.zero,
         value: _allowFollowup,
         activeThumbColor: _orange,
-        title: const Text(
+        title: AyoText(
           'Boleh kami menghubungimu untuk follow-up?',
           style: TextStyle(
             fontSize: 12.5,
@@ -568,7 +569,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
             color: _brown,
           ),
         ),
-        subtitle: const Text(
+        subtitle: const AyoText(
           'Opsional. Kontak hanya dipakai untuk membahas masukan yang kamu kirim.',
           style: TextStyle(fontSize: 10.5, height: 1.35),
         ),
@@ -604,7 +605,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
             ),
             SizedBox(width: 9),
             Expanded(
-              child: Text(
+              child: AyoText(
                 'Nama atau kontak tidak wajib. Jika follow-up dimatikan, form tidak menyimpan kontak tambahan.',
                 style: TextStyle(
                   fontSize: 10.5,
@@ -635,16 +636,16 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w900,
               color: _brown,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          AyoText(
             subtitle,
             style: const TextStyle(
               fontSize: 11.2,
@@ -663,9 +664,9 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12.8,
               fontWeight: FontWeight.w800,
               color: _brown,
@@ -673,7 +674,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
           ),
           if (hint != null) ...<Widget>[
             const SizedBox(height: 2),
-            Text(
+            AyoText(
               hint,
               style: const TextStyle(fontSize: 10.3, color: Color(0xFF847A74)),
             ),
@@ -699,7 +700,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
           checkmarkColor: _brown,
           selectedColor: const Color(0xFFFFE3B6),
           side: const BorderSide(color: Color(0xFFE8DCD4)),
-          label: Text(entry.value),
+          label: AyoText(entry.value),
           labelStyle: TextStyle(
             fontSize: 11.5,
             fontWeight: active ? FontWeight.w900 : FontWeight.w600,
@@ -733,7 +734,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
                     color: active ? _orange : const Color(0xFFE8DCD4),
                   ),
                 ),
-                child: Text(
+                child: AyoText(
                   '$value',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
@@ -754,11 +755,11 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(
+          AyoText(
             start,
             style: const TextStyle(fontSize: 9.5, color: Color(0xFF8A807A)),
           ),
-          Text(
+          AyoText(
             end,
             style: const TextStyle(fontSize: 9.5, color: Color(0xFF8A807A)),
           ),
@@ -790,7 +791,7 @@ class _AppFeedbackPageState extends State<AppFeedbackPage> {
       alignLabelWithHint: true,
       filled: true,
       fillColor: Colors.white,
-      labelStyle: const TextStyle(color: _brown, fontWeight: FontWeight.w700),
+      labelStyle: TextStyle(color: _brown, fontWeight: FontWeight.w700),
       hintStyle: const TextStyle(fontSize: 11, color: Color(0xFFA59B95)),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),

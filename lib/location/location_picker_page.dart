@@ -6,7 +6,9 @@ import '../jobs/job_helpers.dart';
 import '../widgets/ayo_snackbar.dart';
 import 'location_service.dart';
 import 'osm_geocoding_service.dart';
+import 'osm_map_config.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class PickedLocation {
   const PickedLocation({
@@ -134,7 +136,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                       Icons.location_on_outlined,
                       color: jobOrangeColor,
                     ),
-                    title: Text(
+                    title: AyoText(
                       result.displayName,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -228,9 +230,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Pilih Titik Lokasi',
           style: TextStyle(
             color: jobBrownColor,
@@ -250,10 +252,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _searchAddress(),
               decoration: InputDecoration(
-                hintText: 'Cari alamat, contoh: UPI Kampus Cibiru',
+                hintText: AyoI18n.t('Cari alamat, contoh: UPI Kampus Cibiru'),
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: IconButton(
-                  tooltip: 'Cari alamat',
+                  tooltip: AyoI18n.t('Cari alamat'),
                   onPressed: _isSearching ? null : _searchAddress,
                   icon: _isSearching
                       ? const SizedBox(
@@ -274,7 +276,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: jobBorderColor),
+                  borderSide: BorderSide(color: jobBorderColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -294,14 +296,14 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               ),
               child: Row(
                 children: <Widget>[
-                  const Icon(
+                  Icon(
                     Icons.pin_drop_outlined,
                     color: jobBrownColor,
                     size: 18,
                   ),
                   const SizedBox(width: 7),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       _selectedAddressLabel,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -332,9 +334,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   ),
                   children: <Widget>[
                     TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.ayosuruh.app',
+                      urlTemplate: OsmMapConfig.tileUrl,
+                      userAgentPackageName: OsmMapConfig.userAgentPackageName,
                       maxNativeZoom: 19,
                     ),
                     if (_selectedPoint != null)
@@ -368,10 +369,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   child: FloatingActionButton.small(
                     heroTag: 'currentLocationButton',
                     onPressed: _isLocating ? null : _useCurrentLocation,
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     foregroundColor: jobBrownColor,
                     child: _isLocating
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
@@ -394,7 +395,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                       color: Colors.white.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: const AyoText(
                       '© OpenStreetMap contributors',
                       style: TextStyle(fontSize: 9, color: Color(0xFF625750)),
                     ),
@@ -406,14 +407,14 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 20),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: jobBackgroundColor,
               border: Border(top: BorderSide(color: jobBorderColor)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   _selectedPoint == null
                       ? 'Belum ada titik dipilih'
                       : 'Koordinat: ${_selectedPoint!.latitude.toStringAsFixed(6)}, ${_selectedPoint!.longitude.toStringAsFixed(6)}',
@@ -423,7 +424,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                const AyoText(
                   'Cari alamat atau ketuk peta untuk mengoreksi titik. Pencarian menggunakan data OpenStreetMap.',
                   style: TextStyle(
                     color: Color(0xFF7B7069),
@@ -454,7 +455,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                             ),
                           )
                         : const Icon(Icons.check_circle_outline_rounded),
-                    label: Text(
+                    label: AyoText(
                       _isResolvingPoint
                           ? 'Membaca Alamat Titik...'
                           : 'Gunakan Titik Ini',

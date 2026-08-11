@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/ayo_theme.dart';
 
-const Color refundBrown = Color(0xFF8A5300);
-const Color refundOrange = Color(0xFFFF9800);
-const Color refundBackground = Color(0xFFFFF9FC);
+Color get refundBrown => AyoAdaptiveColors.brown;
+const Color refundOrange = Color(0xFFF6990E);
+Color get refundBackground => AyoAdaptiveColors.canvas;
 
 String refundStatusLabel(Object? raw) {
   switch ((raw ?? '').toString().toLowerCase()) {

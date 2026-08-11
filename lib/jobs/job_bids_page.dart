@@ -5,6 +5,7 @@ import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobBidsPage extends StatefulWidget {
   const JobBidsPage({super.key, required this.jobId});
@@ -52,19 +53,19 @@ class _JobBidsPageState extends State<JobBidsPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Terima penawaran ini?'),
-          content: Text(
+          title: const AyoText('Terima penawaran ini?'),
+          content: AyoText(
             'Mitra ${_mitraName(bid)} akan dipilih. Penawaran mitra lain otomatis ditolak.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Kembali'),
+              child: const AyoText('Kembali'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(backgroundColor: jobOrangeColor),
-              child: const Text('Terima'),
+              child: const AyoText('Terima'),
             ),
           ],
         );
@@ -81,9 +82,9 @@ class _JobBidsPageState extends State<JobBidsPage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            icon: const Icon(Icons.check_circle_rounded, color: jobGreenColor, size: 52),
-            title: const Text('Mitra berhasil dipilih'),
-            content: Text(
+            icon: Icon(Icons.check_circle_rounded, color: jobGreenColor, size: 52),
+            title: const AyoText('Mitra berhasil dipilih'),
+            content: AyoText(
               '${_mitraName(bid)} sekarang menjadi mitra untuk pekerjaan ini.',
               textAlign: TextAlign.center,
             ),
@@ -91,7 +92,7 @@ class _JobBidsPageState extends State<JobBidsPage> {
             actions: <Widget>[
               FilledButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Selesai'),
+                child: const AyoText('Selesai'),
               ),
             ],
           );
@@ -133,9 +134,9 @@ class _JobBidsPageState extends State<JobBidsPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Penawaran Mitra',
           style: TextStyle(
             color: jobBrownColor,
@@ -159,11 +160,11 @@ class _JobBidsPageState extends State<JobBidsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      const Text(
+                      const AyoText(
                         'Pilih Penawaran',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                       ),
-                      Text(
+                      AyoText(
                         '${_bids.where((bid) => bid['status'] == 'pending').length} Mitra Menunggu',
                         style: const TextStyle(fontSize: 11, color: Color(0xFF70645D)),
                       ),
@@ -194,24 +195,24 @@ class _JobBidsPageState extends State<JobBidsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          AyoText(
             'PEKERJAAN AKTIF',
             style: TextStyle(fontSize: 9, color: jobDarkBrownColor, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
-          Text(
+          AyoText(
             job['title'].toString(),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          Text(
+          AyoText(
             '${formatJobDate(job['schedule_date'])}, ${formatJobTime(job['schedule_time'])}',
             style: const TextStyle(fontSize: 11),
           ),
           const SizedBox(height: 3),
-          Text(jobAddress(job), style: const TextStyle(fontSize: 11)),
+          AyoText(jobAddress(job), style: const TextStyle(fontSize: 11)),
           const SizedBox(height: 3),
-          Text(
+          AyoText(
             'Harga awal: ${formatRupiah(job['budget'])}',
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
           ),
@@ -246,7 +247,7 @@ class _JobBidsPageState extends State<JobBidsPage> {
                     ? null
                     : NetworkImage(_mitraAvatar(bid)!),
                 child: _mitraAvatar(bid) == null
-                    ? const Icon(Icons.person, color: jobBrownColor)
+                    ? Icon(Icons.person, color: jobBrownColor)
                     : null,
               ),
               const SizedBox(width: 10),
@@ -254,19 +255,19 @@ class _JobBidsPageState extends State<JobBidsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       _mitraName(bid),
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                     ),
                     Row(
                       children: <Widget>[
                         const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
-                        Text(
+                        AyoText(
                           rating.toStringAsFixed(1),
                           style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(width: 6),
-                        Text(
+                        AyoText(
                           bidStatusLabel(status),
                           style: TextStyle(
                             fontSize: 10,
@@ -280,9 +281,9 @@ class _JobBidsPageState extends State<JobBidsPage> {
                   ],
                 ),
               ),
-              Text(
+              AyoText(
                 formatRupiah(bid['price']),
-                style: const TextStyle(
+                style: TextStyle(
                   color: jobBrownColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
@@ -300,14 +301,14 @@ class _JobBidsPageState extends State<JobBidsPage> {
               color: const Color(0xFFF8F2F7),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
+            child: AyoText(
               '“${(bid['message'] ?? 'Tidak ada pesan.').toString()}”',
               style: const TextStyle(fontSize: 11, height: 1.4, color: Color(0xFF5F535A)),
             ),
           ),
           if ((bid['estimated_time'] ?? '').toString().isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
+            AyoText(
               'Estimasi: ${bid['estimated_time']}',
               style: const TextStyle(fontSize: 11, color: Color(0xFF6A5D55)),
             ),
@@ -321,10 +322,10 @@ class _JobBidsPageState extends State<JobBidsPage> {
                     onPressed: processing ? null : () => _rejectBid(bid),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: jobDarkBrownColor,
-                      side: const BorderSide(color: jobBorderColor),
+                      side: BorderSide(color: jobBorderColor),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                     ),
-                    child: const Text('Tolak'),
+                    child: const AyoText('Tolak'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -341,7 +342,7 @@ class _JobBidsPageState extends State<JobBidsPage> {
                             width: 18,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Terima'),
+                        : const AyoText('Terima'),
                   ),
                 ),
               ],
@@ -378,18 +379,18 @@ class _JobBidsPageState extends State<JobBidsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   hasArea ? area : 'Area Mitra belum tersedia',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: jobDarkBrownColor,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AyoText(
                   distance,
                   style: const TextStyle(
                     fontSize: 10,

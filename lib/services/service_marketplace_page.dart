@@ -10,8 +10,10 @@ import 'service_detail_page.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/network_photo_gallery.dart';
 import '../widgets/ayo_avatar.dart';
+import '../widgets/ayo_empty_state.dart';
 import '../widgets/ayo_category_visual.dart';
 import '../widgets/ayo_snackbar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class ServiceMarketplacePage extends StatefulWidget {
   const ServiceMarketplacePage({super.key});
@@ -198,9 +200,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Cari Layanan',
           style: TextStyle(color: jobBrownColor, fontWeight: FontWeight.w900),
         ),
@@ -220,7 +222,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     autofocus: true,
                     onChanged: (String value) => setState(() => _query = value),
                     decoration: InputDecoration(
-                      hintText: 'Cari elektronik, coding, jastip, nama mitra...',
+                      hintText: AyoI18n.t('Cari elektronik, coding, jastip, nama mitra...'),
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _query.isEmpty
                           ? null
@@ -235,7 +237,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                       fillColor: Colors.white,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: jobBorderColor),
+                        borderSide: BorderSide(color: jobBorderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -254,7 +256,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         color: const Color(0xFFFFE4DF),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
+                      child: AyoText(
                         'Sebagian katalog belum dapat dimuat: $_error',
                         style: const TextStyle(fontSize: 10.5),
                       ),
@@ -263,8 +265,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   const SizedBox(height: 22),
                   Row(
                     children: <Widget>[
-                      const Expanded(
-                        child: Text(
+                      Expanded(
+                        child: AyoText(
                           'Katalog Ayo Suruh',
                           style: TextStyle(
                             fontSize: 16,
@@ -273,7 +275,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                           ),
                         ),
                       ),
-                      Text(
+                      AyoText(
                         '${categories.length} kategori',
                         style: const TextStyle(
                           fontSize: 10.5,
@@ -284,7 +286,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   ),
                   const SizedBox(height: 10),
                   if (categories.isEmpty)
-                    const Text(
+                    const AyoText(
                       'Kategori tidak ditemukan.',
                       style: TextStyle(color: Color(0xFF746760)),
                     )
@@ -305,7 +307,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                                 radius: 18,
                                 width: 1.4,
                                 child: Material(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                   child: InkWell(
                                     onTap: () => _createFromCategory(name),
                                     child: Padding(
@@ -322,11 +324,11 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                                           ),
                                           Padding(
                                             padding: const EdgeInsets.fromLTRB(4, 9, 4, 4),
-                                            child: Text(
+                                            child: AyoText(
                                               name,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 11.5,
                                                 height: 1.15,
                                                 fontWeight: FontWeight.w800,
@@ -348,8 +350,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   const SizedBox(height: 26),
                   Row(
                     children: <Widget>[
-                      const Expanded(
-                        child: Text(
+                      Expanded(
+                        child: AyoText(
                           'Jasa yang Ditawarkan Mitra',
                           style: TextStyle(
                             fontSize: 16,
@@ -358,7 +360,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                           ),
                         ),
                       ),
-                      Text(
+                      AyoText(
                         '${services.length} jasa',
                         style: const TextStyle(
                           fontSize: 10.5,
@@ -368,7 +370,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  const AyoText(
                     'Pilih jasa untuk membuat permintaan yang ditujukan ke mitra tersebut. Harga akhir tetap mengikuti penawaran di dalam job.',
                     style: TextStyle(
                       fontSize: 10.5,
@@ -388,7 +390,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                             : Icons.bookmark_border_rounded,
                         size: 17,
                       ),
-                      label: const Text('Jasa tersimpan'),
+                      label: const AyoText('Jasa tersimpan'),
                       onSelected: (bool selected) {
                         setState(() => _showBookmarkedOnly = selected);
                       },
@@ -396,31 +398,21 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   ),
                   const SizedBox(height: 12),
                   if (services.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(18),
+                    DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: jobBorderColor),
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.all(Radius.circular(18)),
+                        border: Border.fromBorderSide(
+                          BorderSide(color: jobBorderColor),
+                        ),
                       ),
-                      child: const Column(
-                        children: <Widget>[
-                          Icon(
-                            Icons.storefront_outlined,
-                            size: 42,
-                            color: Color(0xFFC6B6AB),
-                          ),
-                          SizedBox(height: 9),
-                          Text(
-                            'Belum ada jasa mitra yang cocok. Kamu tetap dapat membuat pekerjaan melalui kategori di atas.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              height: 1.4,
-                              color: Color(0xFF746760),
-                            ),
-                          ),
-                        ],
+                      child: AyoEmptyState(
+                        compact: true,
+                        assetPath: 'assets/images/ayos/ayos_search.png',
+                        badgeIcon: Icons.storefront_outlined,
+                        title: 'Jasa yang kamu cari belum tersedia',
+                        description:
+                            'Coba kategori lain atau buat pekerjaan agar Mitra dapat mengirim penawaran.',
                       ),
                     )
                   else
@@ -471,7 +463,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 11),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
@@ -506,7 +498,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       mitraName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -554,9 +546,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   color: categoryBackground(categoryName),
                   borderRadius: BorderRadius.circular(99),
                 ),
-                child: Text(
+                child: AyoText(
                   'Mulai ${_currency.format(price)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w900,
                     color: jobBrownColor,
@@ -566,7 +558,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
+          AyoText(
             categoryName,
             style: const TextStyle(
               fontSize: 10.5,
@@ -575,7 +567,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          AyoText(
             (service['title'] ?? 'Jasa Mitra').toString(),
             style: const TextStyle(
               fontSize: 14.5,
@@ -584,7 +576,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             ),
           ),
           const SizedBox(height: 5),
-          Text(
+          AyoText(
             (service['description'] ?? '').toString(),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -602,7 +594,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               children: tags.take(4).map((String tag) {
                 return Chip(
                   visualDensity: VisualDensity.compact,
-                  label: Text('#$tag', style: const TextStyle(fontSize: 9)),
+                  label: AyoText('#${AyoI18n.serviceTag(tag)}', style: const TextStyle(fontSize: 9)),
                 );
               }).toList(),
             ),
@@ -622,7 +614,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 isOwnService ? Icons.person_outline_rounded : Icons.arrow_forward_rounded,
                 size: 17,
               ),
-              label: Text(
+              label: AyoText(
                 isOwnService ? 'Jasa Anda' : 'Pesan Jasa',
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
@@ -649,7 +641,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
           Icon(icon, size: 13, color: iconColor),
           const SizedBox(width: 3),
           Flexible(
-            child: Text(
+            child: AyoText(
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

@@ -21,6 +21,7 @@ import 'widgets/ayo_avatar.dart';
 import 'widgets/ayo_category_visual.dart';
 import 'widgets/ayo_snackbar.dart';
 import 'widgets/home_trivia_ticker.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({
@@ -64,27 +65,32 @@ class _DashboardPageState extends State<DashboardPage> {
 
   static const List<_PromoItem> _promos = <_PromoItem>[
     _PromoItem(
-      assetPath: 'assets/images/home_slider_1.png',
+      assetPathId: 'assets/images/home_slider_1_id.png',
+      assetPathEn: 'assets/images/home_slider_1_en.png',
       semanticLabel: 'Beresin Kost Sat-Set. Tanpa Ribet!',
       action: _PromoAction.serviceCatalog,
     ),
     _PromoItem(
-      assetPath: 'assets/images/home_slider_4.png',
+      assetPathId: 'assets/images/home_slider_2_id.png',
+      assetPathEn: 'assets/images/home_slider_2_en.png',
       semanticLabel: 'Fitur Chat, Telpon dan Notifikasi Bisa Bantu Kamu',
       action: _PromoAction.chat,
     ),
     _PromoItem(
-      assetPath: 'assets/images/home_slider_2.png',
+      assetPathId: 'assets/images/home_slider_3_id.png',
+      assetPathEn: 'assets/images/home_slider_3_en.png',
       semanticLabel: 'Bisa Posting Jasa. Temuin atau Bikin yang Kamu Mau!',
       action: _PromoAction.createJob,
     ),
     _PromoItem(
-      assetPath: 'assets/images/home_slider_5.png',
+      assetPathId: 'assets/images/home_slider_4_id.png',
+      assetPathEn: 'assets/images/home_slider_4_en.png',
       semanticLabel: 'Ayo Suruh tersedia di Play Store',
       action: _PromoAction.playStore,
     ),
     _PromoItem(
-      assetPath: 'assets/images/home_slider_3.png',
+      assetPathId: 'assets/images/home_slider_5_id.png',
+      assetPathEn: 'assets/images/home_slider_5_en.png',
       semanticLabel: 'Mau Tambah Uang Saku',
       action: _PromoAction.registerMitra,
     ),
@@ -342,7 +348,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           color: const Color(0xFFFFE0DD),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
+                        child: AyoText(
                           'Sebagian data belum dapat dimuat: $_errorMessage',
                           style: const TextStyle(fontSize: 11),
                         ),
@@ -418,7 +424,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           const SizedBox(width: 8),
-          const NotificationBell(
+          NotificationBell(
             color: jobDarkBrownColor,
             activeMode: 'customer',
           ),
@@ -435,36 +441,36 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
+              AyoText(
                 'Halo,',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF746A64),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
               ),
               const SizedBox(height: 1),
-              Text(
+              AyoText(
                 _userName,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontSize: 17,
                       height: 1.16,
-                      color: const Color(0xFF302A27),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
               ),
               const SizedBox(height: 5),
               Row(
                 children: <Widget>[
-                  const Icon(Icons.location_on_rounded, size: 15, color: jobBrownColor),
+                  Icon(Icons.location_on_rounded, size: 15, color: jobBrownColor),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       _userAddress,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF6F645D),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                   ),
@@ -487,16 +493,16 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: jobBorderColor),
       ),
       child: TextField(
         readOnly: true,
         onTap: _showServiceSearch,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF746A64)),
-          hintText: 'Cari layanan...',
+          hintText: AyoI18n.t('Cari layanan...'),
           hintStyle: TextStyle(fontSize: 12, color: Color(0xFF9B918C)),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 11),
@@ -523,7 +529,7 @@ class _DashboardPageState extends State<DashboardPage> {
               animation: _promoController,
               child: Semantics(
                 button: true,
-                label: promo.semanticLabel,
+                label: AyoI18n.t(promo.semanticLabel),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Material(
@@ -533,7 +539,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       splashColor: Colors.white.withValues(alpha: 0.10),
                       highlightColor: Colors.black.withValues(alpha: 0.035),
                       child: Image.asset(
-                        promo.assetPath,
+                        promo.localizedAssetPath,
                         fit: BoxFit.cover,
                         filterQuality: FilterQuality.high,
                       ),
@@ -588,7 +594,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     radius: 18,
                   ),
                   const SizedBox(height: 7),
-                  Text(
+                  AyoText(
                     name,
                     maxLines: 2,
                     textAlign: TextAlign.center,
@@ -597,7 +603,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           fontSize: 10.4,
                           height: 1.08,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF4D433D),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                   ),
                 ],
@@ -616,14 +622,14 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Row(
             children: <Widget>[
               const Expanded(
-                child: Text(
+                child: AyoText(
                   'Kategori Layanan',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ),
               TextButton(
                 onPressed: _showServiceSearch,
-                child: Text(
+                child: AyoText(
                   'Lihat semua',
                   style: AyoTypography.link(context, color: AyoColors.coral),
                 ),
@@ -635,7 +641,7 @@ class _DashboardPageState extends State<DashboardPage> {
         if (_categories.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 18),
-            child: Text(
+            child: AyoText(
               'Kategori belum tersedia.',
               style: TextStyle(fontSize: 12, color: Color(0xFF7C6F67)),
             ),
@@ -670,12 +676,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       'Jasa Pilihan Mitra',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                     ),
                     SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       'Lihat jasa yang baru ditawarkan Mitra Ayo Suruh.',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -687,7 +693,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               TextButton(
                 onPressed: _showServiceSearch,
-                child: Text(
+                child: AyoText(
                   'Lihat semua',
                   style: AyoTypography.link(context, color: AyoColors.coral),
                 ),
@@ -708,7 +714,9 @@ class _DashboardPageState extends State<DashboardPage> {
               itemBuilder: (_, _) => Container(
                 width: 248,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4EFEA),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                      : const Color(0xFFF4EFEA),
                   borderRadius: BorderRadius.circular(18),
                 ),
               ),
@@ -721,11 +729,11 @@ class _DashboardPageState extends State<DashboardPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: jobBorderColor),
               ),
-              child: const Text(
+              child: const AyoText(
                 'Belum ada jasa Mitra yang dipublikasikan. Cek lagi nanti atau buka katalog untuk melihat layanan lainnya.',
                 style: TextStyle(
                   fontSize: 11,
@@ -781,7 +789,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return SizedBox(
       width: 248,
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -799,7 +807,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   width: double.infinity,
                   child: images.isEmpty
                       ? Container(
-                          color: const Color(0xFFFFF0E4),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).colorScheme.surfaceContainerHighest
+                              : const Color(0xFFFFF0E4),
                           child: const Icon(
                             Icons.storefront_rounded,
                             color: AyoColors.orange,
@@ -810,7 +820,9 @@ class _DashboardPageState extends State<DashboardPage> {
                           images.first,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
-                            color: const Color(0xFFFFF0E4),
+                            color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).colorScheme.surfaceContainerHighest
+                              : const Color(0xFFFFF0E4),
                             child: const Icon(
                               Icons.storefront_rounded,
                               color: AyoColors.orange,
@@ -825,7 +837,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
+                        AyoText(
                           categoryName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -836,11 +848,11 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
+                        AyoText(
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: jobDarkBrownColor,
@@ -850,7 +862,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         Row(
                           children: <Widget>[
                             Expanded(
-                              child: Text(
+                              child: AyoText(
                                 mitraName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -866,7 +878,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               color: Color(0xFFF6A900),
                             ),
                             const SizedBox(width: 2),
-                            Text(
+                            AyoText(
                               rating > 0 ? rating.toStringAsFixed(1) : 'Baru',
                               style: const TextStyle(
                                 fontSize: 9.5,
@@ -876,7 +888,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           ],
                         ),
                         const Spacer(),
-                        Text(
+                        AyoText(
                           'Mulai ${_currency.format(price)}',
                           style: const TextStyle(
                             fontSize: 12.5,
@@ -900,7 +912,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
+        const AyoText(
           'Status Pekerjaan Saya',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
@@ -942,12 +954,17 @@ enum _PromoAction {
 
 class _PromoItem {
   const _PromoItem({
-    required this.assetPath,
+    required this.assetPathId,
+    required this.assetPathEn,
     required this.semanticLabel,
     required this.action,
   });
 
-  final String assetPath;
+  final String assetPathId;
+  final String assetPathEn;
   final String semanticLabel;
   final _PromoAction action;
+
+  String get localizedAssetPath =>
+      AyoI18n.isEnglish ? assetPathEn : assetPathId;
 }

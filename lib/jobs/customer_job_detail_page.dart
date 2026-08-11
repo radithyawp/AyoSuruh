@@ -5,6 +5,7 @@ import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
 import '../notifications/notification_service.dart';
 import '../location/job_location_map.dart';
+import '../location/job_live_tracking_card.dart';
 import '../payments/job_payment_page.dart';
 import '../payments/job_payment_widgets.dart';
 import '../payments/payment_service.dart';
@@ -18,6 +19,7 @@ import 'job_service.dart';
 import 'job_widgets.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/network_photo_gallery.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class CustomerJobDetailPage extends StatefulWidget {
   const CustomerJobDetailPage({super.key, required this.jobId});
@@ -135,19 +137,19 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Konfirmasi pekerjaan selesai?'),
-          content: const Text(
+          title: const AyoText('Konfirmasi pekerjaan selesai?'),
+          content: const AyoText(
             'Pastikan pekerjaan sudah sesuai. Setelah dikonfirmasi, status akan menjadi selesai.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Periksa Lagi'),
+              child: const AyoText('Periksa Lagi'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(backgroundColor: jobGreenColor),
-              child: const Text('Konfirmasi Selesai'),
+              child: const AyoText('Konfirmasi Selesai'),
             ),
           ],
         );
@@ -192,19 +194,19 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Batalkan pekerjaan?'),
-          content: const Text(
+          title: const AyoText('Batalkan pekerjaan?'),
+          content: const AyoText(
             'Seluruh penawaran yang masih menunggu akan ikut ditolak.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Kembali'),
+              child: const AyoText('Kembali'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-              child: const Text('Batalkan'),
+              child: const AyoText('Batalkan'),
             ),
           ],
         );
@@ -239,9 +241,9 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, true),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Detail Pekerjaan',
           style: TextStyle(
             color: jobBrownColor,
@@ -269,18 +271,18 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.error_outline_rounded,
                 size: 50,
                 color: jobBrownColor,
               ),
               const SizedBox(height: 12),
-              Text(
+              AyoText(
                 _errorMessage ?? 'Pekerjaan tidak ditemukan.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _loadJob, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _loadJob, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -330,7 +332,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           _contentCard(
             title: 'Deskripsi Pekerjaan',
             icon: Icons.description_outlined,
-            child: Text(
+            child: AyoText(
               (job['description'] ?? 'Tidak ada deskripsi.').toString(),
               style: const TextStyle(
                 fontSize: 13,
@@ -349,7 +351,15 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           ],
           const SizedBox(height: 14),
           if (jobNeedsPhysicalLocation(job) && jobLatLng(job) != null) ...<Widget>[
-            JobLocationMapCard(job: job),
+            if (jobNeedsRouteEndpoints(job) && jobDestinationLatLng(job) != null)
+              JobRouteMapCard(job: job)
+            else
+              JobLocationMapCard(job: job),
+            const SizedBox(height: 14),
+          ],
+          if (jobWorkMode(job) == jobWorkModeMobile &&
+              status == 'on_progress') ...<Widget>[
+            JobLiveTrackingCard(job: job, isMitra: false),
             const SizedBox(height: 14),
           ],
           if (job['mitra_id'] != null) ...<Widget>[
@@ -367,7 +377,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                   ),
                 ),
                 icon: _isOpeningChat
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 17,
                         height: 17,
                         child: CircularProgressIndicator(
@@ -376,7 +386,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                         ),
                       )
                     : const Icon(Icons.chat_bubble_outline_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Chat dengan Mitra',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -416,13 +426,13 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                const Text(
+                const AyoText(
                   'Estimasi harga',
                   style: TextStyle(color: Color(0xFF675B54)),
                 ),
-                Text(
+                AyoText(
                   formatRupiah(job['budget']),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: jobBrownColor,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -442,10 +452,10 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(Icons.task_alt_rounded, color: jobBrownColor),
+                  Icon(Icons.task_alt_rounded, color: jobBrownColor),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       paymentAwaitingCompletion
                           ? cashAwaitingPayment
                               ? 'Mitra telah mengajukan pekerjaan selesai. Bayarkan nominal tunai yang tertera pada halaman pembayaran sebelum mengonfirmasi pekerjaan.'
@@ -486,7 +496,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                             ? Icons.payments_outlined
                             : Icons.check_circle_outline_rounded,
                       ),
-                label: Text(
+                label: AyoText(
                   paymentAwaitingCompletion
                       ? cashAwaitingPayment
                           ? 'Bayar Tunai ke Mitra'
@@ -505,12 +515,12 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 color: const Color(0xFFFFEBCB),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Row(
+              child: Row(
                 children: <Widget>[
                   Icon(Icons.star_outline_rounded, color: jobBrownColor),
                   SizedBox(width: 10),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       'Bagikan pengalamanmu agar rating mitra dapat diperbarui.',
                       style: TextStyle(fontSize: 12, height: 1.4),
                     ),
@@ -531,7 +541,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                   ),
                 ),
                 icon: const Icon(Icons.star_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Beri Penilaian untuk Mitra',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
@@ -551,7 +561,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                   ),
                 ),
                 icon: const Icon(Icons.groups_2_outlined),
-                label: Text(
+                label: AyoText(
                   pendingBidCount == 0
                       ? 'Belum Ada Penawaran'
                       : 'Lihat $pendingBidCount Penawaran',
@@ -564,7 +574,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             TextButton.icon(
               onPressed: _isActionLoading ? null : _cancelJob,
               icon: const Icon(Icons.cancel_outlined),
-              label: Text(
+              label: AyoText(
                 _hasCancelableMidtransTransaction()
                     ? isPaymentPaid(_payment)
                         ? 'Ajukan Pembatalan & Refund'
@@ -582,7 +592,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: jobBorderColor),
       ),
@@ -596,16 +606,16 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       categoryName(job).toUpperCase(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: jobBrownColor,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
+                    AyoText(
                       job['title'].toString(),
                       style: const TextStyle(
                         fontSize: 24,
@@ -645,7 +655,19 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           ),
           if (jobNeedsPhysicalLocation(job)) ...<Widget>[
             const SizedBox(height: 12),
-            _infoRow(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+            _infoRow(
+              Icons.location_on_outlined,
+              jobNeedsRouteEndpoints(job) ? jobOriginLabel(job) : 'Lokasi',
+              jobAddress(job),
+            ),
+            if (jobNeedsRouteEndpoints(job)) ...<Widget>[
+              const SizedBox(height: 12),
+              _infoRow(
+                Icons.flag_outlined,
+                jobDestinationLabel(job),
+                jobDestinationAddress(job),
+              ),
+            ],
           ],
         ],
       ),
@@ -665,14 +687,14 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           backgroundColor: const Color(0xFFFFE9CC),
           backgroundImage: _networkImage(avatarUrl),
           child: avatarUrl == null || avatarUrl.isEmpty
-              ? const Icon(Icons.person, color: jobBrownColor)
+              ? Icon(Icons.person, color: jobBrownColor)
               : null,
         ),
-        title: Text(
+        title: AyoText(
           selectedMitraName(job),
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        subtitle: Text(
+        subtitle: AyoText(
           phone == null || phone.isEmpty ? 'Mitra Ayo Suruh' : phone,
         ),
       ),
@@ -708,7 +730,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 color: const Color(0xFFF6F1F3),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
+              child: AyoText(
                 note,
                 style: const TextStyle(
                   fontSize: 12,
@@ -731,7 +753,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                   height: 120,
                   color: const Color(0xFFF1ECEF),
                   alignment: Alignment.center,
-                  child: const Text('Foto bukti belum dapat dimuat.'),
+                  child: const AyoText('Foto bukti belum dapat dimuat.'),
                 ),
               ),
             ),
@@ -764,7 +786,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
+              AyoText(
                 label,
                 style: const TextStyle(
                   fontSize: 10,
@@ -772,7 +794,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
+              AyoText(
                 value,
                 style: const TextStyle(
                   fontSize: 13,
@@ -794,7 +816,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFF0E9E4)),
       ),
@@ -805,7 +827,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             children: <Widget>[
               Icon(icon, size: 18, color: jobBrownColor),
               const SizedBox(width: 7),
-              Text(
+              AyoText(
                 title,
                 style: const TextStyle(
                   fontSize: 13,

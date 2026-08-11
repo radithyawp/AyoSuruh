@@ -23,7 +23,7 @@ class AyoAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: backgroundColor,
-        border: Border.all(color: Colors.white, width: 1.5),
+        border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: url.isEmpty

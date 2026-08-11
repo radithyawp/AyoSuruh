@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../admin/admin_navigation.dart';
 import '../admin/admin_service.dart';
 import '../navbar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class HomeShortcutButton extends StatelessWidget {
   const HomeShortcutButton({super.key, this.color});
@@ -34,11 +35,11 @@ class HomeShortcutButton extends StatelessWidget {
     }
 
     return IconButton(
-      tooltip: 'Ke Home',
+      tooltip: AyoI18n.t('Ke Home'),
       onPressed: () => _goHome(context),
       icon: Icon(
         Icons.home_rounded,
-        color: color ?? const Color(0xFF8B5A2B),
+        color: color ?? Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

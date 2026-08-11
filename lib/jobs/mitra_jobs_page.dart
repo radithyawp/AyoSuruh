@@ -6,6 +6,7 @@ import 'job_helpers.dart';
 import 'job_service.dart';
 import 'job_widgets.dart';
 import 'mitra_job_detail_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraJobsPage extends StatefulWidget {
   const MitraJobsPage({
@@ -91,7 +92,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
         backgroundColor: jobBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: AyoText(
           'Pekerjaan',
           style: TextStyle(
             color: jobDarkBrownColor,
@@ -99,7 +100,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
             fontWeight: FontWeight.w800,
           ),
         ),
-        actions: const <Widget>[
+        actions: <Widget>[
           NotificationBell(
             color: jobDarkBrownColor,
             activeMode: 'mitra',
@@ -111,14 +112,14 @@ class _MitraJobsPageState extends State<MitraJobsPage>
           controller: _tabController,
           isScrollable: false,
           labelColor: jobBrownColor,
-          unselectedLabelColor: const Color(0xFF766B65),
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           indicatorColor: jobBrownColor,
           indicatorSize: TabBarIndicatorSize.tab,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-          tabs: const <Widget>[
-            Tab(text: 'Tersedia'),
-            Tab(text: 'Pengajuan'),
-            Tab(text: 'Aktif'),
+          tabs: <Widget>[
+            Tab(text: AyoI18n.t('Tersedia')),
+            Tab(text: AyoI18n.t('Pengajuan')),
+            Tab(text: AyoI18n.t('Aktif')),
           ],
         ),
 
@@ -217,7 +218,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
                 return Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: jobBorderColor),
                   ),
@@ -227,7 +228,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
                       Row(
                         children: <Widget>[
                           Expanded(
-                            child: Text(
+                            child: AyoText(
                               job['title'].toString(),
                               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                             ),
@@ -242,7 +243,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
                                       : const Color(0xFFFFE8C5),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
+                            child: AyoText(
                               bidStatusLabel(bid['status']),
                               style: TextStyle(
                                 fontSize: 10,
@@ -256,12 +257,12 @@ class _MitraJobsPageState extends State<MitraJobsPage>
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      AyoText(
                         'Penawaran: ${formatRupiah(bid['price'])}',
-                        style: const TextStyle(color: jobBrownColor, fontWeight: FontWeight.w800),
+                        style: TextStyle(color: jobBrownColor, fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      AyoText(
                         'Estimasi: ${bid['estimated_time'] ?? '-'}',
                         style: const TextStyle(fontSize: 11, color: Color(0xFF70645D)),
                       ),
@@ -270,7 +271,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () => _openJob(job['id'].toString()),
-                          child: const Text('Lihat Pekerjaan'),
+                          child: const AyoText('Lihat Pekerjaan'),
                         ),
                       ),
                     ],

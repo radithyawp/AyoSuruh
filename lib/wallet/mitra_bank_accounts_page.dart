@@ -4,9 +4,11 @@ import '../widgets/ayo_snackbar.dart';
 import '../widgets/home_shortcut_button.dart';
 import 'wallet_service.dart';
 import 'wallet_pin_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _bankBrown = Color(0xFF8A5300);
-const Color _bankOrange = Color(0xFFFF9800);
+Color get _bankBrown => AyoAdaptiveColors.brown;
+const Color _bankOrange = Color(0xFFF6990E);
 const Color _bankBackground = Color(0xFFFFF9FC);
 
 class MitraBankAccountsPage extends StatefulWidget {
@@ -137,24 +139,24 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Hapus rekening?'),
-        content: Text(
+        title: const AyoText('Hapus rekening?'),
+        content: AyoText(
           '${account['bank_name']} • ${_mask(account['account_number'])} akan dihapus dari daftar pencairan.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Batal'),
+            child: const AyoText('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            child: const Text('Hapus'),
+            child: const AyoText('Hapus'),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
     if (!await ensureWalletPinConfigured(context, _service)) return;
     if (!mounted) return;
     final String? pin = await showWalletPinPrompt(
@@ -194,16 +196,16 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bankBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _bankBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, true),
-          icon: const Icon(Icons.arrow_back_rounded, color: _bankBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: _bankBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Rekening Pencairan',
           style: TextStyle(
             color: _bankBrown,
@@ -218,7 +220,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
         backgroundColor: _bankOrange,
         foregroundColor: const Color(0xFF553600),
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
+        label: const AyoText(
           'Tambah Rekening',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
@@ -238,15 +240,15 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.account_balance_outlined,
                 size: 54,
                 color: _bankBrown,
               ),
               const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
+              AyoText(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 14),
-              FilledButton(onPressed: _load, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _load, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -263,7 +265,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
             fit: BoxFit.contain,
           ),
           const SizedBox(height: 12),
-          const Text(
+          AyoText(
             'Belum ada rekening pencairan',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -273,7 +275,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          const AyoText(
             'Tambahkan rekening bank atau akun pencairan. Rekening utama akan dipakai sebagai pilihan awal saat kamu mencairkan saldo.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -299,7 +301,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
           return Container(
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isDefault
@@ -320,7 +322,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                         color: const Color(0xFFFFE9C7),
                         borderRadius: BorderRadius.circular(13),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.account_balance_rounded,
                         color: _bankBrown,
                       ),
@@ -330,7 +332,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
+                          AyoText(
                             (account['bank_name'] ?? 'Rekening').toString(),
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
@@ -338,7 +340,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
+                          AyoText(
                             _mask(account['account_number']),
                             style: const TextStyle(
                               color: Color(0xFF6B6059),
@@ -358,7 +360,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                           color: const Color(0xFFEAF4E3),
                           borderRadius: BorderRadius.circular(99),
                         ),
-                        child: const Text(
+                        child: const AyoText(
                           'Utama',
                           style: TextStyle(
                             fontSize: 10,
@@ -370,7 +372,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                   ],
                 ),
                 const SizedBox(height: 9),
-                Text(
+                AyoText(
                   (account['account_holder'] ?? '').toString(),
                   style: const TextStyle(
                     fontSize: 11.5,
@@ -387,14 +389,14 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                             ? null
                             : () => _setDefault(account),
                         icon: const Icon(Icons.star_outline_rounded, size: 17),
-                        label: const Text('Jadikan Utama'),
+                        label: const AyoText('Jadikan Utama'),
                       ),
                     TextButton.icon(
                       onPressed: _actionLoading
                           ? null
                           : () => _openForm(account),
                       icon: const Icon(Icons.edit_outlined, size: 17),
-                      label: const Text('Edit'),
+                      label: const AyoText('Edit'),
                     ),
                     TextButton.icon(
                       onPressed: _actionLoading ? null : () => _delete(account),
@@ -402,7 +404,7 @@ class _MitraBankAccountsPageState extends State<MitraBankAccountsPage> {
                         foregroundColor: Colors.red.shade700,
                       ),
                       icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                      label: const Text('Hapus'),
+                      label: const AyoText('Hapus'),
                     ),
                   ],
                 ),
@@ -537,9 +539,9 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Text(
+                AyoText(
                   widget.account == null ? 'Tambah Rekening' : 'Edit Rekening',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
                     color: _bankBrown,
@@ -552,7 +554,7 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                       .map(
                         (String bank) => DropdownMenuItem<String>(
                           value: bank,
-                          child: Text(bank),
+                          child: AyoText(bank),
                         ),
                       )
                       .toList(),
@@ -591,11 +593,11 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                   value: _makeDefault,
                   contentPadding: EdgeInsets.zero,
                   activeThumbColor: _bankOrange,
-                  title: const Text(
+                  title: const AyoText(
                     'Jadikan rekening utama',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  subtitle: const Text(
+                  subtitle: const AyoText(
                     'Rekening utama menjadi pilihan awal saat pencairan.',
                     style: TextStyle(fontSize: 11),
                   ),
@@ -625,7 +627,7 @@ class _BankAccountFormSheetState extends State<_BankAccountFormSheet> {
                             ),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: const Text(
+                    label: const AyoText(
                       'Simpan Rekening',
                       style: TextStyle(fontWeight: FontWeight.w900),
                     ),

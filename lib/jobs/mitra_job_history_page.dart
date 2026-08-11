@@ -5,6 +5,7 @@ import 'job_service.dart';
 import 'job_widgets.dart';
 import 'mitra_job_detail_page.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraJobHistoryPage extends StatefulWidget {
   const MitraJobHistoryPage({super.key});
@@ -71,9 +72,9 @@ class _MitraJobHistoryPageState extends State<MitraJobHistoryPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Riwayat Pekerjaan Mitra',
           style: TextStyle(
             color: jobBrownColor,

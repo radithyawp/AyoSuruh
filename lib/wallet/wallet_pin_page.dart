@@ -3,10 +3,11 @@ import '../widgets/ayo_snackbar.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/six_digit_pin_field.dart';
 import 'wallet_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _pinBrown = Color(0xFF8A5300);
+Color get _pinBrown => AyoAdaptiveColors.brown;
 const Color _pinOrange = Color(0xFFF6990E);
-const Color _pinBackground = Color(0xFFFFFAF7);
 
 Future<bool> ensureWalletPinConfigured(
   BuildContext context,
@@ -68,13 +69,13 @@ Future<String?> showWalletPinPrompt(
                     color: const Color(0xFFFFE8C2),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Icon(Icons.lock_rounded, color: _pinBrown),
+                  child: Icon(Icons.lock_rounded, color: _pinBrown),
                 ),
                 const SizedBox(width: 11),
                 Expanded(
-                  child: Text(
+                  child: AyoText(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: _pinBrown,
@@ -87,14 +88,14 @@ Future<String?> showWalletPinPrompt(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   message,
                   style: const TextStyle(fontSize: 12, height: 1.45),
                 ),
                 const SizedBox(height: 15),
                 SixDigitPinField(
                   controller: controller,
-                  label: 'PIN 6 digit',
+                  label: AyoI18n.t('PIN 6 digit'),
                   autofocus: true,
                   textInputAction: TextInputAction.done,
                   errorText: fieldError,
@@ -109,12 +110,12 @@ Future<String?> showWalletPinPrompt(
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Batal'),
+                child: const AyoText('Batal'),
               ),
               FilledButton(
                 onPressed: submit,
                 style: FilledButton.styleFrom(backgroundColor: _pinOrange),
-                child: const Text('Konfirmasi'),
+                child: const AyoText('Konfirmasi'),
               ),
             ],
           );
@@ -252,11 +253,11 @@ class _WalletPinPageState extends State<WalletPinPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _pinBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _pinBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
+        title: AyoText(
           'PIN AyoPay',
           style: TextStyle(fontWeight: FontWeight.w900, color: _pinBrown),
         ),
@@ -284,7 +285,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: <Color>[Color(0xFF8A5300), Color(0xFFB87516)],
+          colors: <Color>[Color(0xFF6E481F), Color(0xFFB87516)],
         ),
         borderRadius: BorderRadius.circular(21),
       ),
@@ -308,7 +309,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   !_hasPin
                       ? 'Aktifkan keamanan AyoPay'
                       : locked
@@ -321,7 +322,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   !_hasPin
                       ? 'PIN 6 digit akan melindungi pencairan saldo dan perubahan rekening.'
                       : locked
@@ -335,7 +336,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
                 ),
                 if (_hasPin && _pinChangedAt != null) ...<Widget>[
                   const SizedBox(height: 6),
-                  Text(
+                  AyoText(
                     'Terakhir diubah ${_formatDate(_pinChangedAt!)}',
                     style: const TextStyle(color: Colors.white60, fontSize: 10.5),
                   ),
@@ -358,7 +359,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFEEDFD5)),
       ),
@@ -367,26 +368,26 @@ class _WalletPinPageState extends State<WalletPinPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
+            AyoText(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
                 color: _pinBrown,
               ),
             ),
             const SizedBox(height: 6),
-            Text(
+            AyoText(
               _forgotMode
                   ? 'Masukkan password akun untuk memverifikasi identitas. Reset dengan password tersedia untuk akun email/password.'
                   : 'Jangan gunakan PIN yang mudah ditebak seperti 123456 atau tanggal lahir.',
-              style: const TextStyle(fontSize: 11.5, height: 1.45, color: Colors.black54),
+              style: TextStyle(fontSize: 11.5, height: 1.45, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 15),
             if (_hasPin && !_forgotMode)
               _pinField(
                 controller: _currentPinController,
-                label: 'PIN saat ini',
+                label: AyoI18n.t('PIN saat ini'),
               ),
             if (_forgotMode)
               TextFormField(
@@ -396,15 +397,15 @@ class _WalletPinPageState extends State<WalletPinPage> {
                 validator: (String? value) => (value ?? '').isEmpty
                     ? 'Password akun wajib diisi.'
                     : null,
-                decoration: _decoration('Password akun'),
+                decoration: _decoration(AyoI18n.t('Password akun')),
               ),
             if ((_hasPin && !_forgotMode) || _forgotMode)
               const SizedBox(height: 12),
-            _pinField(controller: _newPinController, label: 'PIN baru'),
+            _pinField(controller: _newPinController, label: AyoI18n.t('PIN baru')),
             const SizedBox(height: 12),
             _pinField(
               controller: _confirmPinController,
-              label: 'Ulangi PIN baru',
+              label: AyoI18n.t('Ulangi PIN baru'),
             ),
             const SizedBox(height: 17),
             SizedBox(
@@ -428,7 +429,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
                         ),
                       )
                     : const Icon(Icons.shield_rounded),
-                label: Text(
+                label: AyoText(
                   !_hasPin
                       ? 'Aktifkan PIN'
                       : _forgotMode
@@ -454,7 +455,7 @@ class _WalletPinPageState extends State<WalletPinPage> {
                             _passwordController.clear();
                           });
                         },
-                  child: Text(
+                  child: AyoText(
                     _forgotMode ? 'Kembali ke Ubah PIN' : 'Lupa PIN?',
                     style: const TextStyle(
                       decoration: TextDecoration.underline,
@@ -482,14 +483,15 @@ class _WalletPinPageState extends State<WalletPinPage> {
   }
 
   InputDecoration _decoration(String label) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: const Color(0xFFFFFBF7),
+      fillColor: colors.surfaceContainerHighest,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE9DDD6)),
+        borderSide: BorderSide(color: colors.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

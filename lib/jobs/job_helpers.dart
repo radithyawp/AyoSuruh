@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-const Color jobBackgroundColor = Color(0xFFFFFAF7);
-const Color jobBrownColor = Color(0xFF9A5B00);
-const Color jobDarkBrownColor = Color(0xFF6F4300);
-const Color jobOrangeColor = Color(0xFFF6990E);
-const Color jobGreenColor = Color(0xFF5C704B);
-const Color jobCardColor = Color(0xFFFFFFFF);
-const Color jobBorderColor = Color(0xFFE9DDD6);
+import '../theme/ayo_theme.dart';
+import '../settings/app_settings.dart';
+
+Color get jobBackgroundColor => AppSettingsController.instance.isDarkMode
+    ? AyoDarkColors.canvas
+    : AyoColors.canvas;
+Color get jobBrownColor => AppSettingsController.instance.isDarkMode
+    ? AyoDarkColors.warm
+    : AyoColors.brown;
+Color get jobDarkBrownColor => AppSettingsController.instance.isDarkMode
+    ? AyoDarkColors.onSurface
+    : AyoColors.brownDark;
+const Color jobOrangeColor = AyoColors.orange;
+Color get jobGreenColor => AppSettingsController.instance.isDarkMode
+    ? AyoColors.green
+    : AyoColors.greenDark;
+Color get jobCardColor => AppSettingsController.instance.isDarkMode
+    ? AyoDarkColors.surface
+    : AyoColors.surface;
+Color get jobBorderColor => AppSettingsController.instance.isDarkMode
+    ? AyoDarkColors.border
+    : AyoColors.border;
 
 final NumberFormat _rupiahFormatter = NumberFormat.currency(
   locale: 'id_ID',
@@ -38,12 +53,30 @@ const List<String> _indonesianMonths = <String>[
   'Des',
 ];
 
+const List<String> _englishMonths = <String>[
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 String formatJobDate(dynamic value) {
   if (value == null || value.toString().isEmpty) return '-';
   try {
     final DateTime date = DateTime.parse(value.toString()).toLocal();
+    final List<String> months = AppSettingsController.instance.isEnglish
+        ? _englishMonths
+        : _indonesianMonths;
     return '${date.day.toString().padLeft(2, '0')} '
-        '${_indonesianMonths[date.month - 1]} ${date.year}';
+        '${months[date.month - 1]} ${date.year}';
   } catch (_) {
     return value.toString();
   }
@@ -90,37 +123,49 @@ String jobStatusLabel(dynamic status) {
 }
 
 Color jobStatusBackground(dynamic status) {
+  Color light;
   switch (status?.toString()) {
     case 'posted':
     case 'waiting_bid':
-      return const Color(0xFFFFDAD5);
+      light = const Color(0xFFFFDAD5);
+      break;
     case 'accepted':
-      return const Color(0xFFFFE5B5);
+      light = const Color(0xFFFFE5B5);
+      break;
     case 'on_progress':
-      return const Color(0xFFD9EDCB);
+      light = const Color(0xFFD9EDCB);
+      break;
     case 'completed':
-      return const Color(0xFFD4EDC1);
+      light = const Color(0xFFD4EDC1);
+      break;
     case 'cancelled':
-      return const Color(0xFFFFD8D4);
+      light = const Color(0xFFFFD8D4);
+      break;
     default:
-      return const Color(0xFFEDE7E2);
+      light = const Color(0xFFEDE7E2);
   }
+  if (!AppSettingsController.instance.isDarkMode) return light;
+  return Color.alphaBlend(
+    light.withValues(alpha: 0.18),
+    AyoDarkColors.surfaceRaised,
+  );
 }
 
 Color jobStatusForeground(dynamic status) {
+  final bool dark = AppSettingsController.instance.isDarkMode;
   switch (status?.toString()) {
     case 'posted':
     case 'waiting_bid':
-      return const Color(0xFFB64A3D);
+      return dark ? const Color(0xFFFFA79D) : const Color(0xFFB64A3D);
     case 'accepted':
-      return const Color(0xFF8A5600);
+      return dark ? const Color(0xFFFFCC76) : const Color(0xFF8A5600);
     case 'on_progress':
     case 'completed':
-      return const Color(0xFF4F6B3E);
+      return dark ? const Color(0xFFC6E8B5) : const Color(0xFF4F6B3E);
     case 'cancelled':
-      return const Color(0xFFB83B32);
+      return dark ? const Color(0xFFFFA39B) : const Color(0xFFB83B32);
     default:
-      return const Color(0xFF62564D);
+      return dark ? AyoDarkColors.muted : const Color(0xFF62564D);
   }
 }
 
@@ -270,30 +315,37 @@ String? categoryImageAsset(String value) {
 
 Color categoryBackground(String value) {
   final String category = value.toLowerCase();
+  Color accent;
   if (category.contains('elektronik') || category.contains('administrasi')) {
-    return const Color(0xFFFFE9C9);
-  }
-  if (category.contains('antar') ||
+    accent = const Color(0xFFFFE9C9);
+  } else if (category.contains('antar') ||
       category.contains('kurir') ||
       category.contains('kost')) {
-    return const Color(0xFFE8F3DF);
-  }
-  if (category.contains('jasa titip') ||
+    accent = const Color(0xFFE8F3DF);
+  } else if (category.contains('jasa titip') ||
       category.contains('design') ||
       category.contains('coding')) {
-    return const Color(0xFFFFE3E0);
-  }
-  if (category.contains('rumah tangga') ||
+    accent = const Color(0xFFFFE3E0);
+  } else if (category.contains('rumah tangga') ||
       category.contains('otomotif') ||
       category.contains('tukang')) {
-    return const Color(0xFFFFEDCC);
-  }
-  if (category.contains('gaya hidup') ||
+    accent = const Color(0xFFFFEDCC);
+  } else if (category.contains('gaya hidup') ||
       category.contains('konsultasi') ||
       category.contains('wellness')) {
-    return const Color(0xFFE8F3DF);
+    accent = const Color(0xFFE8F3DF);
+  } else {
+    accent = const Color(0xFFF2ECE7);
   }
-  return const Color(0xFFF2ECE7);
+
+  if (!AppSettingsController.instance.isDarkMode) return accent;
+  // Keep category identity without placing a bright pastel tile on a dark UI.
+  // The translucent tint is blended over the raised dark surface so icons and
+  // labels preserve contrast across Home, Jobs and marketplace cards.
+  return Color.alphaBlend(
+    accent.withValues(alpha: 0.13),
+    AyoDarkColors.surfaceRaised,
+  );
 }
 
 const String jobWorkModeRemote = 'remote';
@@ -315,7 +367,6 @@ String defaultJobWorkModeForCategory(String value) {
   }
   if (category.contains('antar-jemput') ||
       category.contains('jasa titip') ||
-      category.contains('kost') ||
       category.contains('kurir')) {
     return jobWorkModeMobile;
   }
@@ -330,6 +381,57 @@ String jobWorkMode(Map<String, dynamic> job) {
 
 bool jobNeedsPhysicalLocation(Map<String, dynamic> job) {
   return jobWorkMode(job) != jobWorkModeRemote;
+}
+
+bool jobNeedsRouteEndpoints(Map<String, dynamic> job) {
+  return jobWorkMode(job) == jobWorkModeMobile;
+}
+
+bool workModeNeedsRouteEndpoints(String mode) {
+  return mode.trim().toLowerCase() == jobWorkModeMobile;
+}
+
+String jobOriginLabel(Map<String, dynamic> job) {
+  final String category = categoryName(job).trim().toLowerCase();
+  if (category.contains('antar-jemput')) return 'Titik Jemput';
+  if (category.contains('jasa titip')) return 'Lokasi Pembelian / Pengambilan';
+  if (category.contains('kurir')) return 'Titik Pengambilan';
+  return 'Titik Awal';
+}
+
+String jobDestinationLabel(Map<String, dynamic> job) {
+  final String category = categoryName(job).trim().toLowerCase();
+  if (category.contains('antar-jemput')) return 'Tujuan Antar';
+  if (category.contains('jasa titip')) return 'Titik Penyerahan';
+  if (category.contains('kurir')) return 'Titik Pengantaran';
+  return 'Titik Tujuan';
+}
+
+String jobOriginLabelForCategory(String categoryNameValue) {
+  return jobOriginLabel(<String, dynamic>{
+    'categories': <String, dynamic>{'name': categoryNameValue},
+    'work_mode': jobWorkModeMobile,
+  });
+}
+
+String jobDestinationLabelForCategory(String categoryNameValue) {
+  return jobDestinationLabel(<String, dynamic>{
+    'categories': <String, dynamic>{'name': categoryNameValue},
+    'work_mode': jobWorkModeMobile,
+  });
+}
+
+String jobDestinationAddress(Map<String, dynamic> job) {
+  final dynamic destination = job['destination_address'];
+  if (destination is Map && destination['address'] != null) {
+    final String value = destination['address'].toString().trim();
+    if (value.isNotEmpty) return value;
+  }
+  final dynamic direct = job['destination_address_text'];
+  if (direct != null && direct.toString().trim().isNotEmpty) {
+    return direct.toString().trim();
+  }
+  return 'Tujuan belum tersedia';
 }
 
 String jobWorkModeLabel(String mode) {
@@ -459,7 +561,7 @@ String jobProgressLabelFor(Map<String, dynamic> job, String? stage) {
         case 'arrived':
           return 'Tiba di Lokasi';
         case 'working':
-          return 'Pesanan Diproses';
+          return 'Menuju Titik Penyerahan';
         case 'completion_submitted':
           return 'Jasa Titip Selesai';
       }
@@ -482,7 +584,7 @@ String jobProgressLabelFor(Map<String, dynamic> job, String? stage) {
       case 'arrived':
         return 'Tiba di Titik Awal';
       case 'working':
-        return 'Pekerjaan Berlangsung';
+        return 'Menuju Titik Tujuan';
       case 'completion_submitted':
         return 'Pekerjaan Selesai';
     }
@@ -551,7 +653,7 @@ String jobProgressDescriptionFor(Map<String, dynamic> job, String stage) {
         case 'arrived':
           return 'Mitra sudah tiba di lokasi pembelian.';
         case 'working':
-          return 'Pesanan titipan sedang diproses.';
+          return 'Barang titipan sudah diproses dan Mitra sedang menuju titik penyerahan.';
         case 'completion_submitted':
           return 'Jasa titip telah selesai dan menunggu konfirmasi Customer.';
       }

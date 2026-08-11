@@ -2,26 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'help_center.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class KebijakanPage extends StatelessWidget {
   const KebijakanPage({super.key});
 
-  static const Color _primaryBrown = Color(0xFF8B5A2B);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _primaryBrown => AyoAdaptiveColors.brown;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _primaryBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: _primaryBrown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Kebijakan Privasi',
           style: TextStyle(
             color: _primaryBrown,
@@ -38,10 +39,12 @@ class KebijakanPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFE7C1),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  : const Color(0xFFFFE7C1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Icon(
@@ -54,7 +57,7 @@ class KebijakanPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
+                      AyoText(
                         'Privasi pengguna adalah bagian dari layanan',
                         style: TextStyle(
                           fontSize: 16,
@@ -63,8 +66,8 @@ class KebijakanPage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 5),
-                      Text(
-                        'Pembaruan terakhir: 9 Agustus 2026.',
+                      AyoText(
+                        AyoI18n.isEnglish ? 'Last updated: 12 August 2026.' : 'Pembaruan terakhir: 12 Agustus 2026.',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF765638),
@@ -77,11 +80,12 @@ class KebijakanPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          const _PrivacySection(
+          _PrivacySection(
             number: '1',
-            title: 'Data yang Kami Kumpulkan',
-            body:
-                'Ayo Suruh dapat memproses nama, email, nomor telepon, alamat profil, foto profil, data autentikasi, serta informasi lain yang Anda berikan ketika menggunakan aplikasi. Untuk calon mitra, data dapat mencakup selfie dan dokumen pendaftaran yang diperlukan untuk proses verifikasi.',
+            title: AyoI18n.isEnglish ? 'Data We Collect' : 'Data yang Kami Kumpulkan',
+            body: AyoI18n.isEnglish
+                ? 'Ayo Suruh may process your name, email, phone number, profile address, profile photo, authentication data, and other information you provide while using the app. For Partner applicants in the current UPI-student scope, verification data includes a UPI Student Card (KTM) to confirm student eligibility, a selected legal photo ID such as KTP, SIM, Passport, KITAS/KITAP, or another valid photo identity document, and a verification selfie taken with the front camera. These documents are used for manual administrative verification; this flow does not perform automated facial recognition.'
+                : 'Ayo Suruh dapat memproses nama, email, nomor telepon, alamat profil, foto profil, data autentikasi, serta informasi lain yang Anda berikan ketika menggunakan aplikasi. Untuk calon Mitra dalam cakupan mahasiswa UPI saat ini, data verifikasi mencakup KTM UPI untuk memastikan status mahasiswa, identitas legal berfoto yang dipilih seperti KTP, SIM, Paspor, KITAS/KITAP, atau identitas sah lain, serta selfie verifikasi yang diambil dengan kamera depan. Dokumen tersebut digunakan untuk pemeriksaan administratif secara manual; alur ini tidak menggunakan pengenalan wajah otomatis.',
           ),
           const _PrivacySection(
             number: '2',
@@ -107,11 +111,12 @@ class KebijakanPage extends StatelessWidget {
             body:
                 'Pesan yang dikirim melalui fitur chat dan informasi yang diberikan kepada Pusat Dukungan dapat diproses untuk menjalankan pekerjaan, menyelesaikan kendala, mencegah penyalahgunaan, dan meningkatkan kualitas layanan.',
           ),
-          const _PrivacySection(
+          _PrivacySection(
             number: '6',
             title: 'Tujuan Penggunaan Data',
-            body:
-                'Data digunakan untuk menyediakan fitur aplikasi, mencocokkan kebutuhan customer dengan mitra, memproses transaksi, memverifikasi akun, menampilkan riwayat, meningkatkan keamanan, memberi dukungan, melakukan evaluasi produk, dan memenuhi kebutuhan operasional yang relevan.',
+            body: AyoI18n.isEnglish
+                ? 'Data is used to provide app features, match Customer needs with Partners, process transactions, verify accounts and current UPI-student Partner eligibility, display history, improve security, provide support, evaluate the product, and meet relevant operational needs. Verification documents are used only for the stated verification purpose and access should be limited to authorized administrative review.'
+                : 'Data digunakan untuk menyediakan fitur aplikasi, mencocokkan kebutuhan Customer dengan Mitra, memproses transaksi, memverifikasi akun dan eligibility Mitra sebagai mahasiswa UPI pada cakupan saat ini, menampilkan riwayat, meningkatkan keamanan, memberi dukungan, melakukan evaluasi produk, dan memenuhi kebutuhan operasional yang relevan. Dokumen verifikasi digunakan untuk tujuan verifikasi yang telah dijelaskan dan aksesnya dibatasi untuk pemeriksaan administratif yang berwenang.',
           ),
           const _PrivacySection(
             number: '7',
@@ -141,7 +146,9 @@ class KebijakanPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFFE7F1DE),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  : const Color(0xFFE7F1DE),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
@@ -152,7 +159,7 @@ class KebijakanPage extends StatelessWidget {
                   size: 30,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                const AyoText(
                   'Ada pertanyaan tentang data atau privasi?',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.w800),
@@ -167,14 +174,14 @@ class KebijakanPage extends StatelessWidget {
                     backgroundColor: const Color(0xFF536E44),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Hubungi Kami'),
+                  child: const AyoText('Hubungi Kami'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Kebijakan ini dapat diperbarui untuk menyesuaikan perubahan layanan, keamanan, regulasi, atau mitra pihak ketiga. Perubahan material akan diinformasikan melalui aplikasi atau kanal resmi Ayo Suruh.',
+          AyoText(
+            AyoI18n.isEnglish ? 'This policy may be updated to reflect changes in services, security, regulations, or third-party providers. Material changes will be announced through the app or Ayo Suruh official channels.' : 'Kebijakan ini dapat diperbarui untuk menyesuaikan perubahan layanan, keamanan, regulasi, atau mitra pihak ketiga. Perubahan material akan diinformasikan melalui aplikasi atau kanal resmi Ayo Suruh.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 10.5,
@@ -210,13 +217,15 @@ class _PrivacySection extends StatelessWidget {
             width: 30,
             height: 30,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFE7C1),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  : const Color(0xFFFFE7C1),
               shape: BoxShape.circle,
             ),
-            child: Text(
+            child: AyoText(
               number,
-              style: const TextStyle(
+              style: TextStyle(
                 color: KebijakanPage._primaryBrown,
                 fontWeight: FontWeight.w900,
                 fontSize: 12,
@@ -228,7 +237,7 @@ class _PrivacySection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   title,
                   style: const TextStyle(
                     fontSize: 14,
@@ -237,7 +246,7 @@ class _PrivacySection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   body,
                   textAlign: TextAlign.justify,
                   style: const TextStyle(

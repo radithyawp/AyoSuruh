@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/ayo_theme.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 enum AyoSnackType { success, error, info }
 
@@ -79,9 +79,11 @@ abstract final class AyoSnackBar {
         icon = Icons.info_outline_rounded;
         break;
       case AyoSnackType.success:
-        background = Colors.white;
-        foreground = AyoColors.brownDark;
-        iconBackground = const Color(0xFFFFF1E7);
+        background = Theme.of(context).colorScheme.surface;
+        foreground = Theme.of(context).colorScheme.onSurface;
+        iconBackground = Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF3A2B24)
+            : const Color(0xFFFFF1E7);
         icon = Icons.check_circle_outline_rounded;
         break;
     }
@@ -118,7 +120,7 @@ abstract final class AyoSnackBar {
               ),
               const SizedBox(width: 11),
               Expanded(
-                child: Text(
+                child: AyoText(
                   message,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: foreground,
@@ -139,7 +141,7 @@ abstract final class AyoSnackBar {
                     messenger.hideCurrentSnackBar();
                     onAction();
                   },
-                  child: Text(
+                  child: AyoText(
                     actionLabel,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
@@ -149,7 +151,7 @@ abstract final class AyoSnackBar {
                 ),
               ],
               IconButton(
-                tooltip: 'Tutup',
+                tooltip: AyoI18n.t('Tutup'),
                 visualDensity: VisualDensity.compact,
                 onPressed: () => messenger.hideCurrentSnackBar(),
                 icon: Icon(Icons.close_rounded, color: foreground, size: 19),

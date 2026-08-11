@@ -15,6 +15,7 @@ import 'register.dart';
 import 'theme/ayo_theme.dart';
 import 'widgets/ayo_pressable.dart';
 import 'widgets/ayo_snackbar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.initialEmail, this.noticeMessage});
@@ -222,12 +223,12 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFF6990E); // Orange Tombol & Aksen
-    const titleColor = Color(0xFF6E481F); // Cokelat Judul & Link
-    const inputBgColor = Color(0xFFFFFBF8); // Background Textfield
+    const Color primaryColor = Color(0xFFF6990E); // Orange Tombol & Aksen
+    final Color titleColor = AyoAdaptiveColors.brown;
+    final Color inputBgColor = AyoAdaptiveColors.surfaceRaised;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFAF7),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Latar Belakang Dekoratif Bawah (Wave/Curve)
@@ -237,9 +238,11 @@ class _LoginPageState extends State<LoginPage> {
             right: 0,
             child: Container(
               height: 100,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8EFEA),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(100)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.surface
+                    : const Color(0xFFF8EFEA),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(100)),
               ),
             ),
           ),
@@ -264,7 +267,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    AyoText(
                       'Ayo Suruh',
                       style: TextStyle(
                         fontSize: 26,
@@ -273,7 +276,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    AyoText(
                       'Butuh bantuan? Ayo suruh kami!',
                       style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
@@ -283,7 +286,7 @@ class _LoginPageState extends State<LoginPage> {
                     Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -299,13 +302,13 @@ class _LoginPageState extends State<LoginPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Judul Card
-                            const Center(
-                              child: Text(
+                            Center(
+                              child: AyoText(
                                 'Masuk ke Akun',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -316,7 +319,7 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 6),
                             _buildTextField(
                               controller: _emailCtrl,
-                              hintText: 'nama@email.com',
+                              hintText: AyoI18n.t('nama@email.com'),
                               icon: Icons.email_outlined,
                               bgColor: inputBgColor,
                               keyboardType: TextInputType.emailAddress,
@@ -352,7 +355,7 @@ class _LoginPageState extends State<LoginPage> {
                                             ),
                                           );
                                         },
-                                  child: Text(
+                                  child: AyoText(
                                     'Lupa Password?',
                                     style: AyoTypography.link(
                                       context,
@@ -365,7 +368,7 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 6),
                             _buildTextField(
                               controller: _passCtrl,
-                              hintText: '••••••••',
+                              hintText: AyoI18n.t('••••••••'),
                               icon: Icons.lock_outline_rounded,
                               bgColor: inputBgColor,
                               obscureText: _obscurePassword,
@@ -417,7 +420,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 const Expanded(
-                                  child: Text(
+                                  child: AyoText(
                                     'Ingat saya di perangkat ini',
                                     style: TextStyle(
                                       fontSize: 12,
@@ -456,7 +459,7 @@ class _LoginPageState extends State<LoginPage> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Text(
+                                          AyoText(
                                             'Masuk',
                                             style: TextStyle(
                                               fontSize: 15,
@@ -484,7 +487,7 @@ class _LoginPageState extends State<LoginPage> {
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                   ),
-                                  child: Text(
+                                  child: AyoText(
                                     'atau',
                                     style: TextStyle(
                                       fontSize: 12,
@@ -514,20 +517,31 @@ class _LoginPageState extends State<LoginPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Image.network(
-                                      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png',
+                                    Image.asset(
+                                      'assets/images/google_g.png',
                                       height: 18,
-                                      errorBuilder: (_, _, _) => const Icon(
-                                        Icons.g_mobiledata,
-                                        color: Colors.red,
-                                        size: 24,
+                                      width: 18,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: Center(
+                                          child: Text(
+                                            'G',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF4285F4),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Text(
+                                    AyoText(
                                       'Masuk dengan Google',
                                       style: TextStyle(
-                                        color: Colors.black87,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -547,7 +561,7 @@ class _LoginPageState extends State<LoginPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        AyoText(
                           'Belum punya akun? ',
                           style: TextStyle(
                             fontSize: 13,
@@ -565,7 +579,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             );
                           },
-                          child: Text(
+                          child: AyoText(
                             'Daftar',
                             style: AyoTypography.link(
                               context,
@@ -588,12 +602,12 @@ class _LoginPageState extends State<LoginPage> {
 
   /* ---------- HELPER WIDGETS ---------- */
   Widget _buildLabel(String text) {
-    return Text(
+    return AyoText(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: Colors.black87,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -637,7 +651,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFF39C12), width: 1.2),
+          borderSide: const BorderSide(color: Color(0xFFF6990E), width: 1.2),
         ),
       ),
     );

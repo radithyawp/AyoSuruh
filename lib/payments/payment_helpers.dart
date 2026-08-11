@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../theme/ayo_theme.dart';
 
-const Color paymentOrange = Color(0xFFFF9800);
-const Color paymentBrown = Color(0xFF8A5300);
-const Color paymentDarkBrown = Color(0xFF583600);
+const Color paymentOrange = Color(0xFFF6990E);
+Color get paymentBrown => AyoAdaptiveColors.brown;
+Color get paymentDarkBrown => AyoAdaptiveColors.brownDark;
 const Color paymentGreen = Color(0xFF5E774F);
-const Color paymentBackground = Color(0xFFFFF9FC);
-const Color paymentBorder = Color(0xFFEAD8CB);
+Color get paymentBackground => AyoAdaptiveColors.canvas;
+Color get paymentBorder => AyoAdaptiveColors.border;
 
 String paymentProvider(Map<String, dynamic>? payment) {
   return (payment?['provider'] ?? '').toString().trim().toLowerCase();

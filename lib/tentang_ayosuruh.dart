@@ -1,29 +1,31 @@
 import 'package:flutter/material.dart';
-import 'widgets/ayo_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'kebijakan.dart';
 import 'syarat_ketentuan.dart';
 import 'widgets/home_shortcut_button.dart';
 import 'theme/ayo_theme.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class TentangAyoSuruhPage extends StatelessWidget {
   const TentangAyoSuruhPage({super.key});
 
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _brown => AyoAdaptiveColors.brown;
 
   Future<void> _openUrl(BuildContext context, String value) async {
     final Uri uri = Uri.parse(value);
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
           context.mounted) {
-        AyoSnackBar.error(context, 'Tautan belum dapat dibuka.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: AyoText('Tautan belum dapat dibuka.')),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        AyoSnackBar.error(context, 'Gagal membuka aplikasi tujuan.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: AyoText('Gagal membuka aplikasi tujuan.')),
+        );
       }
     }
   }
@@ -31,16 +33,16 @@ class TentangAyoSuruhPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Tentang Ayo Suruh',
           style: TextStyle(
             color: _brown,
@@ -54,9 +56,11 @@ class TentangAyoSuruhPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
         children: <Widget>[
-          _buildAppLogoSection(),
+          _buildAppLogoSection(context),
           const SizedBox(height: 20),
           _buildMissionCard(),
+          const SizedBox(height: 14),
+          _buildAyosMascotCard(context),
           const SizedBox(height: 14),
           _featureCard(
             icon: Icons.volunteer_activism_outlined,
@@ -82,7 +86,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
             background: const Color(0xFFFFE9E3),
           ),
           const SizedBox(height: 22),
-          const Text(
+          const AyoText(
             'Kanal Resmi',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
@@ -99,6 +103,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
           ),
           _socialTile(
             context,
+            assetPath: 'assets/images/instagram.png',
             icon: Icons.camera_alt_outlined,
             title: 'Instagram',
             subtitle: '@ayo.suruh',
@@ -109,6 +114,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
           ),
           _socialTile(
             context,
+            assetPath: 'assets/images/whatsapp.png',
             icon: Icons.chat_bubble_outline_rounded,
             title: 'WhatsApp Business',
             subtitle: '+62 889-5255-693',
@@ -118,8 +124,8 @@ class TentangAyoSuruhPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            '© 2026 Ayo Suruh. Semua hak dilindungi.',
+          const AyoText(
+            '© 2026 Ayo Suruh. Dikembangkan sebagai proyek kewirausahaan Teknik Komputer UPI Kampus Cibiru.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF776C65)),
           ),
@@ -142,9 +148,9 @@ class TentangAyoSuruhPage extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: const Text('Ketentuan Layanan'),
+                child: const AyoText('Ketentuan Layanan'),
               ),
-              const Text('•', style: TextStyle(color: _brown)),
+              AyoText('•', style: TextStyle(color: _brown)),
               TextButton(
                 onPressed: () => Navigator.push<void>(
                   context,
@@ -156,7 +162,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: const Text('Kebijakan Privasi'),
+                child: const AyoText('Kebijakan Privasi'),
               ),
             ],
           ),
@@ -165,7 +171,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAppLogoSection() {
+  Widget _buildAppLogoSection(BuildContext context) {
     return Column(
       children: <Widget>[
         Container(
@@ -173,7 +179,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
           height: 112,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(26),
             boxShadow: const <BoxShadow>[
               BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, 5)),
@@ -182,18 +188,13 @@ class TentangAyoSuruhPage extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.asset(
-              'assets/images/logo.jpeg',
+              'assets/images/logo_ayo_suruh_transparent.png',
               fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.directions_run_rounded,
-                size: 60,
-                color: _orange,
-              ),
             ),
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        AyoText(
           'Ayo Suruh',
           style: TextStyle(
             fontSize: 24,
@@ -202,11 +203,58 @@ class TentangAyoSuruhPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        const Text(
-          'Versi 1.0.0 · 2026',
+        const AyoText(
+          'Versi 1.0.0',
           style: TextStyle(fontSize: 11.5, color: Color(0xFF776C65)),
         ),
       ],
+    );
+  }
+
+
+  Widget _buildAyosMascotCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFECE1DA)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AyoText(
+                  'Siap bantu kebutuhan harianmu',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    color: _brown,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                AyoText(
+                  'AYOS hadir sebagai maskot yang menemani pencarian jasa, percakapan, dan transaksi supaya pengalaman memakai Ayo Suruh terasa lebih ramah dan menyenangkan.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Image.asset(
+            'assets/images/ayos/ayos_hello.png',
+            width: 94,
+            height: 94,
+            fit: BoxFit.contain,
+          ),
+        ],
+      ),
     );
   }
 
@@ -220,10 +268,10 @@ class TentangAyoSuruhPage extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             'MISI KAMI',
             style: TextStyle(
               fontSize: 11,
@@ -233,7 +281,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8),
-          Text(
+          AyoText(
             'Ayo Suruh hadir sebagai platform jasa berbasis komunitas yang mempertemukan kebutuhan sehari-hari customer dengan kemampuan mitra lokal. Kami ingin membuat proses mencari bantuan, berkomunikasi, bertransaksi, dan menyelesaikan pekerjaan menjadi lebih praktis dalam satu aplikasi.',
             textAlign: TextAlign.justify,
             style: TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF5F5148)),
@@ -244,7 +292,7 @@ class TentangAyoSuruhPage extends StatelessWidget {
   }
 
   Widget _featureCard({
-    required IconData icon,
+    IconData? icon,
     required String title,
     required String description,
     required Color background,
@@ -272,12 +320,12 @@ class TentangAyoSuruhPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   title,
                   style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AyoText(
                   description,
                   style: const TextStyle(fontSize: 11.8, height: 1.4, color: Color(0xFF695D56)),
                 ),
@@ -291,7 +339,8 @@ class TentangAyoSuruhPage extends StatelessWidget {
 
   Widget _socialTile(
     BuildContext context, {
-    required IconData icon,
+    IconData? icon,
+    String? assetPath,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -300,16 +349,31 @@ class TentangAyoSuruhPage extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFECE1DA)),
       ),
       child: ListTile(
         enabled: enabled,
         onTap: enabled ? onTap : null,
-        leading: Icon(icon, color: enabled ? _brown : Colors.grey),
-        title: Text(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-        subtitle: Text(
+        leading: assetPath != null
+            ? SizedBox(
+                width: 28,
+                height: 28,
+                child: Image.asset(
+                  assetPath,
+                  fit: BoxFit.contain,
+                  color: enabled ? null : Colors.grey,
+                  colorBlendMode: enabled ? null : BlendMode.saturation,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    icon ?? Icons.open_in_new_rounded,
+                    color: enabled ? _brown : Colors.grey,
+                  ),
+                ),
+              )
+            : Icon(icon, color: enabled ? _brown : Colors.grey),
+        title: AyoText(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+        subtitle: AyoText(
           subtitle,
           style: enabled
               ? AyoTypography.link(context).copyWith(fontSize: 11)

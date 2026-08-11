@@ -4,6 +4,8 @@ import 'widgets/ayo_snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class EditPhotoProfilePage extends StatefulWidget {
   final Map<String, dynamic> userRow;
@@ -24,9 +26,8 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
   bool _isDeleted = false; // Flag untuk menandai jika foto dihapus
 
   // Color Palette Tema Ayo Suruh
-  static const Color _primaryOrange = Color(0xFFF39C12);
-  static const Color _brownColor = Color(0xFF8B5A2B);
-  static const Color _bgGrey = Color(0xFFFAF6F3);
+  static const Color _primaryOrange = Color(0xFFF6990E);
+  static Color get _brownColor => AyoAdaptiveColors.brown;
 
   @override
   void initState() {
@@ -66,7 +67,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -82,11 +83,11 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: _brownColor),
+                        icon: Icon(Icons.arrow_back_rounded, color: _brownColor),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      AyoText(
                         'Pilih Foto Profil',
                         style: TextStyle(
                           color: _brownColor,
@@ -128,7 +129,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(
+                  AyoText(
                     'Pratinjau Foto Profil Anda',
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
@@ -193,7 +194,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                           borderRadius: BorderRadius.circular(25),
                         ),
                       ),
-                      child: const Text(
+                      child: const AyoText(
                         'Terapkan',
                         style: TextStyle(
                           color: Colors.white,
@@ -222,7 +223,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
     required String subtitle,
     required VoidCallback onTap,
     Color cardBgColor = const Color(0xFFF8F9FA),
-    Color titleColor = Colors.black87,
+    Color? titleColor,
     Color? subtitleColor,
     Color? chevronColor,
   }) {
@@ -250,16 +251,16 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AyoText(
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
-                      color: titleColor,
+                      color: titleColor ?? Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  AyoText(
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
@@ -351,15 +352,15 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgGrey,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _brownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: _brownColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Edit Foto Profil',
           style: TextStyle(
             color: _brownColor,
@@ -386,7 +387,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
@@ -422,7 +423,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                       decoration: BoxDecoration(
                         color: _primaryOrange,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
+                        border: Border.all(color: Theme.of(context).colorScheme.surface, width: 3),
                       ),
                       child: const Icon(
                         Icons.camera_alt_rounded,
@@ -441,7 +442,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
               onPressed: _showPhotoOptionsSheet,
               icon: const Icon(Icons.photo_library_outlined,
                   size: 18, color: _primaryOrange),
-              label: const Text(
+              label: const AyoText(
                 'Ubah Foto Profil',
                 style: TextStyle(
                   color: _primaryOrange,
@@ -475,7 +476,7 @@ class _EditPhotoProfilePageState extends State<EditPhotoProfilePage> {
                           strokeWidth: 2.5,
                         ),
                       )
-                    : const Text(
+                    : const AyoText(
                         'Simpan Foto Profil',
                         style: TextStyle(
                           color: Colors.white,
