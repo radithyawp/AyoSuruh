@@ -84,6 +84,75 @@ class MitraServiceService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchFeaturedServices({
+    int limit = 6,
+  }) async {
+    final int safeLimit = limit.clamp(1, 12).toInt();
+    try {
+      final dynamic response = await _client.rpc('get_public_mitra_services');
+      if (response is List) {
+        final List<Map<String, dynamic>> rows = response
+            .whereType<Map>()
+            .take(safeLimit)
+            .map((Map raw) {
+              final Map<String, dynamic> row = Map<String, dynamic>.from(raw);
+              return <String, dynamic>{
+                'id': row['id'],
+                'mitra_id': row['mitra_id'],
+                'category_id': row['category_id'],
+                'title': row['title'],
+                'description': row['description'],
+                'starting_price': row['starting_price'],
+                'tags': row['tags'] ?? <String>[],
+                'is_bookmarked': row['is_bookmarked'] == true,
+                'is_active': true,
+                'created_at': row['created_at'],
+                'categories': <String, dynamic>{
+                  'id': row['category_id'],
+                  'name': row['category_name'],
+                  'icon': row['category_icon'],
+                },
+                'mitra': <String, dynamic>{
+                  'id': row['mitra_id'],
+                  'fullname': row['mitra_fullname'],
+                  'avatar_url': row['mitra_avatar_url'],
+                  'rating': row['mitra_rating'],
+                  'location': row['mitra_location'],
+                },
+              };
+            })
+            .toList();
+        return _attachImages(rows);
+      }
+      return <Map<String, dynamic>>[];
+    } on PostgrestException catch (error) {
+      final String lower = error.message.toLowerCase();
+      final bool rpcMissing =
+          error.code == 'PGRST202' || lower.contains('get_public_mitra_services');
+      if (!rpcMissing) rethrow;
+
+      try {
+        final dynamic result = await _client
+            .from('mitra_services')
+            .select('''
+              id, mitra_id, category_id, title, description, starting_price,
+              tags, is_active, created_at, updated_at,
+              categories(id, name, icon),
+              mitra:users!mitra_services_mitra_id_fkey(id, fullname, avatar_url)
+            ''')
+            .eq('is_active', true)
+            .order('created_at', ascending: false)
+            .limit(safeLimit);
+        return _attachImages(List<Map<String, dynamic>>.from(result as List));
+      } on PostgrestException catch (fallbackError) {
+        if (fallbackError.message.toLowerCase().contains('mitra_services')) {
+          return <Map<String, dynamic>>[];
+        }
+        rethrow;
+      }
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchMyServices() async {
     try {
       final dynamic result = await _client

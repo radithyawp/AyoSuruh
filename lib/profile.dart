@@ -459,16 +459,11 @@ class _ProfilePageState extends State<ProfilePage> {
       elevation: 0,
       title: Row(
         children: <Widget>[
-          Container(
+          SizedBox(
             width: 34,
             height: 34,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEFE1),
-              borderRadius: BorderRadius.circular(10),
-            ),
             child: Image.asset(
-              'assets/images/Logo_Ayo_Suruh.png',
+              'assets/images/ayos_runner_logo.png',
               fit: BoxFit.contain,
             ),
           ),
@@ -485,7 +480,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       actions: <Widget>[
         NotificationBell(
-          color: Colors.black87,
+          color: const Color(0xFFF6990E),
           size: 25,
           activeMode: widget.activeMode,
         ),

@@ -334,7 +334,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.ayosuruh',
+                      userAgentPackageName: 'com.ayosuruh.app',
                       maxNativeZoom: 19,
                     ),
                     if (_selectedPoint != null)

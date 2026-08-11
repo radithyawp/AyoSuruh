@@ -10,10 +10,12 @@ class JobPage extends StatefulWidget {
     super.key,
     this.role,
     this.tutorialKey,
+    this.tutorialPrimaryActionKey,
   });
 
   final String? role;
   final Key? tutorialKey;
+  final Key? tutorialPrimaryActionKey;
 
   @override
   State<JobPage> createState() => _JobPageState();
@@ -76,6 +78,9 @@ class _JobPageState extends State<JobPage> {
     }
     return _role == 'mitra'
         ? MitraJobsPage(tutorialKey: widget.tutorialKey)
-        : CustomerJobsPage(tutorialKey: widget.tutorialKey);
+        : CustomerJobsPage(
+            tutorialKey: widget.tutorialKey,
+            tutorialPrimaryActionKey: widget.tutorialPrimaryActionKey,
+          );
   }
 }

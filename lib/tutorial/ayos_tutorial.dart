@@ -9,28 +9,42 @@ import '../theme/ayo_theme.dart';
 /// Anchor yang dipasang pada UI asli Ayo Suruh.
 ///
 /// Tutorial tidak membuat mockup halaman. Spotlight selalu menunjuk widget yang
-/// benar-benar sedang digunakan user di Home, Jobs, Chat, dan Profile.
+/// benar-benar sedang digunakan user di Beranda, Pekerjaan, Chat, dan Profil.
 class AyosTutorialAnchors {
   final GlobalKey homeHeader = GlobalKey(debugLabel: 'tutorial-home-header');
-  final GlobalKey homeSearchOrIncome =
-      GlobalKey(debugLabel: 'tutorial-home-search-income');
-  final GlobalKey homePromoOrService =
-      GlobalKey(debugLabel: 'tutorial-home-promo-service');
-  final GlobalKey homeCategoriesOrActive =
-      GlobalKey(debugLabel: 'tutorial-home-categories-active');
-  final GlobalKey homePrimaryActionOrAvailable =
-      GlobalKey(debugLabel: 'tutorial-home-primary-available');
+  final GlobalKey homeSearchOrIncome = GlobalKey(
+    debugLabel: 'tutorial-home-search-income',
+  );
+  final GlobalKey homePromoOrService = GlobalKey(
+    debugLabel: 'tutorial-home-promo-service',
+  );
+  final GlobalKey homeTrivia = GlobalKey(debugLabel: 'tutorial-home-trivia');
+  final GlobalKey homeCategoriesOrActive = GlobalKey(
+    debugLabel: 'tutorial-home-categories-active',
+  );
+  final GlobalKey homePrimaryActionOrAvailable = GlobalKey(
+    debugLabel: 'tutorial-home-primary-available',
+  );
 
-  final GlobalKey jobsOverview =
-      GlobalKey(debugLabel: 'tutorial-jobs-overview');
-  final GlobalKey chatOverview =
-      GlobalKey(debugLabel: 'tutorial-chat-overview');
-  final GlobalKey profileHeader =
-      GlobalKey(debugLabel: 'tutorial-profile-header');
-  final GlobalKey profileMode =
-      GlobalKey(debugLabel: 'tutorial-profile-mode');
-  final GlobalKey profileFinance =
-      GlobalKey(debugLabel: 'tutorial-profile-finance');
+  final GlobalKey jobsOverview = GlobalKey(
+    debugLabel: 'tutorial-jobs-overview',
+  );
+  final GlobalKey jobsPrimaryAction = GlobalKey(
+    debugLabel: 'tutorial-jobs-primary-action',
+  );
+  final GlobalKey chatOverview = GlobalKey(
+    debugLabel: 'tutorial-chat-overview',
+  );
+  final GlobalKey chatFirstAction = GlobalKey(
+    debugLabel: 'tutorial-chat-first-action',
+  );
+  final GlobalKey profileHeader = GlobalKey(
+    debugLabel: 'tutorial-profile-header',
+  );
+  final GlobalKey profileMode = GlobalKey(debugLabel: 'tutorial-profile-mode');
+  final GlobalKey profileFinance = GlobalKey(
+    debugLabel: 'tutorial-profile-finance',
+  );
 
   final GlobalKey navHome = GlobalKey(debugLabel: 'tutorial-nav-home');
   final GlobalKey navJobs = GlobalKey(debugLabel: 'tutorial-nav-jobs');
@@ -43,7 +57,7 @@ class AyosTutorial {
 
   // Versi baru agar tester yang pernah melihat tutorial card v1 tetap dapat
   // mencoba walkthrough interaktif sekali. Setelah itu tersimpan per mode.
-  static const String _version = 'v2_interactive';
+  static const String _version = 'v3_release';
 
   /// Dipakai menu Pengaturan untuk meminta MainNavigation memutar tutorial
   /// lagi setelah route Pengaturan ditutup.
@@ -82,12 +96,7 @@ class AyosTutorial {
     required Future<void> Function(int index) onSelectTab,
   }) async {
     if (await hasSeen(mode) || !context.mounted) return;
-    await show(
-      context,
-      mode: mode,
-      anchors: anchors,
-      onSelectTab: onSelectTab,
-    );
+    await show(context, mode: mode, anchors: anchors, onSelectTab: onSelectTab);
   }
 
   /// Jika dipanggil dari MainNavigation, tutorial langsung berjalan di UI asli.
@@ -115,25 +124,27 @@ class AyosTutorial {
       barrierDismissible: false,
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (
-        BuildContext dialogContext,
-        Animation<double> animation,
-        Animation<double> secondaryAnimation,
-      ) {
-        return _AyosInteractiveTutorial(
-          mode: normalized,
-          anchors: anchors,
-          onSelectTab: onSelectTab,
-        );
-      },
-      transitionBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Animation<double> secondaryAnimation,
-        Widget child,
-      ) {
-        return FadeTransition(opacity: animation, child: child);
-      },
+      pageBuilder:
+          (
+            BuildContext dialogContext,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+          ) {
+            return _AyosInteractiveTutorial(
+              mode: normalized,
+              anchors: anchors,
+              onSelectTab: onSelectTab,
+            );
+          },
+      transitionBuilder:
+          (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+            Widget child,
+          ) {
+            return FadeTransition(opacity: animation, child: child);
+          },
     );
     await markSeen(normalized);
   }
@@ -192,278 +203,312 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
   }
 
   List<_TutorialStep> _customerSteps() => <_TutorialStep>[
-        _TutorialStep(
-          target: widget.anchors.homeHeader,
-          tabIndex: 0,
-          title: 'Halo! AYOS akan nemenin kamu 👋',
-          body:
-              'Di bagian ini kamu bisa melihat akun dan alamat utama. Alamat Home mengikuti profil, sedangkan lokasi tiap pekerjaan tetap bisa berbeda.',
-          assetPath: 'assets/images/ayos/ayos_hello.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homeSearchOrIncome,
-          tabIndex: 0,
-          title: 'Cari bantuan tanpa muter-muter',
-          body:
-              'Ketik layanan yang kamu butuhkan. Dari katalog, kamu juga bisa menemukan jasa yang dipublikasikan langsung oleh Mitra.',
-          assetPath: 'assets/images/ayos/ayos_play_phone.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homePromoOrService,
-          tabIndex: 0,
-          title: 'Banner bukan cuma pajangan',
-          body:
-              'Promo di Home bisa ditekan dan langsung membuka pembuatan pekerjaan dengan kategori yang relevan.',
-          assetPath: 'assets/images/ayos/ayos_announce.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homeCategoriesOrActive,
-          tabIndex: 0,
-          title: 'Pilih kategori layanan',
-          body:
-              'Gunakan kategori untuk mempercepat pembuatan pekerjaan. Tekan “Lihat semua” untuk membuka katalog lengkap.',
-          assetPath: 'assets/images/ayos/ayos_pointing_left.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homePrimaryActionOrAvailable,
-          tabIndex: 0,
-          title: 'Buat kebutuhanmu dari sini',
-          body:
-              'Tekan Buat Pekerjaan untuk menulis kebutuhan, memasang foto, menentukan lokasi, jadwal, dan budget sebelum menerima penawaran Mitra.',
-          assetPath: 'assets/images/ayos/ayos_board_task.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.navJobs,
-          tabIndex: 0,
-          title: 'Pindah ke Jobs dari navbar',
-          body:
-              'Navbar selalu siap di bagian bawah. Jobs adalah jalan cepat untuk kembali ke pekerjaan aktif maupun riwayat tanpa menumpuk halaman baru.',
-          assetPath: 'assets/images/ayos/ayos_pointing_left.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.jobsOverview,
-          tabIndex: 1,
-          title: 'Jobs = pusat pekerjaanmu',
-          body:
-              'Pantau pekerjaan aktif dan riwayat di sini. Penawaran, progres, konfirmasi selesai, dan rating semuanya berawal dari pekerjaan terkait.',
-          assetPath: 'assets/images/ayos/ayos_board_task.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.navChat,
-          tabIndex: 1,
-          title: 'Berikutnya: Chat',
-          body:
-              'Kalau perlu koordinasi, kamu tidak perlu mencari dari awal. Tab Chat mengumpulkan percakapan yang sudah terkait dengan pekerjaan.',
-          assetPath: 'assets/images/ayos/ayos_play_phone.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.chatOverview,
-          tabIndex: 2,
-          title: 'Koordinasi lewat Chat',
-          body:
-              'Setelah Customer memilih Mitra, percakapan terkait pekerjaan akan muncul di sini. Kamu bisa mencari chat berdasarkan nama atau pekerjaan.',
-          assetPath: 'assets/images/ayos/ayos_play_phone.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.navProfile,
-          tabIndex: 2,
-          title: 'Terakhir, buka Profile',
-          body:
-              'Profile bukan sekadar biodata. Dari tab ini kamu mengelola peran akun, keuangan, bantuan, keamanan, dan pengaturan aplikasi.',
-          assetPath: 'assets/images/ayos/ayos_idea.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileHeader,
-          tabIndex: 3,
-          title: 'Profile adalah pusat akunmu',
-          body:
-              'Kelola identitas, foto profil, bantuan, pengaturan, keamanan, dan fitur akun dari halaman Profile.',
-          assetPath: 'assets/images/ayos/ayos_idea.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileMode,
-          tabIndex: 3,
-          title: 'Satu akun, dua peran',
-          body:
-              'Kalau akunmu sudah terverifikasi sebagai Mitra, kamu bisa berpindah peran tanpa membuat akun baru.',
-          assetPath: 'assets/images/ayos/ayos_run.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileFinance,
-          tabIndex: 3,
-          title: 'Saldo & riwayat transaksi',
-          body:
-              'Area ini menjadi pintu untuk saldo AyoPay dan riwayat pembayaran Customer. Fitur uang tetap mengikuti flow pembayaran Ayo Suruh yang aktif.',
-          assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
-          preferAbove: true,
-        ),
-      ];
+    _TutorialStep(
+      target: widget.anchors.homeHeader,
+      tabIndex: 0,
+      title: 'Kenalan dulu sama Beranda 👋',
+      body:
+          'Di sini ada sapaan dan alamat utama akunmu. Tenang, lokasi tiap pekerjaan tetap bisa kamu atur sendiri saat bikin job.',
+      assetPath: 'assets/images/ayos/ayos_hello.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homeSearchOrIncome,
+      tabIndex: 0,
+      title: 'Butuh jasa? Cari dari sini',
+      body:
+          'Ketik yang lagi kamu butuhin, lalu pilih jasa Mitra yang paling cocok. Nggak perlu muter-muter cari dari menu lain.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homePromoOrService,
+      tabIndex: 0,
+      title: 'Banner-nya bisa ditekan',
+      body:
+          'Selain buat info, banner juga jadi pintasan ke fitur tertentu. Kalau penasaran, tinggal tap aja.',
+      assetPath: 'assets/images/ayos/ayos_announce.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homeTrivia,
+      tabIndex: 0,
+      title: 'Ada bacaan receh juga',
+      body:
+          'Bagian Sekilas bakal muterin trivia, fun fact, sampai info yang lagi rame. Lumayan buat nemenin scroll.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homeCategoriesOrActive,
+      tabIndex: 0,
+      title: 'Kalau udah tahu kategorinya, gas',
+      body:
+          'Pilih kategori biar pencarian jasa lebih cepat. Geser kalau mau lihat pilihan lainnya.',
+      assetPath: 'assets/images/ayos/ayos_pointing_left.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homePrimaryActionOrAvailable,
+      tabIndex: 0,
+      title: 'Jasa Mitra langsung nongol di Home',
+      body:
+          'Geser kartu jasanya, cek harga dan rating, lalu tap kalau mau lihat detail atau profil Mitranya.',
+      assetPath: 'assets/images/ayos/ayos_board_task.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.navJobs,
+      tabIndex: 0,
+      title: 'Urusan pekerjaan ada di sini',
+      body:
+          'Masuk ke Pekerjaan kalau mau bikin pekerjaan baru, cek yang masih aktif, lihat peluang, atau buka riwayat.',
+      assetPath: 'assets/images/ayos/ayos_pointing_left.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.jobsOverview,
+      tabIndex: 1,
+      title: 'Aktif, Peluang, sama Riwayat',
+      body:
+          'Aktif buat job yang lagi jalan, Peluang buat lihat pekerjaan terbuka, dan Riwayat buat yang sudah selesai atau dibatalkan.',
+      assetPath: 'assets/images/ayos/ayos_board_task.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.jobsPrimaryAction,
+      tabIndex: 1,
+      title: 'Mau nyuruh? Mulainya dari sini',
+      body:
+          'Tekan Buat Pekerjaan, isi kebutuhanmu, tentukan lokasi dan detailnya, lalu tunggu penawaran dari Mitra.',
+      assetPath: 'assets/images/ayos/ayos_run.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.navChat,
+      tabIndex: 1,
+      title: 'Kalau perlu ngobrol, buka Chat',
+      body:
+          'Semua percakapan sama Mitra bakal ngumpul di tab ini, jadi koordinasi nggak tercecer.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.chatOverview,
+      tabIndex: 2,
+      title: 'Cari chat tanpa scroll panjang',
+      body:
+          'Kalau percakapanmu udah banyak, cari aja pakai nama orang atau judul pekerjaannya.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.chatFirstAction,
+      tabIndex: 2,
+      title: 'Belum pernah chat? Mulai dari jasa',
+      body:
+          'Tap Mulai Chat Pertamamu. Kamu bakal dibawa ke katalog jasa Mitra, lalu bisa mulai ngobrol dari jasa yang dipilih.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.navProfile,
+      tabIndex: 2,
+      title: 'Terakhir, ada Profil',
+      body:
+          'Biodata, peran akun, saldo, bantuan, keamanan, dan pengaturan semuanya bisa kamu temuin dari sini.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileHeader,
+      tabIndex: 3,
+      title: 'Ini pusat akunmu',
+      body:
+          'Mau ganti foto, cek data akun, atau lanjut ke pengaturan? Mulainya dari halaman Profil.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileMode,
+      tabIndex: 3,
+      title: 'Satu akun bisa punya dua peran',
+      body:
+          'Kalau akunmu sudah jadi Mitra, kamu bisa pindah Customer ↔ Mitra kapan aja tanpa bikin akun baru.',
+      assetPath: 'assets/images/ayos/ayos_run.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileFinance,
+      tabIndex: 3,
+      title: 'AyoPay & transaksi ada di sini',
+      body:
+          'Cek saldo AyoPay dan riwayat pembayaran dari Profil. Pengaturan keamanan akun tetap ada di menu Pengaturan.',
+      assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
+      preferAbove: true,
+    ),
+  ];
 
   List<_TutorialStep> _mitraSteps() => <_TutorialStep>[
-        _TutorialStep(
-          target: widget.anchors.homeHeader,
-          tabIndex: 0,
-          title: 'Kenalan dengan area Mitra 👋',
-          body:
-              'AYOS akan tunjukin bagian yang paling sering kamu pakai untuk menerima pekerjaan dan mengelola jasa.',
-          assetPath: 'assets/images/ayos/ayos_hello.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homeSearchOrIncome,
-          tabIndex: 0,
-          title: 'Pantau pendapatanmu',
-          body:
-              'Ringkasan pendapatan memberi gambaran hasil pekerjaan yang sudah tercatat. Detail saldo tersedia, pending, dan ditahan ada di Dompet Mitra.',
-          assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homePromoOrService,
-          tabIndex: 0,
-          title: 'Jasa Saya = etalase Mitra',
-          body:
-              'Publikasikan keahlianmu di sini. Tambahkan cover dan foto katalog supaya Customer bisa melihat jasa yang kamu tawarkan.',
-          assetPath: 'assets/images/ayos/ayos_idea.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.homeCategoriesOrActive,
-          tabIndex: 0,
-          title: 'Pekerjaan Aktif',
-          body:
-              'Kalau penawaranmu diterima, pekerjaan aktif tampil di sini. Gunakan detail pekerjaan untuk memperbarui progres sampai selesai.',
-          assetPath: 'assets/images/ayos/ayos_board_task.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.navJobs,
-          tabIndex: 0,
-          title: 'Cari dan pantau pekerjaan',
-          body:
-              'Pekerjaan memisahkan daftar Tersedia, Pengajuan, dan Aktif supaya status penawaran dan pekerjaan tetap mudah dipantau.',
-          assetPath: 'assets/images/ayos/ayos_pointing_left.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.jobsOverview,
-          tabIndex: 1,
-          title: 'Jobs punya tiga antrean penting',
-          body:
-              'Tersedia untuk mencari job, Pengajuan untuk memantau bid, dan Aktif untuk pekerjaan yang sudah dipercayakan kepadamu.',
-          assetPath: 'assets/images/ayos/ayos_run.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.navChat,
-          tabIndex: 1,
-          title: 'Koordinasi ada di tab Chat',
-          body:
-              'Setelah pekerjaan terhubung dengan Customer, gunakan tab Chat untuk komunikasi yang tetap terkait dengan job.',
-          assetPath: 'assets/images/ayos/ayos_play_phone.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.chatOverview,
-          tabIndex: 2,
-          title: 'Koordinasikan pekerjaan lewat Chat',
-          body:
-              'Gunakan percakapan terkait job untuk memastikan kebutuhan, lokasi, dan progres tetap jelas dengan Customer.',
-          assetPath: 'assets/images/ayos/ayos_play_phone.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.navProfile,
-          tabIndex: 2,
-          title: 'Profile Mitra ada di sini',
-          body:
-              'Dari Profile kamu bisa berpindah peran, membuka dompet dan rekening, melihat riwayat, bantuan, serta pengaturan akun.',
-          assetPath: 'assets/images/ayos/ayos_idea.png',
-          preferAbove: true,
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileHeader,
-          tabIndex: 3,
-          title: 'Profile Mitra',
-          body:
-              'Profile menyatukan identitas, rating, riwayat pekerjaan, lokasi, rekening, bantuan, dan pengaturan akun.',
-          assetPath: 'assets/images/ayos/ayos_idea.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileMode,
-          tabIndex: 3,
-          title: 'Balik ke Customer kapan saja',
-          body:
-              'Menjadi Mitra tidak menghapus fungsi Customer. Gunakan pilihan peran ini untuk berpindah tanpa membuat akun baru.',
-          assetPath: 'assets/images/ayos/ayos_run.png',
-        ),
-        _TutorialStep(
-          target: widget.anchors.profileFinance,
-          tabIndex: 3,
-          title: 'Dompet & pencairan',
-          body:
-              'Pendapatan tersedia dapat dicairkan dari sini. Dompet juga menjelaskan saldo Pending, Available, Held, rekening, dan status pencairan.',
-          assetPath: 'assets/images/ayos/ayos_hooray_with_confetti.png',
-          preferAbove: true,
-        ),
-      ];
+    _TutorialStep(
+      target: widget.anchors.homeHeader,
+      tabIndex: 0,
+      title: 'Sekarang kamu lagi di mode Mitra 👋',
+      body:
+          'Di mode ini fokusnya beda: cari pekerjaan, kelola jasa, pantau progres, sampai urus penghasilan.',
+      assetPath: 'assets/images/ayos/ayos_hello.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homeSearchOrIncome,
+      tabIndex: 0,
+      title: 'Penghasilanmu kelihatan dari sini',
+      body:
+          'Ringkasan ini bantu kamu lihat hasil kerja. Detail saldo tersedia, pending, atau ditahan bisa dicek dari Dompet Mitra.',
+      assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homePromoOrService,
+      tabIndex: 0,
+      title: 'Jasa Saya itu etalase kamu',
+      body:
+          'Upload jasa yang kamu tawarkan lengkap dengan foto, harga, dan deskripsi biar Customer gampang nemuin kamu.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homeCategoriesOrActive,
+      tabIndex: 0,
+      title: 'Yang lagi dikerjain nongol di sini',
+      body:
+          'Begitu penawaranmu diterima, pekerjaan aktif bisa dipantau dari Home dan dilanjutkan lewat detail pekerjaan.',
+      assetPath: 'assets/images/ayos/ayos_board_task.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.homePrimaryActionOrAvailable,
+      tabIndex: 0,
+      title: 'Ada pekerjaan yang bisa kamu ambil',
+      body:
+          'Cek pekerjaan terbaru yang tersedia. Kalau cocok sama keahlian dan lokasimu, buka detail lalu kirim penawaran.',
+      assetPath: 'assets/images/ayos/ayos_run.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.navJobs,
+      tabIndex: 0,
+      title: 'Daftar lengkapnya ada di Pekerjaan',
+      body:
+          'Di sini kamu bisa pindah antara pekerjaan Tersedia, Pengajuan yang sudah dikirim, dan pekerjaan Aktif.',
+      assetPath: 'assets/images/ayos/ayos_pointing_left.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.jobsOverview,
+      tabIndex: 1,
+      title: 'Tersedia, Pengajuan, dan Aktif',
+      body:
+          'Tersedia buat cari pekerjaan, Pengajuan buat cek status penawaran, dan Aktif buat pekerjaan yang sudah dipercayakan ke kamu.',
+      assetPath: 'assets/images/ayos/ayos_board_task.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.navChat,
+      tabIndex: 1,
+      title: 'Koordinasinya lewat Chat',
+      body:
+          'Kalau sudah terhubung sama Customer, pakai Chat buat ngobrol soal kebutuhan, lokasi, dan progres kerja.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.chatOverview,
+      tabIndex: 2,
+      title: 'Cari percakapan dengan cepat',
+      body:
+          'Gunakan kolom pencarian kalau chat sudah ramai. Bisa cari berdasarkan nama Customer atau judul pekerjaan.',
+      assetPath: 'assets/images/ayos/ayos_play_phone.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.navProfile,
+      tabIndex: 2,
+      title: 'Dompet dan akun ada di Profil',
+      body:
+          'Mau cairin penghasilan, atur rekening, cek riwayat, atau balik jadi Customer? Semuanya mulai dari sini.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+      preferAbove: true,
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileHeader,
+      tabIndex: 3,
+      title: 'Profil Mitra kamu',
+      body:
+          'Di sini ada identitas akun dan informasi Mitra yang kamu pakai selama menjalankan pekerjaan.',
+      assetPath: 'assets/images/ayos/ayos_idea.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileMode,
+      tabIndex: 3,
+      title: 'Mau balik jadi Customer? Bisa',
+      body:
+          'Pindah peran nggak bikin data Mitramu hilang. Tinggal switch lagi kalau nanti mau cari pekerjaan.',
+      assetPath: 'assets/images/ayos/ayos_run.png',
+    ),
+    _TutorialStep(
+      target: widget.anchors.profileFinance,
+      tabIndex: 3,
+      title: 'Penghasilan dan pencairan ada di sini',
+      body:
+          'Saldo yang sudah tersedia bisa dicairkan ke rekening. PIN AyoPay 6 digit dipakai buat melindungi aksi sensitif seperti pencairan dan perubahan rekening.',
+      assetPath: 'assets/images/ayos/ayos_hooray_with_confetti.png',
+      preferAbove: true,
+    ),
+  ];
+
+  Future<BuildContext?> _waitForTarget(GlobalKey target) async {
+    for (int attempt = 0; attempt < 30; attempt++) {
+      if (!mounted) return null;
+      final BuildContext? targetContext = target.currentContext;
+      if (targetContext != null) return targetContext;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    return null;
+  }
 
   Future<void> _prepareCurrentStep() async {
     if (!mounted || _steps.isEmpty) return;
     setState(() => _preparing = true);
 
-    _TutorialStep step = _steps[_index];
+    final _TutorialStep step = _steps[_index];
     await widget.onSelectTab(step.tabIndex);
+    if (!mounted) return;
     await WidgetsBinding.instance.endOfFrame;
 
     // Dashboard/Profile memuat data secara async. Tunggu anchor UI asli
-    // tersedia agar tutorial tidak meloncat hanya karena API belum selesai.
-    BuildContext? targetContext;
-    for (int attempt = 0; attempt < 30; attempt++) {
-      if (!mounted) return;
-      targetContext = step.target.currentContext;
-      if (targetContext != null) break;
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      await WidgetsBinding.instance.endOfFrame;
+    // tersedia supaya spotlight tidak lompat hanya karena data belum selesai.
+    final BuildContext? visibleTarget = await _waitForTarget(step.target);
+    if (!mounted) return;
+
+    if (visibleTarget == null) {
+      await _skipUnavailableStep();
+      return;
     }
 
-    // Beberapa target (mis. wallet di Profile) berada di bawah fold. Scroll
-    // halaman aslinya terlebih dahulu sebelum menghitung spotlight.
-    if (targetContext != null) {
-      try {
-        await Scrollable.ensureVisible(
-          targetContext,
-          alignment: 0.34,
-          duration: const Duration(milliseconds: 330),
-          curve: Curves.easeOutCubic,
-        );
-      } catch (_) {
-        // Target yang bukan bagian dari Scrollable tetap dapat disorot.
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 80));
+    // Beberapa target berada di bawah fold. Scroll halaman asli dulu, lalu
+    // ambil context baru setelah animasi selesai agar tidak memakai BuildContext
+    // yang melewati async gap.
+    try {
+      await Scrollable.ensureVisible(
+        visibleTarget,
+        alignment: 0.34,
+        duration: const Duration(milliseconds: 330),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (_) {
+      // Target di luar Scrollable (mis. FAB/navbar) tetap bisa disorot.
     }
 
     if (!mounted) return;
-    targetContext = step.target.currentContext;
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    if (!mounted) return;
 
-    // Jika sebuah elemen memang tidak tersedia untuk akun ini (contoh switch
-    // mode pada Customer yang belum jadi Mitra), lanjut otomatis ke step berikut.
+    final BuildContext? targetContext = step.target.currentContext;
     if (targetContext == null) {
-      if (_index < _steps.length - 1) {
-        _index++;
-        await _prepareCurrentStep();
-      } else {
-        Navigator.of(context).pop();
-      }
+      await _skipUnavailableStep();
       return;
     }
 
     final RenderObject? object = targetContext.findRenderObject();
     if (object is! RenderBox || !object.hasSize) {
-      if (_index < _steps.length - 1) {
-        _index++;
-        await _prepareCurrentStep();
-      } else {
-        Navigator.of(context).pop();
-      }
+      await _skipUnavailableStep();
       return;
     }
 
@@ -474,6 +519,16 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       _targetRect = rect.inflate(6);
       _preparing = false;
     });
+  }
+
+  Future<void> _skipUnavailableStep() async {
+    if (!mounted) return;
+    if (_index < _steps.length - 1) {
+      _index++;
+      await _prepareCurrentStep();
+      return;
+    }
+    Navigator.of(context).pop();
   }
 
   Future<void> _next() async {
@@ -500,7 +555,8 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
 
     final double cardWidth = (screen.width - 32).clamp(0, 390).toDouble();
     const double cardEstimatedHeight = 230;
-    final bool placeAbove = step.preferAbove ||
+    final bool placeAbove =
+        step.preferAbove ||
         (target != null && target.center.dy > screen.height * 0.55);
 
     double? top;
@@ -508,17 +564,11 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
     if (target != null) {
       if (placeAbove) {
         bottom = (screen.height - target.top + 14)
-            .clamp(
-              88,
-              screen.height - cardEstimatedHeight - 12,
-            )
+            .clamp(88, screen.height - cardEstimatedHeight - 12)
             .toDouble();
       } else {
         top = (target.bottom + 14)
-            .clamp(
-              18,
-              screen.height - cardEstimatedHeight - 88,
-            )
+            .clamp(18, screen.height - cardEstimatedHeight - 88)
             .toDouble();
       }
     }
@@ -528,13 +578,9 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          CustomPaint(
-            painter: _SpotlightPainter(targetRect: target),
-          ),
+          CustomPaint(painter: _SpotlightPainter(targetRect: target)),
           if (_preparing || target == null)
-            const Center(
-              child: CircularProgressIndicator(color: _orange),
-            )
+            const Center(child: CircularProgressIndicator(color: _orange))
           else
             Positioned(
               left: (screen.width - cardWidth) / 2,
@@ -549,7 +595,10 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                   return FadeTransition(
                     opacity: animation,
                     child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.97, end: 1).animate(animation),
+                      scale: Tween<double>(
+                        begin: 0.97,
+                        end: 1,
+                      ).animate(animation),
                       child: child,
                     ),
                   );
@@ -616,8 +665,8 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                   children: <Widget>[
                     Text(
                       widget.mode == 'mitra'
-                          ? 'AYOS · Panduan Mitra'
-                          : 'AYOS · Panduan Aplikasi',
+                          ? 'AYOS · Mode Mitra'
+                          : 'AYOS · Kenalan Yuk',
                       style: const TextStyle(
                         fontSize: 10,
                         letterSpacing: 0.7,
@@ -689,7 +738,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                   last ? Icons.check_rounded : Icons.arrow_forward_rounded,
                   size: 17,
                 ),
-                label: Text(last ? 'Mulai pakai Ayo Suruh' : 'Lanjut'),
+                label: Text(last ? 'Sip, ngerti!' : 'Lanjut'),
               ),
             ],
           ),
@@ -713,9 +762,7 @@ class _SpotlightPainter extends CustomPainter {
 
     final Rect? target = targetRect;
     if (target != null) {
-      path.addRRect(
-        RRect.fromRectAndRadius(target, const Radius.circular(18)),
-      );
+      path.addRRect(RRect.fromRectAndRadius(target, const Radius.circular(18)));
     }
     canvas.drawPath(path, overlay);
 
