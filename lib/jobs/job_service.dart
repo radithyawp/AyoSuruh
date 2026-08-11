@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -193,6 +195,7 @@ class JobService {
     required String title,
     required String description,
     required num budget,
+    required String workMode,
     required DateTime scheduleDate,
     required String scheduleTime,
     String? addressId,
@@ -207,9 +210,16 @@ class JobService {
       throw StateError('Kamu tidak dapat memesan jasa milik akunmu sendiri.');
     }
 
-    String? finalAddressId = addressId;
+    final String normalizedWorkMode = workMode.trim().toLowerCase();
+    if (!<String>['remote', 'onsite', 'mobile'].contains(normalizedWorkMode)) {
+      throw ArgumentError('Cara pengerjaan tidak valid.');
+    }
 
-    if ((finalAddressId == null || finalAddressId.isEmpty) &&
+    final bool requiresPhysicalLocation = normalizedWorkMode != 'remote';
+    String? finalAddressId = requiresPhysicalLocation ? addressId : null;
+
+    if (requiresPhysicalLocation &&
+        (finalAddressId == null || finalAddressId.isEmpty) &&
         newAddress != null &&
         newAddress.trim().isNotEmpty) {
       final Map<String, dynamic> insertedAddress = await _client
@@ -227,7 +237,8 @@ class JobService {
       finalAddressId = insertedAddress['id'].toString();
     }
 
-    if (finalAddressId == null || finalAddressId.isEmpty) {
+    if (requiresPhysicalLocation &&
+        (finalAddressId == null || finalAddressId.isEmpty)) {
       throw ArgumentError('Alamat pekerjaan wajib dipilih atau diisi.');
     }
 
@@ -240,9 +251,10 @@ class JobService {
           'title': title.trim(),
           'description': description.trim(),
           'budget': budget,
+          'work_mode': normalizedWorkMode,
           'address_id': finalAddressId,
-          'latitude': latitude,
-          'longitude': longitude,
+          'latitude': requiresPhysicalLocation ? latitude : null,
+          'longitude': requiresPhysicalLocation ? longitude : null,
           'schedule_date': dateValue,
           'schedule_time': scheduleTime,
           'status': 'posted',
@@ -267,7 +279,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
+          status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           mitra:users!jobs_mitra_id_fkey(id, fullname, avatar_url),
@@ -285,7 +297,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
+          status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
@@ -305,7 +317,7 @@ class JobService {
           id, job_id, mitra_id, price, estimated_time, message, status, created_at,
           jobs!bids_job_id_fkey(
             id, customer_id, title, description, budget, schedule_date,
-            schedule_time, status, progress_stage, created_at, mitra_id,
+            schedule_time, status, progress_stage, work_mode, created_at, mitra_id,
             categories(id, name, icon),
             addresses(id, label, address, latitude, longitude),
             customer:users!jobs_customer_id_fkey(id, fullname, avatar_url)
@@ -331,7 +343,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
+          status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url),
@@ -349,7 +361,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
+          status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url)
@@ -386,7 +398,7 @@ class JobService {
         .select('''
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, schedule_date, schedule_time,
-          status, progress_stage, created_at, mitra_id, preferred_mitra_id,
+          status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
           categories(id, name, icon),
           addresses(id, label, address, latitude, longitude),
           customer:users!jobs_customer_id_fkey(id, fullname, avatar_url, phone),
@@ -690,33 +702,20 @@ class JobService {
         'start_assigned_job',
         params: <String, dynamic>{'p_job_id': jobId},
       );
-      return;
     } on PostgrestException catch (error) {
       final String lowerMessage = error.message.toLowerCase();
       final bool functionMissing = lowerMessage.contains('start_assigned_job') &&
           (lowerMessage.contains('not find') ||
               lowerMessage.contains('does not exist') ||
               error.code == 'PGRST202');
-      if (!functionMissing) rethrow;
-      debugPrint('RPC start_assigned_job belum tersedia. Menggunakan fallback: $error');
+      if (functionMissing) {
+        throw StateError(
+          'SQL penguncian pembayaran belum dijalankan di Supabase. '
+          'Jalankan migration logika pekerjaan terbaru terlebih dahulu.',
+        );
+      }
+      rethrow;
     }
-
-    final Map<String, dynamic>? updated = await _client
-        .from('jobs')
-        .update(<String, dynamic>{'status': 'on_progress'})
-        .eq('id', jobId)
-        .eq('mitra_id', currentUserId)
-        .eq('status', 'accepted')
-        .select('id')
-        .maybeSingle();
-    if (updated == null) {
-      throw StateError('Pekerjaan tidak dapat dimulai oleh akun ini.');
-    }
-    await _insertTimeline(
-      jobId: jobId,
-      status: 'on_progress',
-      description: 'Mitra mulai mengerjakan pekerjaan.',
-    );
   }
 
   Future<List<Map<String, dynamic>>> fetchJobTimelines(String jobId) async {

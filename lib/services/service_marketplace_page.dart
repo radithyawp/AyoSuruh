@@ -381,6 +381,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     alignment: Alignment.centerLeft,
                     child: FilterChip(
                       selected: _showBookmarkedOnly,
+                      showCheckmark: false,
                       avatar: Icon(
                         _showBookmarkedOnly
                             ? Icons.bookmark_rounded

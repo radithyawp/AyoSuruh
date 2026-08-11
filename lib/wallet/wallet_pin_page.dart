@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
 import '../widgets/ayo_snackbar.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/six_digit_pin_field.dart';
 import 'wallet_service.dart';
 
 const Color _pinBrown = Color(0xFF8A5300);
@@ -93,29 +92,17 @@ Future<String?> showWalletPinPrompt(
                   style: const TextStyle(fontSize: 12, height: 1.45),
                 ),
                 const SizedBox(height: 15),
-                TextField(
+                SixDigitPinField(
                   controller: controller,
+                  label: 'PIN 6 digit',
                   autofocus: true,
-                  obscureText: true,
-                  obscuringCharacter: '●',
-                  keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.done,
-                  inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
+                  errorText: fieldError,
+                  onChanged: (_) {
+                    if (fieldError == null) return;
+                    setDialogState(() => fieldError = null);
+                  },
                   onSubmitted: (_) => submit(),
-                  decoration: InputDecoration(
-                    labelText: 'PIN 6 digit',
-                    errorText: fieldError,
-                    counterText: '',
-                    filled: true,
-                    fillColor: const Color(0xFFFFFBF7),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  maxLength: 6,
                 ),
               ],
             ),
@@ -487,18 +474,10 @@ class _WalletPinPageState extends State<WalletPinPage> {
     required TextEditingController controller,
     required String label,
   }) {
-    return TextFormField(
+    return SixDigitPinField(
       controller: controller,
-      obscureText: true,
-      obscuringCharacter: '●',
-      keyboardType: TextInputType.number,
-      maxLength: 6,
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(6),
-      ],
+      label: label,
       validator: _validatePin,
-      decoration: _decoration(label).copyWith(counterText: ''),
     );
   }
 

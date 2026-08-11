@@ -900,6 +900,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         return 'Pencairan Berhasil';
       case 'refund_adjustment':
         return 'Penyesuaian Refund';
+      case 'voucher_subsidy':
+        return 'Subsidi Voucher Cash';
       default:
         return 'Penyesuaian Saldo';
     }

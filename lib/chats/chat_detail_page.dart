@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../jobs/job_helpers.dart';
 import '../widgets/ayo_snackbar.dart';
@@ -433,6 +434,114 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  Future<void> _callPartner() async {
+    final bool canCall = _room?['can_call'] == true;
+    final String partnerName =
+        (_room?['partner_name'] ?? 'pengguna').toString().trim();
+    final String rawPhone =
+        (_room?['partner_phone'] ?? '').toString().trim();
+
+    if (!canCall || rawPhone.isEmpty) {
+      if (!mounted) return;
+      AyoSnackBar.info(
+        context,
+        'Telepon hanya tersedia saat pekerjaan masih aktif dan nomor lawan transaksi tersedia.',
+      );
+      return;
+    }
+
+    final String phone = _sanitizePhoneForDialer(rawPhone);
+    if (phone.isEmpty) {
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        'Nomor telepon $partnerName belum valid.',
+      );
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Row(
+            children: <Widget>[
+              Icon(Icons.call_rounded, color: jobOrangeColor),
+              SizedBox(width: 10),
+              Expanded(child: Text('Telepon sekarang?')),
+            ],
+          ),
+          content: Text(
+            'Kamu akan membuka aplikasi Telepon untuk menghubungi '
+            '$partnerName. Gunakan panggilan hanya untuk koordinasi '
+            'pekerjaan aktif. Biaya operator dapat berlaku.',
+            style: const TextStyle(height: 1.45),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: jobOrangeColor,
+                foregroundColor: const Color(0xFF4E3400),
+              ),
+              icon: const Icon(Icons.call_rounded),
+              label: const Text(
+                'Telepon',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final Uri uri = Uri(
+      scheme: 'tel',
+      path: phone,
+    );
+
+    try {
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        AyoSnackBar.error(
+          context,
+          'Aplikasi Telepon belum dapat dibuka di perangkat ini.',
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        'Panggilan belum dapat dibuka: $error',
+      );
+    }
+  }
+
+  String _sanitizePhoneForDialer(String value) {
+    String phone = value.replaceAll(RegExp(r'[^0-9+]'), '');
+
+    if (phone.startsWith('00')) {
+      phone = '+${phone.substring(2)}';
+    }
+
+    // Tanda + hanya valid di karakter pertama.
+    if (phone.length > 1) {
+      phone = '${phone.startsWith('+') ? '+' : ''}'
+          '${phone.replaceAll('+', '')}';
+    }
+
+    return phone;
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
@@ -509,9 +618,21 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
         ],
       ),
+      actions: <Widget>[
+        if (_room?['can_call'] == true)
+          IconButton(
+            tooltip: 'Telepon',
+            onPressed: _callPartner,
+            icon: const Icon(
+              Icons.call_rounded,
+              color: jobBrownColor,
+            ),
+          ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 

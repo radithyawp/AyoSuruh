@@ -19,19 +19,28 @@ class JobPaymentStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool required = isPaymentRequired(payment);
     final bool paid = isPaymentPaid(payment);
+    final bool cash = isCashPayment(payment);
     final num total = paymentTotalAmount(payment);
 
     String description;
     if (!required) {
       description = isCustomer
-          ? 'Pembayaran belum dibuat. Buka halaman pembayaran untuk melanjutkan melalui Midtrans.'
-          : 'Customer belum membuat transaksi pembayaran Midtrans.';
+          ? 'Pilih metode pembayaran untuk pekerjaan ini.'
+          : 'Customer belum memilih metode pembayaran.';
+    } else if (cash && paid) {
+      description =
+          'Customer sudah mengonfirmasi pembayaran tunai langsung ke Mitra.';
+    } else if (cash) {
+      description = isCustomer
+          ? 'Bayar tunai langsung ke Mitra setelah pekerjaan selesai, lalu konfirmasi pembayaran di aplikasi.'
+          : 'Pembayaran dipilih secara tunai. Kamu tetap dapat memulai pekerjaan dan menagih Customer setelah pekerjaan selesai.';
     } else if (paid) {
-      description = 'Pembayaran sudah terverifikasi. Pekerjaan dapat dilanjutkan.';
+      description =
+          'Pembayaran sudah terverifikasi. Pekerjaan dapat dilanjutkan.';
     } else {
       description = isCustomer
-          ? 'Selesaikan pembayaran Midtrans agar mitra dapat memulai pekerjaan.'
-          : 'Customer belum menyelesaikan pembayaran. Tombol mulai pekerjaan akan aktif setelah pembayaran terverifikasi.';
+          ? 'Selesaikan pembayaran online agar pekerjaan dapat dilanjutkan.'
+          : 'Customer belum menyelesaikan pembayaran online.';
     }
 
     return Container(
@@ -63,9 +72,12 @@ class JobPaymentStatusCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      'Status Pembayaran Midtrans',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF72665F)),
+                    Text(
+                      cash ? 'Status Pembayaran Tunai' : 'Status Pembayaran',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF72665F),
+                      ),
                     ),
                     Text(
                       paymentStatusLabel(payment),
@@ -107,7 +119,11 @@ class JobPaymentStatusCard extends StatelessWidget {
                   ),
                 ),
                 icon: Icon(
-                  paid ? Icons.receipt_long_outlined : Icons.payments_outlined,
+                  paid
+                      ? Icons.receipt_long_outlined
+                      : cash
+                          ? Icons.payments_rounded
+                          : Icons.payment_rounded,
                 ),
                 label: Text(
                   paid ? 'Lihat Pembayaran' : 'Buka Pembayaran',

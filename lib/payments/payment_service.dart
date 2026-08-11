@@ -42,12 +42,16 @@ class PaymentService {
             updated_at, provider, payment_required, order_id, snap_token,
             redirect_url, transaction_id, transaction_status, fraud_status,
             payment_type, status_code, status_message, expires_at,
-            refunded_amount, refund_status, refunded_at
+            refunded_amount, refund_status, refunded_at,
+            user_voucher_id, voucher_code, discount_amount, payable_amount,
+            payment_method_selected_at, cash_confirmed_at, cash_confirmed_by
           ''')
           .eq('job_id', jobId)
           .maybeSingle();
     } on PostgrestException catch (error) {
-      debugPrint('Kolom Midtrans belum tersedia. Menggunakan skema dasar: $error');
+      debugPrint(
+        'Kolom payment terbaru belum tersedia. Menggunakan skema dasar: $error',
+      );
       final Map<String, dynamic>? legacy = await _client
           .from('payments')
           .select('id, job_id, amount, service_fee, status, paid_at, created_at')
@@ -58,8 +62,17 @@ class PaymentService {
         ...legacy,
         'provider': 'midtrans',
         'payment_required': false,
+        'discount_amount': 0,
       };
     }
+  }
+
+  Future<Map<String, dynamic>> fetchJobContext(String jobId) async {
+    return await _client
+        .from('jobs')
+        .select('id, customer_id, mitra_id, status, progress_stage')
+        .eq('id', jobId)
+        .single();
   }
 
   Stream<Map<String, dynamic>?> watchJobPayment(String jobId) {
@@ -88,10 +101,11 @@ class PaymentService {
           .toList();
     } on PostgrestException catch (error) {
       final String message = error.message.toLowerCase();
-      final bool functionMissing = message.contains('get_job_payment_attempts') &&
-          (message.contains('not find') ||
-              message.contains('does not exist') ||
-              error.code == 'PGRST202');
+      final bool functionMissing =
+          message.contains('get_job_payment_attempts') &&
+              (message.contains('not find') ||
+                  message.contains('does not exist') ||
+                  error.code == 'PGRST202');
       if (!functionMissing) rethrow;
       debugPrint('Migration payment stage 2 belum dijalankan: $error');
       return <Map<String, dynamic>>[];
@@ -105,6 +119,34 @@ class PaymentService {
         .whereType<Map>()
         .map((Map row) => Map<String, dynamic>.from(row))
         .toList();
+  }
+
+  Future<Map<String, dynamic>> prepareCashPayment({
+    required String jobId,
+    String? userVoucherId,
+  }) async {
+    final dynamic response = await _client.rpc(
+      'prepare_cash_payment',
+      params: <String, dynamic>{
+        'p_job_id': jobId,
+        'p_user_voucher_id': userVoucherId,
+      },
+    );
+    return _parseRpcPayment(
+      response,
+      'Pembayaran tunai belum dapat disiapkan.',
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmCashPayment(String jobId) async {
+    final dynamic response = await _client.rpc(
+      'confirm_cash_payment',
+      params: <String, dynamic>{'p_job_id': jobId},
+    );
+    return _parseRpcPayment(
+      response,
+      'Pembayaran tunai belum dapat dikonfirmasi.',
+    );
   }
 
   Future<Map<String, dynamic>> createSnapTransaction(String jobId) async {
@@ -127,6 +169,14 @@ class PaymentService {
       response,
       'Status pembayaran belum dapat diperbarui.',
     );
+  }
+
+  Map<String, dynamic> _parseRpcPayment(dynamic response, String fallback) {
+    if (response is List && response.isNotEmpty && response.first is Map) {
+      return Map<String, dynamic>.from(response.first as Map);
+    }
+    if (response is Map) return Map<String, dynamic>.from(response);
+    throw StateError(fallback);
   }
 
   Map<String, dynamic> _parseFunctionResponse(

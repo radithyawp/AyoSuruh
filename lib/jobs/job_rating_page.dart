@@ -322,6 +322,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
             final bool selected = _selectedTags.contains(tag);
             return FilterChip(
               selected: selected,
+              showCheckmark: false,
               label: Text(tag),
               avatar: Icon(
                 _tagIcon(tag),
@@ -342,7 +343,6 @@ class _JobRatingPageState extends State<JobRatingPage> {
               side: BorderSide(
                 color: selected ? jobOrangeColor : const Color(0xFFE5D7CB),
               ),
-              checkmarkColor: jobDarkBrownColor,
               labelStyle: const TextStyle(fontSize: 11),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import '../jobs/job_helpers.dart';
 import '../refunds/refund_helpers.dart';
 import '../refunds/refund_request_page.dart';
 import '../refunds/refund_service.dart';
+import 'cash_checkout_page.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
 import '../widgets/home_shortcut_button.dart';
@@ -61,7 +63,9 @@ class _JobPaymentPageState extends State<JobPaymentPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && isPaymentRequired(_payment)) {
+    if (state == AppLifecycleState.resumed &&
+        isPaymentRequired(_payment) &&
+        !isCashPayment(_payment)) {
       _refreshStatus(silent: true);
     }
   }
@@ -151,7 +155,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
         .toString()
         .trim()
         .isNotEmpty;
-    if (!isPaymentRequired(_payment) || status != 'pending' || !hasOrder) {
+    if (isCashPayment(_payment) ||
+        !isPaymentRequired(_payment) ||
+        status != 'pending' ||
+        !hasOrder) {
       return;
     }
 
@@ -202,6 +209,23 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     );
     if (!opened && mounted) {
       AyoSnackBar.error(context, 'Halaman Midtrans tidak dapat dibuka.');
+    }
+  }
+
+  Future<void> _openCashCheckout() async {
+    final bool? changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => CashCheckoutPage(
+          jobId: widget.jobId,
+          jobTitle: widget.jobTitle,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _loadPayment();
+    if (changed == true && mounted) {
+      AyoSnackBar.success(context, 'Status pembayaran tunai diperbarui.');
     }
   }
 
@@ -270,7 +294,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
         ),
         title: const Text(
-          'Pembayaran Midtrans',
+          'Pembayaran Pekerjaan',
           style: TextStyle(
             color: paymentBrown,
             fontWeight: FontWeight.w800,
@@ -317,11 +341,11 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       );
     }
 
-    final bool required = isPaymentRequired(_payment);
     final bool paid = isPaymentPaid(_payment);
     final bool ended =
         isPaymentRefunded(_payment) || isPaymentCancelled(_payment);
     final bool activeLink = hasActiveMidtransCheckout(_payment);
+    final bool cash = isCashPayment(_payment);
     final String status = (_payment?['status'] ?? '').toString().toLowerCase();
     final num baseAmount = paymentBaseAmount(_payment);
     final num serviceFee = paymentServiceFee(_payment);
@@ -346,39 +370,41 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             serviceFee: serviceFee,
             total: total,
           ),
-          if (_attempts.isNotEmpty) ...<Widget>[
+          if (!cash && _attempts.isNotEmpty) ...<Widget>[
             const SizedBox(height: 16),
             _attemptHistoryCard(),
           ],
-          if (_refund != null) ...<Widget>[
+          if (!cash && _refund != null) ...<Widget>[
             const SizedBox(height: 16),
             _refundStatusCard(),
           ],
           const SizedBox(height: 16),
-          _securityInfoCard(),
+          _securityInfoCard(cash: cash),
           const SizedBox(height: 22),
           if (paid) ...<Widget>[
-            SizedBox(
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: _openRefund,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                  side: BorderSide(color: Colors.red.shade300),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+            if (!cash) ...<Widget>[
+              SizedBox(
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _openRefund,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  icon: const Icon(Icons.currency_exchange_rounded),
+                  label: Text(
+                    _refund == null
+                        ? 'Ajukan Pembatalan & Refund'
+                        : 'Lihat Status Refund',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
-                icon: const Icon(Icons.currency_exchange_rounded),
-                label: Text(
-                  _refund == null
-                      ? 'Ajukan Pembatalan & Refund'
-                      : 'Lihat Status Refund',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
+            ],
             SizedBox(
               height: 52,
               child: FilledButton.icon(
@@ -397,18 +423,20 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               ),
             ),
           ] else if (ended) ...<Widget>[
-            SizedBox(
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: _openRefund,
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text(
-                  'Lihat Rincian Refund',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+            if (!cash) ...<Widget>[
+              SizedBox(
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _openRefund,
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text(
+                    'Lihat Rincian Refund',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
+            ],
             SizedBox(
               height: 52,
               child: FilledButton.icon(
@@ -424,103 +452,136 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               ),
             ),
           ] else ...<Widget>[
-            SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: _isCreating
-                    ? null
-                    : activeLink
-                    ? _openCheckout
-                    : _createTransaction,
-                style: FilledButton.styleFrom(
-                  backgroundColor: paymentOrange,
-                  foregroundColor: paymentDarkBrown,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                ),
-                icon: _isCreating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: paymentDarkBrown,
-                        ),
-                      )
-                    : Icon(
-                        activeLink
-                            ? Icons.open_in_new_rounded
-                            : Icons.payments_outlined,
-                      ),
-                label: Text(
-                  activeLink
-                      ? 'Lanjutkan Pembayaran'
-                      : !required
-                      ? 'Bayar Sekarang'
-                      : status == 'failed' || status == 'expired'
-                      ? 'Buat Pembayaran Baru'
-                      : 'Bayar Sekarang',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ),
-            if ((_payment?['order_id'] ?? '').toString().trim().isNotEmpty &&
-                status == 'pending') ...<Widget>[
-              const SizedBox(height: 10),
+            if (cash) ...<Widget>[
               SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: _openRefund,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red.shade700,
-                    side: BorderSide(color: Colors.red.shade300),
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: _openCashCheckout,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: paymentOrange,
+                    foregroundColor: paymentDarkBrown,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(26),
                     ),
                   ),
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: Text(
-                    _refund == null
-                        ? 'Batalkan Transaksi & Pekerjaan'
-                        : 'Lihat Permintaan Pembatalan',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-            ],
-            if ((_payment?['order_id'] ?? '')
-                .toString()
-                .trim()
-                .isNotEmpty) ...<Widget>[
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: _isRefreshing ? null : () => _refreshStatus(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: paymentBrown,
-                    side: const BorderSide(color: paymentOrange),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  icon: _isRefreshing
-                      ? const SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: paymentBrown,
-                          ),
-                        )
-                      : const Icon(Icons.refresh_rounded),
+                  icon: const Icon(Icons.payments_rounded),
                   label: const Text(
-                    'Cek Status Pembayaran',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                    'Buka Pembayaran Tunai',
+                    style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
+            ] else ...<Widget>[
+              SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: _openCashCheckout,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: paymentOrange,
+                    foregroundColor: paymentDarkBrown,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                  ),
+                  icon: const Icon(Icons.payments_rounded),
+                  label: const Text(
+                    'Bayar Tunai / Cash',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+              if (kDebugMode) ...<Widget>[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _isCreating
+                        ? null
+                        : activeLink
+                            ? _openCheckout
+                            : _createTransaction,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: paymentBrown,
+                      side: const BorderSide(color: paymentOrange),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: _isCreating
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: paymentBrown,
+                            ),
+                          )
+                        : const Icon(Icons.science_outlined),
+                    label: Text(
+                      activeLink
+                          ? 'Lanjutkan Midtrans Sandbox'
+                          : 'Uji Midtrans Sandbox',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+              if (kDebugMode &&
+                  (_payment?['order_id'] ?? '').toString().trim().isNotEmpty &&
+                  status == 'pending') ...<Widget>[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _openRefund,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: Text(
+                      _refund == null
+                          ? 'Batalkan Transaksi & Pekerjaan'
+                          : 'Lihat Permintaan Pembatalan',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+              if (kDebugMode &&
+                  (_payment?['order_id'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _isRefreshing ? null : () => _refreshStatus(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: paymentBrown,
+                      side: const BorderSide(color: paymentOrange),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: _isRefreshing
+                        ? const SizedBox(
+                            width: 17,
+                            height: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: paymentBrown,
+                            ),
+                          )
+                        : const Icon(Icons.refresh_rounded),
+                    label: const Text(
+                      'Cek Status Midtrans',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ],
         ],
@@ -535,16 +596,17 @@ class _JobPaymentPageState extends State<JobPaymentPage>
 
     String description;
     if (status == 'refunded') {
-      description =
-          'Dana transaksi telah dikembalikan atau sedang dikonfirmasi oleh Midtrans.';
+      description = 'Dana transaksi telah dikembalikan.';
     } else if (status == 'cancelled') {
       description = 'Transaksi dan pekerjaan telah dibatalkan.';
+    } else if (isCashPayment(_payment) && paid) {
+      description = 'Pembayaran tunai sudah dikonfirmasi dan tercatat di Ayo Suruh.';
+    } else if (isCashPayment(_payment)) {
+      description = 'Metode tunai sudah dipilih. Bayar langsung ke Mitra setelah pekerjaan selesai.';
     } else if (!required) {
-      description =
-          'Pembayaran belum dibuat. Tekan Bayar Sekarang untuk membuka checkout Midtrans.';
+      description = 'Pilih pembayaran Tunai. Midtrans Sandbox hanya tersedia pada debug untuk pengujian.';
     } else if (paid) {
-      description =
-          'Pembayaran terverifikasi. Mitra sekarang dapat memulai pekerjaan.';
+      description = 'Pembayaran terverifikasi. Mitra sekarang dapat memulai pekerjaan.';
     } else if (status == 'expired') {
       description =
           'Waktu pembayaran telah habis. Buat pembayaran baru untuk memperoleh kode atau QR baru.';
@@ -619,6 +681,13 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           if (serviceFee > 0) ...<Widget>[
             const SizedBox(height: 10),
             _priceRow('Biaya layanan pembayaran', formatRupiah(serviceFee)),
+          ],
+          if (paymentDiscountAmount(_payment) > 0) ...<Widget>[
+            const SizedBox(height: 10),
+            _priceRow(
+              'Voucher ${(_payment?['voucher_code'] ?? '').toString()}',
+              '- ${formatRupiah(paymentDiscountAmount(_payment))}',
+            ),
           ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
@@ -849,22 +918,24 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     );
   }
 
-  Widget _securityInfoCard() {
+  Widget _securityInfoCard({required bool cash}) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F6EC),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(Icons.verified_user_outlined, color: paymentGreen),
-          SizedBox(width: 10),
+          const Icon(Icons.verified_user_outlined, color: paymentGreen),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Pembayaran diproses oleh Midtrans. Ayo Suruh tidak menyimpan PIN, nomor kartu, atau kredensial e-wallet kamu.',
-              style: TextStyle(
+              cash
+                  ? 'Pembayaran tunai dilakukan langsung Customer ke Mitra. Ayo Suruh mencatat nominal, voucher, dan konfirmasi pembayarannya.'
+                  : 'Untuk release saat ini, pembayaran tunai tersedia. Midtrans tetap dipertahankan sebagai Sandbox pada debug sampai akun produksi disetujui.',
+              style: const TextStyle(
                 fontSize: 11,
                 height: 1.45,
                 color: Color(0xFF526347),

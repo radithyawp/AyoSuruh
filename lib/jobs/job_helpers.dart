@@ -143,14 +143,6 @@ String categoryName(Map<String, dynamic> job) {
   return 'Lainnya';
 }
 
-String jobAddress(Map<String, dynamic> job) {
-  final dynamic address = job['addresses'];
-  if (address is Map && address['address'] != null) {
-    return address['address'].toString();
-  }
-  return 'Alamat belum tersedia';
-}
-
 String customerName(Map<String, dynamic> job) {
   final dynamic customer = job['customer'];
   if (customer is Map && customer['fullname'] != null) {
@@ -304,12 +296,106 @@ Color categoryBackground(String value) {
   return const Color(0xFFF2ECE7);
 }
 
+const String jobWorkModeRemote = 'remote';
+const String jobWorkModeOnsite = 'onsite';
+const String jobWorkModeMobile = 'mobile';
+
+const List<String> jobWorkModes = <String>[
+  jobWorkModeRemote,
+  jobWorkModeOnsite,
+  jobWorkModeMobile,
+];
+
+String defaultJobWorkModeForCategory(String value) {
+  final String category = value.trim().toLowerCase();
+  if (category.contains('design') ||
+      category.contains('coding') ||
+      category.contains('administrasi')) {
+    return jobWorkModeRemote;
+  }
+  if (category.contains('antar-jemput') ||
+      category.contains('jasa titip') ||
+      category.contains('kost') ||
+      category.contains('kurir')) {
+    return jobWorkModeMobile;
+  }
+  return jobWorkModeOnsite;
+}
+
+String jobWorkMode(Map<String, dynamic> job) {
+  final String value = (job['work_mode'] ?? '').toString().trim().toLowerCase();
+  if (jobWorkModes.contains(value)) return value;
+  return defaultJobWorkModeForCategory(categoryName(job));
+}
+
+bool jobNeedsPhysicalLocation(Map<String, dynamic> job) {
+  return jobWorkMode(job) != jobWorkModeRemote;
+}
+
+String jobWorkModeLabel(String mode) {
+  switch (mode) {
+    case jobWorkModeRemote:
+      return 'Online / Jarak Jauh';
+    case jobWorkModeMobile:
+      return 'Mobilitas / Antar';
+    case jobWorkModeOnsite:
+    default:
+      return 'Datang ke Lokasi';
+  }
+}
+
+String jobWorkModeDescription(String mode) {
+  switch (mode) {
+    case jobWorkModeRemote:
+      return 'Pekerjaan dilakukan secara online tanpa Mitra datang ke lokasi Customer.';
+    case jobWorkModeMobile:
+      return 'Pekerjaan membutuhkan perjalanan, pengambilan, pengantaran, atau kunjungan ke beberapa titik.';
+    case jobWorkModeOnsite:
+    default:
+      return 'Mitra datang ke lokasi yang ditentukan Customer untuk mengerjakan pekerjaan.';
+  }
+}
+
+IconData jobWorkModeIcon(String mode) {
+  switch (mode) {
+    case jobWorkModeRemote:
+      return Icons.laptop_mac_rounded;
+    case jobWorkModeMobile:
+      return Icons.route_rounded;
+    case jobWorkModeOnsite:
+    default:
+      return Icons.location_on_rounded;
+  }
+}
+
+String jobAddress(Map<String, dynamic> job) {
+  if (!jobNeedsPhysicalLocation(job)) {
+    return 'Pengerjaan online / jarak jauh';
+  }
+  final dynamic address = job['addresses'];
+  if (address is Map && address['address'] != null) {
+    return address['address'].toString();
+  }
+  return 'Alamat belum tersedia';
+}
+
 const List<String> jobProgressStages = <String>[
   'heading_to_location',
   'arrived',
   'working',
   'completion_submitted',
 ];
+
+const List<String> remoteJobProgressStages = <String>[
+  'working',
+  'completion_submitted',
+];
+
+List<String> jobProgressStagesFor(Map<String, dynamic> job) {
+  return jobWorkMode(job) == jobWorkModeRemote
+      ? remoteJobProgressStages
+      : jobProgressStages;
+}
 
 String jobProgressLabel(String? stage) {
   switch (stage) {
@@ -326,6 +412,85 @@ String jobProgressLabel(String? stage) {
   }
 }
 
+String jobProgressLabelFor(Map<String, dynamic> job, String? stage) {
+  final String mode = jobWorkMode(job);
+  final String category = categoryName(job).trim().toLowerCase();
+
+  if (mode == jobWorkModeRemote) {
+    switch (stage) {
+      case 'working':
+        return 'Sedang Mengerjakan';
+      case 'completion_submitted':
+        return 'Ajukan Pekerjaan Selesai';
+      default:
+        return 'Belum Dimulai';
+    }
+  }
+
+  if (mode == jobWorkModeMobile) {
+    if (category.contains('kurir')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Menuju Titik Pengambilan';
+        case 'arrived':
+          return 'Barang Diambil';
+        case 'working':
+          return 'Sedang Diantar';
+        case 'completion_submitted':
+          return 'Pengantaran Selesai';
+      }
+    }
+    if (category.contains('antar-jemput')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Menuju Titik Jemput';
+        case 'arrived':
+          return 'Tiba di Titik Jemput';
+        case 'working':
+          return 'Perjalanan Berlangsung';
+        case 'completion_submitted':
+          return 'Perjalanan Selesai';
+      }
+    }
+    if (category.contains('jasa titip')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Menuju Lokasi Pembelian';
+        case 'arrived':
+          return 'Tiba di Lokasi';
+        case 'working':
+          return 'Pesanan Diproses';
+        case 'completion_submitted':
+          return 'Jasa Titip Selesai';
+      }
+    }
+    if (category.contains('kost')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Menuju Lokasi Kost';
+        case 'arrived':
+          return 'Tiba di Lokasi Kost';
+        case 'working':
+          return 'Survey Berlangsung';
+        case 'completion_submitted':
+          return 'Survey Selesai';
+      }
+    }
+    switch (stage) {
+      case 'heading_to_location':
+        return 'Menuju Titik Awal';
+      case 'arrived':
+        return 'Tiba di Titik Awal';
+      case 'working':
+        return 'Pekerjaan Berlangsung';
+      case 'completion_submitted':
+        return 'Pekerjaan Selesai';
+    }
+  }
+
+  return jobProgressLabel(stage);
+}
+
 String jobProgressDescription(String stage) {
   switch (stage) {
     case 'heading_to_location':
@@ -339,6 +504,73 @@ String jobProgressDescription(String stage) {
     default:
       return 'Pekerjaan belum memiliki pembaruan progres.';
   }
+}
+
+String jobProgressDescriptionFor(Map<String, dynamic> job, String stage) {
+  final String mode = jobWorkMode(job);
+  final String category = categoryName(job).trim().toLowerCase();
+
+  if (mode == jobWorkModeRemote) {
+    switch (stage) {
+      case 'working':
+        return 'Mitra sedang mengerjakan pekerjaan secara online / jarak jauh.';
+      case 'completion_submitted':
+        return 'Mitra telah mengajukan hasil pekerjaan dan menunggu konfirmasi Customer.';
+    }
+  }
+
+  if (mode == jobWorkModeMobile) {
+    if (category.contains('kurir')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Mitra sedang menuju titik pengambilan barang.';
+        case 'arrived':
+          return 'Barang sudah diambil oleh Mitra.';
+        case 'working':
+          return 'Barang sedang dalam proses pengantaran.';
+        case 'completion_submitted':
+          return 'Mitra telah menyelesaikan pengantaran dan menunggu konfirmasi Customer.';
+      }
+    }
+    if (category.contains('antar-jemput')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Mitra sedang menuju titik penjemputan.';
+        case 'arrived':
+          return 'Mitra sudah tiba di titik penjemputan.';
+        case 'working':
+          return 'Perjalanan antar-jemput sedang berlangsung.';
+        case 'completion_submitted':
+          return 'Perjalanan telah selesai dan menunggu konfirmasi Customer.';
+      }
+    }
+    if (category.contains('jasa titip')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Mitra sedang menuju lokasi pembelian.';
+        case 'arrived':
+          return 'Mitra sudah tiba di lokasi pembelian.';
+        case 'working':
+          return 'Pesanan titipan sedang diproses.';
+        case 'completion_submitted':
+          return 'Jasa titip telah selesai dan menunggu konfirmasi Customer.';
+      }
+    }
+    if (category.contains('kost')) {
+      switch (stage) {
+        case 'heading_to_location':
+          return 'Mitra sedang menuju lokasi kost yang akan disurvey.';
+        case 'arrived':
+          return 'Mitra sudah tiba di lokasi kost.';
+        case 'working':
+          return 'Survey dan pengumpulan informasi sedang dilakukan.';
+        case 'completion_submitted':
+          return 'Survey telah selesai dan menunggu konfirmasi Customer.';
+      }
+    }
+  }
+
+  return jobProgressDescription(stage);
 }
 
 IconData jobProgressIcon(String stage) {
@@ -362,7 +594,9 @@ String? currentJobProgressStage(Map<String, dynamic> job) {
   if (status != 'on_progress') return null;
   final String? stage = job['progress_stage']?.toString();
   if (stage != null && stage.isNotEmpty) return stage;
-  return 'heading_to_location';
+  return jobWorkMode(job) == jobWorkModeRemote
+      ? 'working'
+      : 'heading_to_location';
 }
 
 String? nextJobProgressStage(String? currentStage) {
@@ -372,7 +606,24 @@ String? nextJobProgressStage(String? currentStage) {
   return jobProgressStages[index + 1];
 }
 
+String? nextJobProgressStageFor(
+  Map<String, dynamic> job,
+  String? currentStage,
+) {
+  final List<String> stages = jobProgressStagesFor(job);
+  if (currentStage == null) return stages.first;
+  final int index = stages.indexOf(currentStage);
+  if (index < 0) return stages.first;
+  if (index >= stages.length - 1) return null;
+  return stages[index + 1];
+}
+
 int jobProgressIndex(String? stage) {
   final int index = jobProgressStages.indexOf(stage ?? '');
+  return index < 0 ? -1 : index;
+}
+
+int jobProgressIndexFor(Map<String, dynamic> job, String? stage) {
+  final int index = jobProgressStagesFor(job).indexOf(stage ?? '');
   return index < 0 ? -1 : index;
 }

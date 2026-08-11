@@ -305,6 +305,12 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
         !<String>['completed', 'cancelled', 'on_progress'].contains(status);
     final bool waitingCompletionConfirmation =
         status == 'on_progress' && progressStage == 'completion_submitted';
+    final bool paymentReadyForCompletion =
+        hasSelectedPaymentMethod(_payment) && isPaymentPaid(_payment);
+    final bool paymentAwaitingCompletion =
+        waitingCompletionConfirmation && !paymentReadyForCompletion;
+    final bool cashAwaitingPayment =
+        paymentAwaitingCompletion && isCashPayment(_payment);
     final bool completedWithoutReview =
         status == 'completed' && _review == null;
 
@@ -342,7 +348,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             ),
           ],
           const SizedBox(height: 14),
-          if (jobLatLng(job) != null) ...<Widget>[
+          if (jobNeedsPhysicalLocation(job) && jobLatLng(job) != null) ...<Widget>[
             JobLocationMapCard(job: job),
             const SizedBox(height: 14),
           ],
@@ -380,8 +386,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
           ],
           if (_payment != null &&
               job['mitra_id'] != null &&
-              ((status == 'accepted' || _payment?['payment_required'] == true) &&
-                      <String>['accepted', 'on_progress', 'completed'].contains(status) ||
+              (<String>['accepted', 'on_progress', 'completed'].contains(status) ||
                   <String>['refunded', 'cancelled'].contains(
                     (_payment?['status'] ?? '').toString().toLowerCase(),
                   ))) ...<Widget>[
@@ -434,15 +439,19 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                 color: const Color(0xFFFFEBCB),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Icon(Icons.task_alt_rounded, color: jobBrownColor),
-                  SizedBox(width: 10),
+                  const Icon(Icons.task_alt_rounded, color: jobBrownColor),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Mitra telah mengajukan pekerjaan selesai. Periksa hasil dan bukti pekerjaan sebelum mengonfirmasi.',
-                      style: TextStyle(fontSize: 12, height: 1.4),
+                      paymentAwaitingCompletion
+                          ? cashAwaitingPayment
+                              ? 'Mitra telah mengajukan pekerjaan selesai. Bayarkan nominal tunai yang tertera pada halaman pembayaran sebelum mengonfirmasi pekerjaan.'
+                              : 'Mitra telah mengajukan pekerjaan selesai, tetapi pembayaran belum selesai. Pilih atau selesaikan pembayaran terlebih dahulu.'
+                          : 'Mitra telah mengajukan pekerjaan selesai. Periksa hasil dan bukti pekerjaan sebelum mengonfirmasi.',
+                      style: const TextStyle(fontSize: 12, height: 1.4),
                     ),
                   ),
                 ],
@@ -452,7 +461,11 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             SizedBox(
               height: 52,
               child: FilledButton.icon(
-                onPressed: _isActionLoading ? null : _confirmCompletion,
+                onPressed: _isActionLoading
+                    ? null
+                    : paymentAwaitingCompletion
+                        ? _openPayment
+                        : _confirmCompletion,
                 style: FilledButton.styleFrom(
                   backgroundColor: jobGreenColor,
                   shape: RoundedRectangleBorder(
@@ -468,10 +481,18 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.check_circle_outline_rounded),
-                label: const Text(
-                  'Konfirmasi Pekerjaan Selesai',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                    : Icon(
+                        paymentAwaitingCompletion
+                            ? Icons.payments_outlined
+                            : Icons.check_circle_outline_rounded,
+                      ),
+                label: Text(
+                  paymentAwaitingCompletion
+                      ? cashAwaitingPayment
+                          ? 'Bayar Tunai ke Mitra'
+                          : 'Selesaikan Pembayaran'
+                      : 'Konfirmasi Pekerjaan Selesai',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -617,7 +638,15 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
             '${formatJobDate(job['schedule_date'])} · ${formatJobTime(job['schedule_time'])}',
           ),
           const SizedBox(height: 12),
-          _infoRow(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+          _infoRow(
+            jobWorkModeIcon(jobWorkMode(job)),
+            'Cara Pengerjaan',
+            jobWorkModeLabel(jobWorkMode(job)),
+          ),
+          if (jobNeedsPhysicalLocation(job)) ...<Widget>[
+            const SizedBox(height: 12),
+            _infoRow(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+          ],
         ],
       ),
     );
@@ -666,6 +695,7 @@ class _CustomerJobDetailPageState extends State<CustomerJobDetailPage> {
         children: <Widget>[
           JobProgressTimeline(
             currentStage: progressStage,
+            job: job,
             isCompleted: job['status'] == 'completed',
             compact: true,
           ),

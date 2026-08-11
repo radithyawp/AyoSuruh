@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import '../widgets/ayo_snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'job_helpers.dart';
@@ -126,7 +125,12 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       });
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, 'Foto belum dapat dipilih: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto belum dapat dipilih: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     }
   }
 
@@ -134,9 +138,11 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
     final Map<String, dynamic>? job = _job;
     if (job == null || _isSaving) return;
     final String? currentStage = currentJobProgressStage(job);
-    final String? nextStage = nextJobProgressStage(currentStage);
+    final String? nextStage = nextJobProgressStageFor(job, currentStage);
     if (nextStage == null) {
-      AyoSnackBar.info(context, 'Seluruh progres sudah diperbarui.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seluruh progres sudah diperbarui.')),
+      );
       return;
     }
 
@@ -167,17 +173,23 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       });
       await _loadData();
       if (!mounted) return;
-      AyoSnackBar.success(
-        context,
-        nextStage == 'completion_submitted'
-            ? 'Pekerjaan diajukan selesai. Menunggu konfirmasi customer.'
-            : 'Status diperbarui menjadi ${jobProgressLabel(nextStage)}.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nextStage == 'completion_submitted'
+                ? 'Pekerjaan diajukan selesai. Menunggu konfirmasi customer.'
+                : 'Status diperbarui menjadi ${jobProgressLabelFor(job, nextStage)}.',
+          ),
+          backgroundColor: jobGreenColor,
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(
-        context,
-        'Status belum berhasil diperbarui: $error',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Status belum berhasil diperbarui: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -256,7 +268,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
 
     final Map<String, dynamic> job = _job!;
     final String? currentStage = currentJobProgressStage(job);
-    final String? nextStage = nextJobProgressStage(currentStage);
+    final String? nextStage = nextJobProgressStageFor(job, currentStage);
     final Map<String, dynamic>? latest = latestProgressEntry(_timelines);
 
     return RefreshIndicator(
@@ -277,7 +289,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
             ),
           ),
           const SizedBox(height: 16),
-          JobProgressTimeline(currentStage: currentStage),
+          JobProgressTimeline(currentStage: currentStage, job: job),
           if (nextStage == null) ...<Widget>[
             Container(
               padding: const EdgeInsets.all(14),
@@ -356,7 +368,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
               label: Text(
                 nextStage == null
                     ? 'Menunggu Konfirmasi Customer'
-                    : 'Perbarui ke ${jobProgressLabel(nextStage)}',
+                    : 'Perbarui ke ${jobProgressLabelFor(job, nextStage)}',
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
               ),
             ),
@@ -410,7 +422,13 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(Icons.location_on_outlined, size: 15, color: Color(0xFF5E514A)),
+                  Icon(
+                    jobNeedsPhysicalLocation(job)
+                        ? Icons.location_on_outlined
+                        : Icons.laptop_mac_rounded,
+                    size: 15,
+                    color: const Color(0xFF5E514A),
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
@@ -499,7 +517,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                     ? Image.network(
                         latestUrl,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const Icon(
+                        errorBuilder: (_, __, ___) => const Icon(
                           Icons.broken_image_outlined,
                           color: jobBrownColor,
                         ),

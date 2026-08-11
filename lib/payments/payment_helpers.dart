@@ -7,11 +7,34 @@ const Color paymentGreen = Color(0xFF5E774F);
 const Color paymentBackground = Color(0xFFFFF9FC);
 const Color paymentBorder = Color(0xFFEAD8CB);
 
+String paymentProvider(Map<String, dynamic>? payment) {
+  return (payment?['provider'] ?? '').toString().trim().toLowerCase();
+}
+
+bool isCashPayment(Map<String, dynamic>? payment) {
+  return paymentProvider(payment) == 'cash';
+}
+
 String paymentStatusLabel(Map<String, dynamic>? payment) {
-  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  final String status =
+      (payment?['status'] ?? 'pending').toString().toLowerCase();
+
   if (!isPaymentRequired(payment) &&
       !<String>['refunded', 'cancelled'].contains(status)) {
-    return 'Belum Diaktifkan';
+    return 'Pilih Metode Pembayaran';
+  }
+
+  if (isCashPayment(payment)) {
+    switch (status) {
+      case 'paid':
+        return 'Tunai Sudah Dibayar';
+      case 'cancelled':
+        return 'Pembayaran Tunai Dibatalkan';
+      case 'refunded':
+        return 'Pembayaran Dikembalikan';
+      default:
+        return 'Menunggu Pembayaran Tunai';
+    }
   }
 
   switch (status) {
@@ -31,7 +54,8 @@ String paymentStatusLabel(Map<String, dynamic>? payment) {
 }
 
 Color paymentStatusColor(Map<String, dynamic>? payment) {
-  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  final String status =
+      (payment?['status'] ?? 'pending').toString().toLowerCase();
   if (!isPaymentRequired(payment) &&
       !<String>['refunded', 'cancelled'].contains(status)) {
     return const Color(0xFF8A7B72);
@@ -54,7 +78,8 @@ Color paymentStatusColor(Map<String, dynamic>? payment) {
 }
 
 Color paymentStatusBackground(Map<String, dynamic>? payment) {
-  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  final String status =
+      (payment?['status'] ?? 'pending').toString().toLowerCase();
   if (!isPaymentRequired(payment) &&
       !<String>['refunded', 'cancelled'].contains(status)) {
     return const Color(0xFFF1ECE8);
@@ -77,10 +102,16 @@ Color paymentStatusBackground(Map<String, dynamic>? payment) {
 }
 
 IconData paymentStatusIcon(Map<String, dynamic>? payment) {
-  final String status = (payment?['status'] ?? 'pending').toString().toLowerCase();
+  final String status =
+      (payment?['status'] ?? 'pending').toString().toLowerCase();
+
   if (!isPaymentRequired(payment) &&
       !<String>['refunded', 'cancelled'].contains(status)) {
-    return Icons.construction_rounded;
+    return Icons.payment_rounded;
+  }
+
+  if (isCashPayment(payment) && status == 'pending') {
+    return Icons.payments_rounded;
   }
 
   switch (status) {
@@ -111,8 +142,22 @@ num paymentServiceFee(Map<String, dynamic>? payment) {
   return num.tryParse(value?.toString() ?? '') ?? 0;
 }
 
+num paymentDiscountAmount(Map<String, dynamic>? payment) {
+  final dynamic value = payment?['discount_amount'];
+  if (value is num) return value;
+  return num.tryParse(value?.toString() ?? '') ?? 0;
+}
+
 num paymentTotalAmount(Map<String, dynamic>? payment) {
-  return paymentBaseAmount(payment) + paymentServiceFee(payment);
+  final dynamic explicit = payment?['payable_amount'];
+  if (explicit is num) return explicit;
+  final num? parsed = num.tryParse(explicit?.toString() ?? '');
+  if (parsed != null) return parsed;
+
+  final num calculated = paymentBaseAmount(payment) +
+      paymentServiceFee(payment) -
+      paymentDiscountAmount(payment);
+  return calculated < 0 ? 0 : calculated;
 }
 
 bool isPaymentPaid(Map<String, dynamic>? payment) {
@@ -131,13 +176,43 @@ bool isPaymentRequired(Map<String, dynamic>? payment) {
   return payment?['payment_required'] == true;
 }
 
+bool hasSelectedPaymentMethod(Map<String, dynamic>? payment) {
+  if (payment == null || !isPaymentRequired(payment)) return false;
+  final String provider = paymentProvider(payment);
+  return provider.isNotEmpty;
+}
+
 bool canMitraStartJob(Map<String, dynamic>? payment) {
-  return !isPaymentRequired(payment) || isPaymentPaid(payment);
+  if (!hasSelectedPaymentMethod(payment)) return false;
+
+  final String status =
+      (payment?['status'] ?? '').toString().trim().toLowerCase();
+  if (isCashPayment(payment)) {
+    return <String>['pending', 'paid'].contains(status);
+  }
+  return isPaymentPaid(payment);
+}
+
+String mitraPaymentGateLabel(Map<String, dynamic>? payment) {
+  if (!hasSelectedPaymentMethod(payment)) {
+    return 'Menunggu Customer Memilih Pembayaran';
+  }
+  if (isCashPayment(payment)) {
+    return 'Pembayaran Cash Dipilih';
+  }
+  if (!isPaymentPaid(payment)) {
+    return 'Menunggu Pembayaran Customer';
+  }
+  return 'Pembayaran Siap';
 }
 
 bool hasActiveMidtransCheckout(Map<String, dynamic>? payment) {
+  if (isCashPayment(payment)) return false;
+
   final String link = (payment?['redirect_url'] ?? '').toString().trim();
-  final String status = (payment?['status'] ?? '').toString().toLowerCase();
+  final String status =
+      (payment?['status'] ?? '').toString().toLowerCase();
+
   if (link.isEmpty || status != 'pending' || !isPaymentRequired(payment)) {
     return false;
   }
@@ -151,6 +226,8 @@ bool hasActiveMidtransCheckout(Map<String, dynamic>? payment) {
 String paymentMethodLabel(Object? rawValue) {
   final String value = (rawValue ?? '').toString().trim().toLowerCase();
   switch (value) {
+    case 'cash':
+      return 'Tunai / Cash';
     case 'qris':
       return 'QRIS';
     case 'gopay':

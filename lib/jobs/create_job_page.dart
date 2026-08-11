@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +10,7 @@ import 'job_helpers.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/ayo_snackbar.dart';
+import '../widgets/rupiah_input_formatter.dart';
 
 class CreateJobPage extends StatefulWidget {
   const CreateJobPage({
@@ -36,6 +35,7 @@ class CreateJobPage extends StatefulWidget {
 }
 
 class _CreateJobPageState extends State<CreateJobPage> {
+  static const int _maxJobBudget = 10000000;
   final JobService _jobService = JobService();
   final OsmGeocodingService _geocodingService = OsmGeocodingService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -52,6 +52,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
   List<Map<String, dynamic>> _categories = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _addresses = <Map<String, dynamic>>[];
   String? _selectedCategoryId;
+  String _selectedWorkMode = jobWorkModeOnsite;
   String? _selectedAddressId;
   bool _useNewAddress = false;
   DateTime? _selectedDate;
@@ -65,7 +66,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     _descriptionController.text = widget.initialDescription?.trim() ?? '';
     final num? initialBudget = widget.initialBudget;
     if (initialBudget != null && initialBudget > 0) {
-      _budgetController.text = initialBudget.round().toString();
+      _budgetController.text = RupiahInputFormatter.format(initialBudget.round());
     }
     _loadInitialData();
   }
@@ -98,21 +99,22 @@ class _CreateJobPageState extends State<CreateJobPage> {
         _categories = categories;
         _addresses = addresses;
         if (categories.isNotEmpty) {
-          final String initialName = (widget.initialCategoryName ?? '')
-              .trim()
-              .toLowerCase();
+          final String initialName = (widget.initialCategoryName ?? '').trim().toLowerCase();
           Map<String, dynamic>? initialCategory;
           if (initialName.isNotEmpty) {
             for (final Map<String, dynamic> category in categories) {
-              if ((category['name'] ?? '').toString().trim().toLowerCase() ==
-                  initialName) {
+              if ((category['name'] ?? '').toString().trim().toLowerCase() == initialName) {
                 initialCategory = category;
                 break;
               }
             }
           }
-          _selectedCategoryId = (initialCategory ?? categories.first)['id']
-              .toString();
+          final Map<String, dynamic> selectedCategory =
+              initialCategory ?? categories.first;
+          _selectedCategoryId = selectedCategory['id'].toString();
+          _selectedWorkMode = defaultJobWorkModeForCategory(
+            (selectedCategory['name'] ?? 'Lainnya').toString(),
+          );
         }
         if (addresses.isNotEmpty) {
           _selectedAddressId = addresses.first['id'].toString();
@@ -195,6 +197,19 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return 'Lainnya';
   }
 
+  bool get _requiresPhysicalLocation =>
+      _selectedWorkMode != jobWorkModeRemote;
+
+  String _workModeRecommendation() {
+    final String recommended =
+        defaultJobWorkModeForCategory(_selectedCategoryName());
+    if (recommended == _selectedWorkMode) {
+      return 'Direkomendasikan untuk kategori ${_selectedCategoryName()}.';
+    }
+    return 'Mode ini kamu pilih manual. Rekomendasi kategori: '
+        '${jobWorkModeLabel(recommended)}.';
+  }
+
   String _titleHintForCategory() {
     switch (_selectedCategoryName().trim().toLowerCase()) {
       case 'elektronik':
@@ -240,7 +255,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
           '',
         )
         .replaceAll(
-          RegExp(r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+', caseSensitive: false),
+          RegExp(
+            r'\b(?:no\.?|nomor)\s*[a-z0-9./-]+',
+            caseSensitive: false,
+          ),
           '',
         )
         .replaceAll(
@@ -248,7 +266,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
           '',
         )
         .replaceAll(
-          RegExp(r'\b(?:kota|kabupaten|kab\.?)\s+', caseSensitive: false),
+          RegExp(
+            r'\b(?:kota|kabupaten|kab\.?)\s+',
+            caseSensitive: false,
+          ),
           '',
         )
         .replaceAll(RegExp(r'\s+,'), ',')
@@ -259,7 +280,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
     if (broader.endsWith(',')) {
       broader = broader.substring(0, broader.length - 1).trim();
     }
-    if (broader.isNotEmpty && !broader.toLowerCase().contains('indonesia')) {
+    if (broader.isNotEmpty &&
+        !broader.toLowerCase().contains('indonesia')) {
       broader = '$broader, Jawa Barat, Indonesia';
     }
     if (broader.isNotEmpty && !queries.contains(broader)) {
@@ -294,9 +316,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
       bool approximate = false;
 
       for (int index = 0; index < candidates.length; index++) {
-        final List<OsmGeocodingResult> results = await _geocodingService.search(
-          candidates[index],
-        );
+        final List<OsmGeocodingResult> results =
+            await _geocodingService.search(candidates[index]);
         if (results.isNotEmpty) {
           best = results.first;
           approximate = index > 0;
@@ -379,26 +400,28 @@ class _CreateJobPageState extends State<CreateJobPage> {
       _showMessage('Tanggal dan waktu pekerjaan wajib dipilih.', isError: true);
       return;
     }
-    if (!_useNewAddress && _selectedAddressId == null) {
-      _showMessage('Pilih alamat pekerjaan.', isError: true);
-      return;
-    }
-    if (_selectedPoint == null && (_useNewAddress || _addresses.isEmpty)) {
-      final bool resolved = await _resolveTypedAddress(showMessage: false);
-      if (!resolved) {
+    if (_requiresPhysicalLocation) {
+      if (!_useNewAddress && _selectedAddressId == null) {
+        _showMessage('Pilih alamat pekerjaan.', isError: true);
+        return;
+      }
+      if (_selectedPoint == null && (_useNewAddress || _addresses.isEmpty)) {
+        final bool resolved = await _resolveTypedAddress(showMessage: false);
+        if (!resolved) {
+          _showMessage(
+            'Alamat belum memiliki titik lokasi. Cari titik otomatis atau pilih di peta.',
+            isError: true,
+          );
+          return;
+        }
+      }
+      if (_selectedPoint == null) {
         _showMessage(
-          'Alamat belum memiliki titik lokasi. Cari titik otomatis atau pilih di peta.',
+          'Pilih titik lokasi pekerjaan pada peta terlebih dahulu.',
           isError: true,
         );
         return;
       }
-    }
-    if (_selectedPoint == null) {
-      _showMessage(
-        'Pilih titik lokasi pekerjaan pada peta terlebih dahulu.',
-        isError: true,
-      );
-      return;
     }
 
     final DateTime scheduledAt = DateTime(
@@ -409,17 +432,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
       _selectedTime!.minute,
     );
     if (!scheduledAt.isAfter(DateTime.now())) {
-      _showMessage(
-        'Jadwal pekerjaan harus lebih lambat dari waktu sekarang.',
-        isError: true,
-      );
+      _showMessage('Jadwal pekerjaan harus lebih lambat dari waktu sekarang.',
+          isError: true);
       return;
     }
 
-    final String digits = _budgetController.text.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    final String digits = _budgetController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final num budget = num.tryParse(digits) ?? 0;
 
     setState(() => _isSubmitting = true);
@@ -431,12 +449,17 @@ class _CreateJobPageState extends State<CreateJobPage> {
         title: _titleController.text,
         description: _descriptionController.text,
         budget: budget,
+        workMode: _selectedWorkMode,
         scheduleDate: _selectedDate!,
         scheduleTime: timeValue,
-        addressId: _useNewAddress ? null : _selectedAddressId,
-        newAddress: _useNewAddress ? _addressController.text : null,
-        latitude: _selectedPoint!.latitude,
-        longitude: _selectedPoint!.longitude,
+        addressId: _requiresPhysicalLocation && !_useNewAddress
+            ? _selectedAddressId
+            : null,
+        newAddress: _requiresPhysicalLocation && _useNewAddress
+            ? _addressController.text
+            : null,
+        latitude: _requiresPhysicalLocation ? _selectedPoint?.latitude : null,
+        longitude: _requiresPhysicalLocation ? _selectedPoint?.longitude : null,
         preferredMitraId: widget.preferredMitraId,
       );
 
@@ -463,9 +486,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         barrierDismissible: false,
         builder: (BuildContext dialogContext) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
             icon: const CircleAvatar(
               radius: 30,
               backgroundColor: Color(0xFFD9EDCB),
@@ -476,7 +497,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: Text(successMessage, textAlign: TextAlign.center),
+            content: Text(
+              successMessage,
+              textAlign: TextAlign.center,
+            ),
             actionsAlignment: MainAxisAlignment.center,
             actions: <Widget>[
               FilledButton(
@@ -490,10 +514,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      _showMessage(
-        'Pekerjaan belum berhasil dipublikasikan: $error',
-        isError: true,
-      );
+      _showMessage('Pekerjaan belum berhasil dipublikasikan: $error',
+          isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -565,9 +587,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
       final List<XFile> accepted = files.take(remaining).toList();
       setState(() => _jobImages.addAll(accepted));
       if (files.length > remaining) {
-        _showMessage(
-          'Maksimal 5 foto. Hanya $remaining foto pertama yang ditambahkan.',
-        );
+        _showMessage('Maksimal 5 foto. Hanya $remaining foto pertama yang ditambahkan.');
       }
     } catch (error) {
       _showMessage('Foto belum dapat dipilih: $error', isError: true);
@@ -585,7 +605,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 _jobImages.isEmpty
                     ? 'Opsional · maksimal 5 foto'
                     : '${_jobImages.length}/5 foto dipilih',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF756960)),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF756960),
+                ),
               ),
             ),
             TextButton.icon(
@@ -615,26 +638,17 @@ class _CreateJobPageState extends State<CreateJobPage> {
                         height: 92,
                         child: FutureBuilder<Uint8List>(
                           future: file.readAsBytes(),
-                          builder:
-                              (
-                                BuildContext context,
-                                AsyncSnapshot<Uint8List> snapshot,
-                              ) {
-                                if (!snapshot.hasData) {
-                                  return const ColoredBox(
-                                    color: Color(0xFFF1ECE8),
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return Image.memory(
-                                  snapshot.data!,
-                                  fit: BoxFit.cover,
-                                );
-                              },
+                          builder: (BuildContext context, AsyncSnapshot<Uint8List> snapshot) {
+                            if (!snapshot.hasData) {
+                              return const ColoredBox(
+                                color: Color(0xFFF1ECE8),
+                                child: Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            }
+                            return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                          },
                         ),
                       ),
                     ),
@@ -649,8 +663,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                           customBorder: const CircleBorder(),
                           onTap: _isSubmitting
                               ? null
-                              : () =>
-                                    setState(() => _jobImages.removeAt(index)),
+                              : () => setState(() => _jobImages.removeAt(index)),
                           child: const Padding(
                             padding: EdgeInsets.all(5),
                             child: Icon(
@@ -671,11 +684,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         const SizedBox(height: 5),
         const Text(
           'Tips: foto kerusakan, kondisi barang, ukuran, atau area kerja membantu Mitra memberi penawaran yang lebih tepat.',
-          style: TextStyle(
-            fontSize: 10.5,
-            height: 1.4,
-            color: Color(0xFF81736B),
-          ),
+          style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF81736B)),
         ),
       ],
     );
@@ -714,9 +723,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         actions: const <Widget>[HomeShortcutButton()],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: jobOrangeColor),
-            )
+          ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
           : SafeArea(
               top: false,
               child: Form(
@@ -759,6 +766,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     _sectionLabel('Kategori Layanan'),
                     const SizedBox(height: 8),
                     _buildCategoryPicker(),
+                    const SizedBox(height: 18),
+                    _sectionLabel('Cara Pengerjaan'),
+                    const SizedBox(height: 8),
+                    _buildWorkModePicker(),
                     const SizedBox(height: 22),
                     _sectionLabel('Judul Pekerjaan'),
                     const SizedBox(height: 8),
@@ -778,8 +789,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _descriptionController,
-                      hintText:
-                          'Jelaskan apa yang perlu dikerjakan secara detail...',
+                      hintText: 'Jelaskan apa yang perlu dikerjakan secara detail...',
                       maxLines: 5,
                       validator: (String? value) {
                         if (value == null || value.trim().length < 10) {
@@ -793,10 +803,43 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 5),
                     _buildJobPhotoPicker(),
                     const SizedBox(height: 18),
-                    _sectionLabel('Lokasi Pekerjaan'),
-                    const SizedBox(height: 8),
-                    _buildAddressSection(),
-                    const SizedBox(height: 18),
+                    if (_requiresPhysicalLocation) ...<Widget>[
+                      _sectionLabel('Lokasi Pekerjaan'),
+                      const SizedBox(height: 8),
+                      _buildAddressSection(),
+                      const SizedBox(height: 18),
+                    ] else ...<Widget>[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF3E4),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFC7DDB8)),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Icon(
+                              Icons.laptop_mac_rounded,
+                              color: jobGreenColor,
+                              size: 21,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Pekerjaan dilakukan secara online. Alamat dan tahap menuju lokasi tidak diperlukan.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  height: 1.45,
+                                  color: Color(0xFF526046),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                    ],
                     Row(
                       children: <Widget>[
                         Expanded(
@@ -830,23 +873,23 @@ class _CreateJobPageState extends State<CreateJobPage> {
                       hintText: '0',
                       prefixText: 'Rp ',
                       keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
+                      inputFormatters: const <TextInputFormatter>[
+                        RupiahInputFormatter(maxValue: _maxJobBudget),
                       ],
                       validator: (String? value) {
-                        final num amount =
-                            num.tryParse(
-                              (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
-                            ) ??
-                            0;
-                        if (amount < 1000)
-                          return 'Masukkan estimasi harga yang wajar.';
+                        final int amount = RupiahInputFormatter.parse(value ?? '');
+                        if (amount < 1000) {
+                          return 'Estimasi harga minimal Rp1.000.';
+                        }
+                        if (amount > _maxJobBudget) {
+                          return 'Estimasi harga maksimal Rp10.000.000.';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Harga yang wajar membantu mitra memberikan penawaran yang sesuai.',
+                      'Minimal Rp1.000 • Maksimal Rp10.000.000. Harga yang wajar membantu Mitra memberikan penawaran yang sesuai.',
                       style: TextStyle(fontSize: 11, color: Color(0xFF7C6F67)),
                     ),
                     const SizedBox(height: 28),
@@ -920,7 +963,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
         return ChoiceChip(
           selected: selected,
           showCheckmark: false,
-          onSelected: (_) => setState(() => _selectedCategoryId = id),
+          onSelected: (_) => setState(() {
+            _selectedCategoryId = id;
+            _selectedWorkMode = defaultJobWorkModeForCategory(name);
+          }),
           avatar: Icon(
             categoryIcon(name),
             size: 17,
@@ -937,11 +983,58 @@ class _CreateJobPageState extends State<CreateJobPage> {
           side: BorderSide(
             color: selected ? const Color(0xFFA8C895) : jobBorderColor,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildWorkModePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: jobWorkModes.map((String mode) {
+            final bool selected = mode == _selectedWorkMode;
+            return ChoiceChip(
+              selected: selected,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _selectedWorkMode = mode),
+              avatar: Icon(
+                jobWorkModeIcon(mode),
+                size: 17,
+                color: selected ? jobGreenColor : jobDarkBrownColor,
+              ),
+              label: Text(jobWorkModeLabel(mode)),
+              labelStyle: TextStyle(
+                color: selected ? jobGreenColor : const Color(0xFF4C4038),
+                fontSize: 11.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+              selectedColor: const Color(0xFFDDEBD5),
+              backgroundColor: Colors.white,
+              side: BorderSide(
+                color: selected ? const Color(0xFFA8C895) : jobBorderColor,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          '${jobWorkModeDescription(_selectedWorkMode)} '
+          '${_workModeRecommendation()}',
+          style: const TextStyle(
+            fontSize: 10.5,
+            height: 1.4,
+            color: Color(0xFF786B63),
+          ),
+        ),
+      ],
     );
   }
 
@@ -964,8 +1057,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 items: <DropdownMenuItem<String>>[
                   ..._addresses.map((Map<String, dynamic> address) {
-                    final String label = (address['label'] ?? 'Alamat')
-                        .toString();
+                    final String label = (address['label'] ?? 'Alamat').toString();
                     final String value = address['address'].toString();
                     return DropdownMenuItem<String>(
                       value: address['id'].toString(),
@@ -1029,7 +1121,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
             job: <String, dynamic>{
               'latitude': _selectedPoint!.latitude,
               'longitude': _selectedPoint!.longitude,
-              'addresses': <String, dynamic>{'address': _currentAddressLabel()},
+              'addresses': <String, dynamic>{
+                'address': _currentAddressLabel(),
+              },
             },
           ),
           const SizedBox(height: 10),
@@ -1145,15 +1239,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
       decoration: InputDecoration(
         hintText: hintText,
         prefixText: prefixText,
-        prefixIcon: prefixIcon == null
-            ? null
-            : Icon(prefixIcon, color: jobBrownColor),
+        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: jobBrownColor),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: jobBorderColor),

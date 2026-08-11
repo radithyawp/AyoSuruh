@@ -75,6 +75,7 @@ flutter:
     - assets/images/
     - assets/images/ayos/
     - assets/images/categories/
+    - assets/images/vouchers/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
