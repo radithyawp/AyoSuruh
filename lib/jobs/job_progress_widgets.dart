@@ -6,27 +6,35 @@ class JobProgressTimeline extends StatelessWidget {
   const JobProgressTimeline({
     super.key,
     required this.currentStage,
+    this.job,
     this.isCompleted = false,
     this.compact = false,
   });
 
   final String? currentStage;
+  final Map<String, dynamic>? job;
   final bool isCompleted;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic>? jobData = job;
+    final List<String> stages = jobData == null
+        ? jobProgressStages
+        : jobProgressStagesFor(jobData);
     final int currentIndex = isCompleted
-        ? jobProgressStages.length - 1
-        : jobProgressIndex(currentStage);
+        ? stages.length - 1
+        : jobData == null
+            ? jobProgressIndex(currentStage)
+            : jobProgressIndexFor(jobData, currentStage);
 
     return Column(
-      children: List<Widget>.generate(jobProgressStages.length, (int index) {
-        final String stage = jobProgressStages[index];
+      children: List<Widget>.generate(stages.length, (int index) {
+        final String stage = stages[index];
         final bool completed = isCompleted || index < currentIndex;
         final bool active = !isCompleted && index == currentIndex;
         final bool next = !isCompleted && index == currentIndex + 1;
-        final bool showLine = index < jobProgressStages.length - 1;
+        final bool showLine = index < stages.length - 1;
 
         return _ProgressStep(
           stage: stage,
@@ -35,6 +43,7 @@ class JobProgressTimeline extends StatelessWidget {
           next: next,
           showLine: showLine,
           compact: compact,
+          job: jobData,
         );
       }),
     );
@@ -49,6 +58,7 @@ class _ProgressStep extends StatelessWidget {
     required this.next,
     required this.showLine,
     required this.compact,
+    this.job,
   });
 
   final String stage;
@@ -57,6 +67,7 @@ class _ProgressStep extends StatelessWidget {
   final bool next;
   final bool showLine;
   final bool compact;
+  final Map<String, dynamic>? job;
 
   @override
   Widget build(BuildContext context) {
@@ -125,7 +136,9 @@ class _ProgressStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  jobProgressLabel(stage),
+                  job == null
+                      ? jobProgressLabel(stage)
+                      : jobProgressLabelFor(job!, stage),
                   style: TextStyle(
                     fontSize: compact ? 13 : 15,
                     fontWeight: active || next || completed
@@ -137,7 +150,9 @@ class _ProgressStep extends StatelessWidget {
                 if (!compact) ...<Widget>[
                   const SizedBox(height: 2),
                   Text(
-                    jobProgressDescription(stage),
+                    job == null
+                        ? jobProgressDescription(stage)
+                        : jobProgressDescriptionFor(job!, stage),
                     style: const TextStyle(
                       fontSize: 10,
                       height: 1.35,

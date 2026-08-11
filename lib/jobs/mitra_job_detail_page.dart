@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/ayo_snackbar.dart';
 
 import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
@@ -98,9 +97,13 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
     if (customerId.isNotEmpty &&
         customerId.toLowerCase() == currentUserId.toLowerCase()) {
       if (!mounted) return;
-      AyoSnackBar.info(
-        context,
-        'Pekerjaan ini dibuat oleh akunmu sendiri. Gunakan akun sebagai Customer untuk melihat penawaran.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pekerjaan ini dibuat oleh akunmu sendiri. Buka dari mode Customer untuk melihat penawaran.',
+          ),
+          backgroundColor: jobBrownColor,
+        ),
       );
       return;
     }
@@ -142,7 +145,12 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, 'Chat belum dapat dibuka: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chat belum dapat dibuka: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isOpeningChat = false);
     }
@@ -154,13 +162,20 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       await _jobService.startJob(widget.jobId);
       await _loadData();
       if (!mounted) return;
-      AyoSnackBar.success(
-        context,
-        'Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.'),
+          backgroundColor: jobGreenColor,
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, 'Pekerjaan belum dapat dimulai: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pekerjaan belum dapat dimulai: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isStarting = false);
     }
@@ -298,7 +313,15 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                 const SizedBox(height: 18),
                 _info(Icons.person_outline_rounded, 'Customer', customerName(job)),
                 const SizedBox(height: 10),
-                _info(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+                _info(
+                  jobWorkModeIcon(jobWorkMode(job)),
+                  'Cara Pengerjaan',
+                  jobWorkModeLabel(jobWorkMode(job)),
+                ),
+                if (jobNeedsPhysicalLocation(job)) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _info(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+                ],
                 const SizedBox(height: 10),
                 _info(
                   Icons.calendar_month_outlined,
@@ -309,7 +332,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             ),
           ),
           const SizedBox(height: 14),
-          if (jobLatLng(job) != null) ...<Widget>[
+          if (jobNeedsPhysicalLocation(job) && jobLatLng(job) != null) ...<Widget>[
             JobLocationMapCard(job: job),
             const SizedBox(height: 14),
           ],
@@ -345,8 +368,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           ],
           if (assignedToMe &&
               _payment != null &&
-              (((status == 'accepted' || _payment?['payment_required'] == true) &&
-                      <String>['accepted', 'on_progress', 'completed'].contains(status)) ||
+              (<String>['accepted', 'on_progress', 'completed'].contains(status) ||
                   <String>['refunded', 'cancelled'].contains(
                     (_payment?['status'] ?? '').toString().toLowerCase(),
                   ))) ...<Widget>[
@@ -362,6 +384,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
               title: 'Progres Pekerjaan',
               child: JobProgressTimeline(
                 currentStage: currentJobProgressStage(job),
+                job: job,
                 compact: true,
               ),
             ),
@@ -405,7 +428,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             _card(
               title: 'Pekerjaan Milik Akunmu',
               child: const Text(
-                'Pekerjaan ini kamu buat sebagai Customer. Gunakan akun sebagai Customer untuk melihat dan memilih penawaran Mitra.',
+                'Pekerjaan ini kamu buat sebagai Customer. Kembali ke mode Customer untuk melihat dan memilih penawaran Mitra.',
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
             ),
@@ -446,7 +469,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                 label: Text(
                   paymentAllowsStart
                       ? 'Mulai Pekerjaan'
-                      : 'Menunggu Pembayaran Customer',
+                      : mitraPaymentGateLabel(_payment),
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -455,15 +478,22 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             SizedBox(
               height: 52,
               child: FilledButton.icon(
-                onPressed: _openProgress,
+                onPressed: paymentAllowsStart ? _openProgress : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: jobOrangeColor,
+                  disabledBackgroundColor: const Color(0xFFE3DDD9),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                 ),
-                icon: const Icon(Icons.sync_rounded),
-                label: const Text(
-                  'Update Status Pekerjaan',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                icon: Icon(
+                  paymentAllowsStart
+                      ? Icons.sync_rounded
+                      : Icons.lock_outline_rounded,
+                ),
+                label: Text(
+                  paymentAllowsStart
+                      ? 'Update Status Pekerjaan'
+                      : mitraPaymentGateLabel(_payment),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),

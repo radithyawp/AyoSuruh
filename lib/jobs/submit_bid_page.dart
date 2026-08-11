@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/ayo_snackbar.dart';
-import 'package:flutter/services.dart';
+import '../widgets/rupiah_input_formatter.dart';
 
 import 'job_helpers.dart';
 import 'job_service.dart';
@@ -37,7 +37,9 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
     final num budget = widget.initialBudget is num
         ? widget.initialBudget as num
         : num.tryParse(widget.initialBudget?.toString() ?? '') ?? 0;
-    if (budget > 0) _priceController.text = budget.round().toString();
+    if (budget > 0) {
+      _priceController.text = RupiahInputFormatter.format(budget.round());
+    }
     _priceController.addListener(_refreshEconomics);
     _loadPlatformFee();
   }
@@ -52,7 +54,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
     setState(() => _platformFeePercent = value);
   }
 
-  num get _currentOffer => num.tryParse(_priceController.text) ?? 0;
+  num get _currentOffer => RupiahInputFormatter.parse(_priceController.text);
 
   num get _platformFeeAmount =>
       (_currentOffer * _platformFeePercent / 100).round();
@@ -72,7 +74,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
-    final num price = num.tryParse(_priceController.text) ?? 0;
+    final num price = RupiahInputFormatter.parse(_priceController.text);
 
     setState(() => _isSubmitting = true);
     try {
@@ -191,15 +193,24 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
               TextFormField(
                 controller: _priceController,
                 keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.digitsOnly,
+                inputFormatters: const <RupiahInputFormatter>[
+                  RupiahInputFormatter(maxValue: 10000000),
                 ],
                 validator: (String? value) {
-                  final num amount = num.tryParse(value ?? '') ?? 0;
-                  if (amount < 1000) return 'Harga penawaran minimal Rp 1.000.';
+                  final int amount = RupiahInputFormatter.parse(value ?? '');
+                  if (amount < 1000) {
+                    return 'Harga penawaran minimal Rp 1.000.';
+                  }
+                  if (amount > 10000000) {
+                    return 'Harga penawaran maksimal Rp 10.000.000.';
+                  }
                   return null;
                 },
-                decoration: _inputDecoration('0', prefixText: 'Rp '),
+                decoration: _inputDecoration(
+                  '0',
+                  prefixText: 'Rp ',
+                  helperText: 'Maksimal Rp 10.000.000',
+                ),
               ),
               const SizedBox(height: 10),
               Container(
@@ -352,10 +363,15 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint, {String? prefixText}) {
+  InputDecoration _inputDecoration(
+    String hint, {
+    String? prefixText,
+    String? helperText,
+  }) {
     return InputDecoration(
       hintText: hint,
       prefixText: prefixText,
+      helperText: helperText,
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

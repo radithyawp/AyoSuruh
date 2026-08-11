@@ -19,6 +19,9 @@ import 'location/location_picker_page.dart';
 import 'payments/payment_history_page.dart';
 import 'wallet/mitra_wallet_page.dart';
 import 'wallet/wallet_service.dart';
+import 'ayopay/ayopay_page.dart';
+import 'ayopay/ayopay_service.dart';
+import 'vouchers/voucher_page.dart';
 import 'tutorial/ayos_tutorial.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/ayo_pressable.dart';
@@ -47,6 +50,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final JobService _jobService = JobService();
   final MitraApplicationService _applicationService = MitraApplicationService();
   final WalletService _walletService = WalletService();
+  final AyoPayService _ayoPayService = AyoPayService();
 
   Map<String, dynamic>? _userRow;
   Map<String, dynamic>? _mitraApplication;
@@ -105,6 +109,20 @@ class _ProfilePageState extends State<ProfilePage> {
           application = await _applicationService.fetchMyApplication();
         } catch (error) {
           debugPrint('Status pengajuan mitra belum dapat dimuat: $error');
+        }
+      }
+
+      if (widget.activeMode != 'mitra') {
+        try {
+          final Map<String, dynamic> ayoPaySummary =
+              await _ayoPayService.fetchSummary();
+          profile['saldo'] = ayoPaySummary['balance'] ?? 0;
+          profile['ayopay_active'] = ayoPaySummary['is_active'] == true;
+          profile['ayopay_activated_at'] = ayoPaySummary['activated_at'];
+        } catch (error) {
+          debugPrint('Ringkasan AyoPay belum dapat dimuat: $error');
+          profile['saldo'] ??= 0;
+          profile['ayopay_active'] ??= false;
         }
       }
 
@@ -234,6 +252,23 @@ class _ProfilePageState extends State<ProfilePage> {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(builder: (_) => const MitraWalletPage()),
+    );
+    if (mounted) await _loadProfileData();
+  }
+
+
+  Future<void> _navigateToAyoPay() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const AyoPayPage()),
+    );
+    if (mounted) await _loadProfileData();
+  }
+
+  Future<void> _navigateToVouchers() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const VoucherPage()),
     );
     if (mounted) await _loadProfileData();
   }
@@ -397,7 +432,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 key: widget.tutorialAnchors?.profileFinance,
                 child: _buildSaldoCard(
                   title: "SALDO AYOPAY",
-                  buttonText: "Isi Saldo",
+                  buttonText: _userRow?['ayopay_active'] == true
+                      ? "Buka"
+                      : "Aktifkan",
+                  onPressed: _navigateToAyoPay,
                 ),
               ),
               const SizedBox(height: 16),
@@ -410,6 +448,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     builder: (_) => const PaymentHistoryPage(),
                   ),
                 ),
+              ),
+              _buildMenuCard(
+                Icons.confirmation_number_outlined,
+                'Voucher Saya',
+                _navigateToVouchers,
               ),
               _buildMenuCard(
                 Icons.person_outline,
@@ -459,11 +502,16 @@ class _ProfilePageState extends State<ProfilePage> {
       elevation: 0,
       title: Row(
         children: <Widget>[
-          SizedBox(
+          Container(
             width: 34,
             height: 34,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEFE1),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Image.asset(
-              'assets/images/ayos_runner_logo.png',
+              'assets/images/Logo_Ayo_Suruh.png',
               fit: BoxFit.contain,
             ),
           ),
@@ -480,7 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       actions: <Widget>[
         NotificationBell(
-          color: const Color(0xFFF6990E),
+          color: Colors.black87,
           size: 25,
           activeMode: widget.activeMode,
         ),

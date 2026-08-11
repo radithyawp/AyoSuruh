@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +7,7 @@ import '../jobs/job_service.dart';
 import 'mitra_service_service.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/ayo_snackbar.dart';
+import '../widgets/rupiah_input_formatter.dart';
 
 class CreateMitraServicePage extends StatefulWidget {
   const CreateMitraServicePage({
@@ -23,6 +22,7 @@ class CreateMitraServicePage extends StatefulWidget {
 }
 
 class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
+  static const int _maxServicePrice = 10000000;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final JobService _jobService = JobService();
   final MitraServiceService _service = MitraServiceService();
@@ -56,7 +56,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
         ? existing!['starting_price'] as num
         : num.tryParse(existing?['starting_price']?.toString() ?? '') ?? 0;
     _priceController = TextEditingController(
-      text: price > 0 ? price.round().toString() : '',
+      text: price > 0 ? RupiahInputFormatter.format(price.round()) : '',
     );
     final dynamic rawTags = existing?['tags'];
     _tagsController = TextEditingController(
@@ -586,22 +586,24 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                   TextFormField(
                     controller: _priceController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: <TextInputFormatter>[
-                      FilteringTextInputFormatter.digitsOnly,
+                    inputFormatters: const <TextInputFormatter>[
+                      RupiahInputFormatter(maxValue: _maxServicePrice),
                     ],
                     decoration: _decoration('0').copyWith(prefixText: 'Rp '),
                     validator: (String? value) {
-                      final num price = num.tryParse(
-                            (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
-                          ) ??
-                          0;
-                      if (price < 1000) return 'Harga mulai minimal Rp1.000.';
+                      final int price = RupiahInputFormatter.parse(value ?? '');
+                      if (price < 1000) {
+                        return 'Harga mulai minimal Rp1.000.';
+                      }
+                      if (price > _maxServicePrice) {
+                        return 'Harga mulai maksimal Rp10.000.000.';
+                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Harga ini hanya referensi awal. Customer tetap dapat membuat budget dan Mitra mengirim penawaran final melalui sistem bidding.',
+                    'Minimal Rp1.000 • Maksimal Rp10.000.000. Harga ini hanya referensi awal; penawaran final tetap mengikuti sistem bidding.',
                     style: TextStyle(
                       color: Color(0xFF766A63),
                       fontSize: 10.5,

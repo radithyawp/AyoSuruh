@@ -344,7 +344,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
     _TutorialStep(
       target: widget.anchors.homeHeader,
       tabIndex: 0,
-      title: 'Sekarang kamu lagi di mode Mitra 👋',
+      title: 'Sekarang kamu lagi di mode Mitra.',
       body:
           'Di mode ini fokusnya beda: cari pekerjaan, kelola jasa, pantau progres, sampai urus penghasilan.',
       assetPath: 'assets/images/ayos/ayos_hello.png',
