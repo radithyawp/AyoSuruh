@@ -24,6 +24,8 @@ class _SplashScreenState extends State<SplashScreen> {
   StreamSubscription<AuthState>? _authSubscription;
   bool _recoveryDetected = false;
   bool _hasNavigated = false;
+  Timer? _loadingDotsTimer;
+  int _loadingDots = 1;
 
   @override
   void initState() {
@@ -37,12 +39,22 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       },
     );
+    _loadingDotsTimer = Timer.periodic(
+      const Duration(milliseconds: 420),
+      (_) {
+        if (!mounted) return;
+        setState(() {
+          _loadingDots = _loadingDots == 3 ? 1 : _loadingDots + 1;
+        });
+      },
+    );
     _startTimer();
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _loadingDotsTimer?.cancel();
     super.dispose();
   }
 
@@ -123,35 +135,41 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              const Spacer(),
-              SizedBox(
-                width: 230,
-                height: 230,
-                child: Image.asset(
-                  'assets/images/logo_ayo_suruh_transparent.png',
-                  fit: BoxFit.contain,
-                ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: Image.asset(
+                      'assets/images/logo_ayo_suruh_transparent.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: CircularProgressIndicator(
+                      color: AyoColors.orange,
+                      strokeWidth: 3.5,
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    '${AyoI18n.isEnglish ? 'Preparing the best services for you' : 'Menyiapkan layanan terbaik untuk Anda'}${List<String>.filled(_loadingDots, '.').join()}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 13,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              const Spacer(),
-              const SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(
-                  color: AyoColors.orange,
-                  strokeWidth: 3.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              AyoText(
-                'Menyiapkan Ayo Suruh untukmu...',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
         ),
       ),
