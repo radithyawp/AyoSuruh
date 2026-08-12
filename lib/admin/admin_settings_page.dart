@@ -14,6 +14,7 @@ import 'admin_service.dart';
 import 'admin_feedback_page.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import '../theme/ayo_theme.dart';
+import '../widgets/ayo_snackbar.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -67,17 +68,19 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+        MaterialPageRoute<void>(
+          builder: (_) => const LoginPage(
+            noticeMessage: 'Berhasil keluar dari akun admin.',
+          ),
+        ),
         (Route<dynamic> route) => false,
       );
     } catch (error) {
       if (!mounted) return;
       setState(() => _loggingOut = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: AyoText('Logout Admin belum berhasil: $error'),
-          backgroundColor: Colors.red,
-        ),
+      AyoSnackBar.error(
+        context,
+        'Keluar dari akun admin belum berhasil: $error',
       );
     }
   }

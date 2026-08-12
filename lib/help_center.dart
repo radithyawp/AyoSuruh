@@ -84,12 +84,32 @@ class _HelpPageState extends State<HelpPage> {
     _FaqItem(
       category: 'Customer',
       categoryEn: 'Customer',
+      question: 'Bagaimana cara menggunakan panggilan suara?',
+      questionEn: 'How do I use voice calls?',
+      answer:
+          'Panggilan suara tersedia langsung di dalam Ayo Suruh pada chat pekerjaan yang sudah diterima dan masih aktif. Tekan ikon telepon, izinkan mikrofon, lalu tunggu lawan transaksi menerima panggilan. Nomor telepon Customer dan Mitra tidak dibagikan melalui fitur ini. Ayo Suruh tidak mengaktifkan perekaman atau transkripsi panggilan suara.',
+      answerEn:
+          'Voice calls are available directly inside Ayo Suruh from the chat of an accepted active job. Tap the call icon, allow microphone access, then wait for the other party to answer. Customer and Partner phone numbers are not shared through this feature. Ayo Suruh does not enable call recording or transcription.',
+    ),
+    _FaqItem(
+      category: 'Customer',
+      categoryEn: 'Customer',
       question: 'Bagaimana cara memberi rating kepada mitra?',
       questionEn: 'How do I rate a Partner?',
       answer:
           'Setelah pekerjaan selesai dan dikonfirmasi, buka detail atau riwayat pekerjaan lalu berikan rating dan ulasan berdasarkan pengalaman Anda.',
       answerEn:
           'After the job is completed and confirmed, open the job details or history and leave a rating and review based on your experience.',
+    ),
+    _FaqItem(
+      category: 'Akun',
+      categoryEn: 'Account',
+      question: 'Bagaimana cara mengonfirmasi nomor HP?',
+      questionEn: 'How do I confirm my phone number?',
+      answer:
+          'Pada Android, buka Profil lalu ketuk status nomor HP atau Edit Profil dan pilih Gunakan nomor dari perangkat ini. Android akan menampilkan nomor berbasis SIM yang tersedia tanpa meminta izin membaca SMS. Nomor yang dipilih ditandai dikonfirmasi dari perangkat. Cara ini membantu mengurangi salah input, tetapi bukan OTP SMS dan bukan bukti identitas hukum. Nomor yang diketik manual tetap dapat disimpan dengan status belum dikonfirmasi.',
+      answerEn:
+          'On Android, open Profile and tap the phone-number status or Edit Profile, then choose Use a number from this device. Android shows available SIM-based phone numbers without requesting SMS-reading permission. A selected number is marked as confirmed from the device. This reduces input mistakes, but it is not SMS OTP or legal identity proof. A manually entered number can still be saved with an unconfirmed status.',
     ),
     _FaqItem(
       category: 'Akun',
@@ -137,9 +157,9 @@ class _HelpPageState extends State<HelpPage> {
       question: 'Berapa komisi Ayo Suruh untuk mitra?',
       questionEn: 'What is the Ayo Suruh commission for Partners?',
       answer:
-          'Ayo Suruh menggunakan komisi platform 6% dari nilai jasa pada transaksi berhasil, kecuali diinformasikan lain pada aplikasi. Nilai komisi dicatat pada transaksi agar histori tetap konsisten jika kebijakan tarif diperbarui.',
+          'Ayo Suruh menggunakan komisi platform 6% dari nilai jasa pada transaksi berhasil, termasuk pembayaran Cash, kecuali diinformasikan lain pada aplikasi. Untuk Cash, Customer membayar langsung ke Mitra dan komisi diselesaikan melalui saldo AyoPay Mitra. Jika saldo belum cukup, kewajiban akan tertutup otomatis oleh saldo atau pendapatan berikutnya. Mitra baru mendapat Bonus Mitra Baru berupa 0% komisi pada satu pekerjaan pertama yang memenuhi syarat dan berhasil selesai.',
       answerEn:
-          'Ayo Suruh applies a 6% platform commission to the service amount on successful transactions unless the app states otherwise. The commission is recorded with each transaction so historical records remain consistent if the rate policy changes.',
+          'Ayo Suruh applies a 6% platform commission to the service amount on successful transactions, including Cash payments, unless the app states otherwise. For Cash, the Customer pays the Partner directly and the commission is settled through the Partner’s AyoPay balance. If the balance is insufficient, the obligation is automatically offset by the next available balance or earnings. New Partners receive a one-time New Partner Bonus with 0% commission on their first eligible successfully completed job.',
     ),
     _FaqItem(
       category: 'Mitra',

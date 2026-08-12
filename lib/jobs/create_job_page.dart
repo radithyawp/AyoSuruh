@@ -559,13 +559,23 @@ class _CreateJobPageState extends State<CreateJobPage> {
         }
       }
 
+      final bool firstJobPriority =
+          await _jobService.fetchFirstJobPriorityStatus(jobId);
+
       if (!mounted) return;
+      final String priorityMessage = firstJobPriority
+          ? (AyoI18n.isEnglish
+              ? 'Your first job receives AYOS Priority for 12 hours so Partners can discover it sooner.'
+              : 'Pekerjaan pertamamu mendapat Prioritas AYOS selama 12 jam agar lebih cepat terlihat oleh Mitra.')
+          : '';
       final String baseSuccessMessage = widget.preferredMitraId == null
           ? 'Pekerjaanmu sudah tampil untuk mitra. Penawaran yang masuk dapat dilihat dari halaman Pekerjaan.'
           : 'Permintaan ini ditujukan ke ${widget.preferredMitraName ?? 'mitra pilihanmu'}. Mitra tersebut tetap mengirim penawaran melalui alur pekerjaan Ayo Suruh.';
-      final String successMessage = photoWarning == null
-          ? baseSuccessMessage
-          : '$baseSuccessMessage\n\n$photoWarning';
+      final String successMessage = <String>[
+        baseSuccessMessage,
+        if (priorityMessage.isNotEmpty) priorityMessage,
+        ?photoWarning,
+      ].join('\n\n');
       await showDialog<void>(
         context: context,
         barrierDismissible: false,

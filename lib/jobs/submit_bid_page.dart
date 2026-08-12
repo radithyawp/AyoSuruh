@@ -31,6 +31,8 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
   final TextEditingController _messageController = TextEditingController();
   bool _isSubmitting = false;
   num _platformFeePercent = 6;
+  bool _firstJobBonusAvailable = false;
+  bool _firstJobBonusReservedForThisJob = false;
 
   @override
   void initState() {
@@ -42,26 +44,47 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
       _priceController.text = RupiahInputFormatter.format(budget.round());
     }
     _priceController.addListener(_refreshEconomics);
-    _loadPlatformFee();
+    _loadEconomics();
   }
 
   void _refreshEconomics() {
     if (mounted) setState(() {});
   }
 
-  Future<void> _loadPlatformFee() async {
-    final num value = await _jobService.fetchPlatformFeePercent();
+  Future<void> _loadEconomics() async {
+    final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
+      _jobService.fetchPlatformFeePercent(),
+      _jobService.fetchMyGrowthBenefits(),
+    ]);
     if (!mounted) return;
-    setState(() => _platformFeePercent = value);
+
+    final Map<String, dynamic> benefits =
+        result[1] as Map<String, dynamic>;
+    setState(() {
+      _platformFeePercent = result[0] as num;
+      _firstJobBonusAvailable =
+          benefits['first_job_bonus_available'] == true;
+      _firstJobBonusReservedForThisJob =
+          benefits['first_job_bonus_reserved'] == true &&
+              benefits['first_job_bonus_reserved_job_id']?.toString() ==
+                  widget.jobId;
+    });
   }
+
+  bool get _firstJobBonusMayApply =>
+      _firstJobBonusAvailable || _firstJobBonusReservedForThisJob;
 
   num get _currentOffer => RupiahInputFormatter.parse(_priceController.text);
 
-  num get _platformFeeAmount =>
+  num get _normalPlatformFeeAmount =>
       (_currentOffer * _platformFeePercent / 100).round();
 
+  num get _effectivePlatformFeeAmount =>
+      _firstJobBonusMayApply ? 0 : _normalPlatformFeeAmount;
+
   num get _estimatedNetAmount =>
-      (_currentOffer - _platformFeeAmount).clamp(0, double.infinity);
+      (_currentOffer - _effectivePlatformFeeAmount)
+          .clamp(0, double.infinity);
 
   @override
   void dispose() {
@@ -230,8 +253,17 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                     const SizedBox(height: 7),
                     _economicsRow(
                       'Komisi Ayo Suruh ${_platformFeePercent.toStringAsFixed(_platformFeePercent % 1 == 0 ? 0 : 1)}%',
-                      '-${formatRupiah(_platformFeeAmount)}',
+                      '-${formatRupiah(_normalPlatformFeeAmount)}',
                     ),
+                    if (_firstJobBonusMayApply) ...<Widget>[
+                      const SizedBox(height: 7),
+                      _economicsRow(
+                        AyoI18n.isEnglish
+                            ? 'New Partner Bonus'
+                            : 'Bonus Mitra Baru',
+                        '+${formatRupiah(_normalPlatformFeeAmount)}',
+                      ),
+                    ],
                     const Divider(height: 18),
                     _economicsRow(
                       'Estimasi masuk dompet',
@@ -242,9 +274,13 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                 ),
               ),
               const SizedBox(height: 7),
-              const AyoText(
-                'Komisi platform disnapshot saat transaksi dibuat. Biaya pencairan, jika ada, ditampilkan terpisah ketika withdraw.',
-                style: TextStyle(
+              AyoText(
+                _firstJobBonusMayApply
+                    ? (AyoI18n.isEnglish
+                        ? 'This estimate includes the New Partner 0% commission bonus. The bonus is reserved when an eligible transaction is created and can only be used once.'
+                        : 'Estimasi ini memasukkan Bonus Mitra Baru 0% komisi. Bonus dikunci saat transaksi yang memenuhi syarat dibuat dan hanya dapat digunakan satu kali.')
+                    : 'Komisi platform disnapshot saat transaksi dibuat. Biaya pencairan, jika ada, ditampilkan terpisah ketika withdraw.',
+                style: const TextStyle(
                   fontSize: 10.5,
                   height: 1.35,
                   color: Color(0xFF7A6A5F),

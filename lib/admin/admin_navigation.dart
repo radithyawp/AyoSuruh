@@ -10,10 +10,13 @@ import 'admin_settings_page.dart';
 import 'admin_users_page.dart';
 import '../notifications/notification_router.dart';
 import '../services/notification_service.dart' as push_notifications;
+import '../widgets/ayo_snackbar.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class AdminNavigation extends StatefulWidget {
-  const AdminNavigation({super.key});
+  const AdminNavigation({super.key, this.initialNoticeMessage});
+
+  final String? initialNoticeMessage;
 
   @override
   State<AdminNavigation> createState() => _AdminNavigationState();
@@ -36,6 +39,10 @@ class _AdminNavigationState extends State<AdminNavigation> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final String notice = widget.initialNoticeMessage?.trim() ?? '';
+      if (notice.isNotEmpty && mounted) {
+        AyoSnackBar.success(context, notice);
+      }
       final Map<String, dynamic>? pending = push_notifications
           .NotificationService.instance
           .takePendingNotificationTap();

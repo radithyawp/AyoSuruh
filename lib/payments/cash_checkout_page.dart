@@ -7,6 +7,7 @@ import '../widgets/home_shortcut_button.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../config/feature_flags.dart';
 
 class CashCheckoutPage extends StatefulWidget {
   const CashCheckoutPage({
@@ -52,7 +53,9 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
       final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
         _paymentService.fetchJobPayment(widget.jobId),
         _paymentService.fetchJobContext(widget.jobId),
-        _voucherService.fetchMyVouchers(),
+        AyoFeatureFlags.vouchersEnabled
+            ? _voucherService.fetchMyVouchers()
+            : Future<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]),
       ]);
       final Map<String, dynamic>? payment = result[0] as Map<String, dynamic>?;
       final List<Map<String, dynamic>> vouchers =
@@ -94,6 +97,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
   }
 
   Future<void> _chooseVoucher() async {
+    if (!AyoFeatureFlags.vouchersEnabled) return;
     final num subtotal = paymentBaseAmount(_payment);
     final List<Map<String, dynamic>> options = _vouchers.where((row) {
       final String status = (row['status'] ?? '').toString();
@@ -248,10 +252,10 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
       final Map<String, dynamic> payment =
           await _paymentService.prepareCashPayment(
         jobId: widget.jobId,
-        userVoucherId:
-            (_selectedVoucher?['user_voucher_id'] ?? '').toString().isEmpty
-                ? null
-                : _selectedVoucher!['user_voucher_id'].toString(),
+        userVoucherId: AyoFeatureFlags.vouchersEnabled &&
+                (_selectedVoucher?['user_voucher_id'] ?? '').toString().isNotEmpty
+            ? _selectedVoucher!['user_voucher_id'].toString()
+            : null,
       );
       if (!mounted) return;
       setState(() {
@@ -406,7 +410,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               SizedBox(width: 11),
               Expanded(
                 child: AyoText(
-                  'Bayar langsung kepada Mitra setelah pekerjaan selesai. Ayo Suruh tetap mencatat transaksi dan penggunaan voucher di aplikasi.',
+                  'Bayar langsung kepada Mitra setelah pekerjaan selesai. Nominal Customer tidak ditambah komisi platform; komisi diselesaikan terpisah melalui saldo AyoPay Mitra.',
                   style: TextStyle(fontSize: 11.5, height: 1.45),
                 ),
               ),
@@ -429,7 +433,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               ),
               const SizedBox(height: 16),
               _row('Harga jasa Mitra', formatRupiah(base)),
-              if (discount > 0) ...<Widget>[
+              if (AyoFeatureFlags.vouchersEnabled && discount > 0) ...<Widget>[
                 const SizedBox(height: 9),
                 _row(
                   voucherLabel,
@@ -449,48 +453,50 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
-        _card(
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.local_activity_rounded, color: paymentOrange),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const AyoText(
-                      'Voucher',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 2),
-                    AyoText(
-                      _selectedVoucher == null
-                          ? 'Tanpa voucher'
-                          : (_selectedVoucher!['title'] ??
-                                  _selectedVoucher!['code'])
-                              .toString(),
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF746A64),
+        if (AyoFeatureFlags.vouchersEnabled) ...<Widget>[
+          const SizedBox(height: 14),
+          _card(
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.local_activity_rounded, color: paymentOrange),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const AyoText(
+                        'Voucher',
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: paid || _saving ? null : _chooseVoucher,
-                child: const AyoText(
-                  'Pilih',
-                  style: TextStyle(
-                    decoration: TextDecoration.underline,
-                    fontWeight: FontWeight.w800,
+                      const SizedBox(height: 2),
+                      AyoText(
+                        _selectedVoucher == null
+                            ? 'Tanpa voucher'
+                            : (_selectedVoucher!['title'] ??
+                                    _selectedVoucher!['code'])
+                                .toString(),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF746A64),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                TextButton(
+                  onPressed: paid || _saving ? null : _chooseVoucher,
+                  child: const AyoText(
+                    'Pilih',
+                    style: TextStyle(
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 20),
         if (paid)
           FilledButton.icon(

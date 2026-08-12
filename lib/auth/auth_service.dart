@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../phone/phone_confirmation_service.dart';
+
 class AuthService {
   AuthService._();
 
@@ -127,6 +129,7 @@ class AuthService {
 
     try {
       await _supabase.rpc('sync_current_user_profile');
+      await _syncPhoneConfirmationMetadata(user);
       return;
     } catch (error) {
       debugPrint('RPC sync_current_user_profile belum tersedia: $error');
@@ -174,8 +177,92 @@ class AuthService {
 
     try {
       await _supabase.from('users').upsert(profile, onConflict: 'id');
+      await _syncPhoneConfirmationMetadata(user);
     } catch (error) {
       debugPrint('Fallback sinkronisasi public.users gagal: $error');
+      rethrow;
+    }
+  }
+
+  static Future<void> _syncPhoneConfirmationMetadata(User user) async {
+    final Map<String, dynamic> metadata = Map<String, dynamic>.from(
+      user.userMetadata ?? const <String, dynamic>{},
+    );
+    final String rawPhone = (metadata['phone'] ?? '').toString().trim();
+    if (rawPhone.isEmpty) return;
+
+    final String phone = PhoneConfirmationService.normalizeIndonesiaPhone(
+      rawPhone,
+    );
+    if (!PhoneConfirmationService.isValidIndonesiaPhone(phone)) return;
+
+    final String rawLevel =
+        (metadata['phone_verification_level'] ?? '').toString().toLowerCase();
+    String level = switch (rawLevel) {
+      PhoneConfirmationService.verified => PhoneConfirmationService.verified,
+      PhoneConfirmationService.deviceConfirmed =>
+        PhoneConfirmationService.deviceConfirmed,
+      _ => PhoneConfirmationService.unverified,
+    };
+
+    String? existingConfirmedAt;
+    try {
+      final Map<String, dynamic>? current = await _supabase
+          .from('users')
+          .select('phone, phone_verification_level, phone_confirmed_at')
+          .eq('id', user.id)
+          .maybeSingle();
+      final String currentPhone =
+          PhoneConfirmationService.normalizeIndonesiaPhone(
+        (current?['phone'] ?? '').toString(),
+      );
+      final String currentLevel =
+          (current?['phone_verification_level'] ?? '').toString().toLowerCase();
+      if (currentPhone == phone) {
+        existingConfirmedAt = current?['phone_confirmed_at']?.toString();
+
+        // Metadata lama yang belum memiliki level tidak boleh menghapus status
+        // konfirmasi yang sudah tersimpan. `verified` juga tidak boleh turun
+        // menjadi `device_confirmed` hanya karena metadata client lebih lama.
+        if (rawLevel.isEmpty &&
+            PhoneConfirmationService.isConfirmed(currentLevel)) {
+          level = currentLevel;
+        } else if (currentLevel == PhoneConfirmationService.verified &&
+            level == PhoneConfirmationService.deviceConfirmed) {
+          level = PhoneConfirmationService.verified;
+        }
+      }
+    } catch (_) {
+      // The migration-missing path is handled by the update below.
+    }
+
+    final String method = switch (level) {
+      PhoneConfirmationService.verified => 'sms_or_carrier',
+      PhoneConfirmationService.deviceConfirmed => 'phone_number_hint',
+      _ => 'manual',
+    };
+
+    try {
+      await _supabase.from('users').update(<String, dynamic>{
+        'phone': phone,
+        'phone_verification_level': level,
+        'phone_confirmation_method': method,
+        'phone_confirmed_at': level == PhoneConfirmationService.unverified
+            ? null
+            : (existingConfirmedAt?.trim().isNotEmpty == true
+                  ? existingConfirmedAt
+                  : DateTime.now().toUtc().toIso8601String()),
+      }).eq('id', user.id);
+    } catch (error) {
+      final String message = error.toString().toLowerCase();
+      final bool migrationMissing =
+          message.contains('phone_verification_level') ||
+          message.contains('phone_confirmation_method') ||
+          message.contains('phone_confirmed_at');
+      if (migrationMissing) {
+        debugPrint('Migration konfirmasi nomor belum tersedia: $error');
+        return;
+      }
       rethrow;
     }
   }

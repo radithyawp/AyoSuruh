@@ -403,6 +403,57 @@ class _AdminMitrasPageState extends State<AdminMitrasPage>
                   ],
                 ),
                 const SizedBox(height: 10),
+                Builder(
+                  builder: (BuildContext context) {
+                    final String phoneLevel =
+                        (row['phone_verification_level'] ?? 'unverified')
+                            .toString()
+                            .toLowerCase();
+                    final bool phoneConfirmed =
+                        phoneLevel == 'device_confirmed' ||
+                        phoneLevel == 'verified';
+                    final String phoneLabel = phoneLevel == 'verified'
+                        ? (AyoI18n.isEnglish
+                            ? 'Verified phone number'
+                            : 'Nomor HP terverifikasi')
+                        : phoneConfirmed
+                            ? (AyoI18n.isEnglish
+                                ? 'Phone confirmed from device'
+                                : 'Nomor HP dikonfirmasi dari perangkat')
+                            : (AyoI18n.isEnglish
+                                ? 'Phone number not confirmed'
+                                : 'Nomor HP belum dikonfirmasi');
+                    return Row(
+                      children: <Widget>[
+                        Icon(
+                          phoneConfirmed
+                              ? Icons.verified_user_outlined
+                              : Icons.phonelink_lock_outlined,
+                          size: 16,
+                          color: phoneConfirmed
+                              ? _green
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: AyoText(
+                            '$phoneLabel · ${(row['phone'] ?? '-').toString()}',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: phoneConfirmed
+                                  ? _green
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 5),
                 AyoText('Alamat: ${(row['address'] ?? '-').toString()}', style: const TextStyle(fontSize: 11, height: 1.35)),
                 const SizedBox(height: 3),
                 AyoText('Rekening: ${(row['bank_name'] ?? '-').toString()} • ${(row['account_number'] ?? '-').toString()}', style: const TextStyle(fontSize: 11)),

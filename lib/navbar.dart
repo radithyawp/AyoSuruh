@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'calls/voice_call_page.dart';
+import 'calls/voice_call_service.dart';
 import 'chat.dart';
 import 'customer_dashboard.dart';
 import 'job.dart';
@@ -22,8 +24,13 @@ class MainNavigation extends StatefulWidget {
   /// `mitra` hanya digunakan bila akun benar-benar mempunyai record aktif pada
   /// tabel `public.mitras`.
   final String? initialRole;
+  final String? initialNoticeMessage;
 
-  const MainNavigation({super.key, this.initialRole});
+  const MainNavigation({
+    super.key,
+    this.initialRole,
+    this.initialNoticeMessage,
+  });
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -34,6 +41,7 @@ class _MainNavigationState extends State<MainNavigation>
   final SupabaseClient _supabase = Supabase.instance.client;
   final AyosTutorialAnchors _tutorialAnchors = AyosTutorialAnchors();
   final PresenceService _presenceService = PresenceService();
+  final VoiceCallService _voiceCallService = VoiceCallService();
   late final AnimationController _navSplashController;
 
   int _navSplashIndex = 0;
@@ -46,6 +54,8 @@ class _MainNavigationState extends State<MainNavigation>
   bool _canUseMitraMode = false;
   bool _isLoadingAccess = true;
   StreamSubscription<Map<String, dynamic>>? _notificationTapSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _incomingCallSubscription;
+  bool _isPresentingIncomingCall = false;
   Map<String, dynamic>? _pendingNotificationTap;
 
 
@@ -69,6 +79,10 @@ class _MainNavigationState extends State<MainNavigation>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final String notice = widget.initialNoticeMessage?.trim() ?? '';
+      if (notice.isNotEmpty && mounted) {
+        AyoSnackBar.success(context, notice);
+      }
       final Map<String, dynamic>? pending = push_notifications
           .NotificationService.instance
           .takePendingNotificationTap();
@@ -86,6 +100,7 @@ class _MainNavigationState extends State<MainNavigation>
     unawaited(_presenceService.stop());
     AyosTutorial.replayRequest.removeListener(_handleTutorialReplayRequest);
     _notificationTapSubscription?.cancel();
+    _incomingCallSubscription?.cancel();
     _navSplashController.dispose();
     super.dispose();
   }
@@ -95,6 +110,7 @@ class _MainNavigationState extends State<MainNavigation>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_presenceService.start());
+      unawaited(_checkPendingIncomingCall());
       return;
     }
     if (state == AppLifecycleState.inactive ||
@@ -102,6 +118,89 @@ class _MainNavigationState extends State<MainNavigation>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       unawaited(_presenceService.stop());
+    }
+  }
+
+  void _startIncomingCallListener() {
+    if (_incomingCallSubscription != null || _supabase.auth.currentUser == null) {
+      return;
+    }
+
+    try {
+      _incomingCallSubscription = _voiceCallService.incomingCallsStream().listen(
+        (List<Map<String, dynamic>> calls) {
+          if (calls.isEmpty) {
+            return;
+          }
+          unawaited(_presentIncomingCall(calls.first));
+        },
+        onError: (Object error) {
+          debugPrint('Incoming call realtime error: $error');
+        },
+      );
+    } catch (error) {
+      debugPrint('Incoming call listener belum aktif: $error');
+    }
+  }
+
+  Future<void> _checkPendingIncomingCall() async {
+    if (_isLoadingAccess || _supabase.auth.currentUser == null || !mounted) {
+      return;
+    }
+    try {
+      final Map<String, dynamic>? call =
+          await _voiceCallService.fetchPendingIncomingCall();
+      if (call != null) {
+        await _presentIncomingCall(call);
+      }
+    } catch (error) {
+      debugPrint('Pending incoming call check gagal: $error');
+    }
+  }
+
+  Future<void> _presentIncomingCall(Map<String, dynamic> rawCall) async {
+    if (!mounted || _isPresentingIncomingCall) {
+      return;
+    }
+
+    final String callId = (rawCall['id'] ?? '').toString().trim();
+    if (callId.isEmpty || VoiceCallPage.isOpen(callId)) {
+      return;
+    }
+
+    _isPresentingIncomingCall = true;
+    bool reserved = false;
+    try {
+      final Map<String, dynamic> call =
+          rawCall.containsKey('partner_name')
+              ? Map<String, dynamic>.from(rawCall)
+              : await _voiceCallService.fetchCall(callId);
+      if (!mounted || (call['status'] ?? '').toString() != 'ringing') {
+        return;
+      }
+
+      reserved = VoiceCallPage.tryReserve(callId);
+      if (!reserved || !mounted) {
+        return;
+      }
+
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => VoiceCallPage(
+            callId: callId,
+            initialCall: call,
+            incoming: true,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Incoming call belum dapat ditampilkan: $error');
+    } finally {
+      if (reserved) {
+        VoiceCallPage.release(callId);
+      }
+      _isPresentingIncomingCall = false;
     }
   }
 
@@ -232,6 +331,8 @@ class _MainNavigationState extends State<MainNavigation>
         _isLoadingAccess = false;
       });
       unawaited(_prewarmNavigationTabs(_navCacheEpoch));
+      _startIncomingCallListener();
+      unawaited(_checkPendingIncomingCall());
       final bool openedFromNotification = _pendingNotificationTap != null;
       _flushPendingNotificationTap();
       if (!openedFromNotification) {
@@ -254,6 +355,8 @@ class _MainNavigationState extends State<MainNavigation>
           _canUseMitraMode = false;
           _isLoadingAccess = false;
         });
+        _startIncomingCallListener();
+        unawaited(_checkPendingIncomingCall());
         _flushPendingNotificationTap();
       }
     }

@@ -101,6 +101,43 @@ class JobListCard extends StatelessWidget {
                             JobStatusChip(status: status),
                           ],
                         ),
+                        if (isFirstJobPriority(job)) ...<Widget>[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFE4B8),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 12,
+                                    color: Color(0xFF9B5C00),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  AyoText(
+                                    AyoI18n.isEnglish
+                                        ? 'AYOS PRIORITY'
+                                        : 'PRIORITAS AYOS',
+                                    style: const TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF9B5C00),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 5),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

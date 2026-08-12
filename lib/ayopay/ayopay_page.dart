@@ -11,6 +11,7 @@ import '../vouchers/voucher_page.dart';
 import 'ayopay_service.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import '../theme/ayo_theme.dart';
+import '../config/feature_flags.dart';
 
 const Color _ayoPayOrange = Color(0xFFF6990E);
 Color get _ayoPayBrown => AyoAdaptiveColors.brown;
@@ -85,7 +86,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
       if (!mounted) return;
       AyoSnackBar.success(
         context,
-        'AyoPay berhasil diaktifkan. Voucher aktivasi akan otomatis masuk ke Voucher Saya.',
+        'AyoPay berhasil diaktifkan dan siap digunakan untuk fitur finansial Ayo Suruh.',
       );
       await _load();
     } on AyoPayException catch (error) {
@@ -118,7 +119,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
   void _showTopUpInfo() {
     AyoSnackBar.info(
       context,
-      'Top up AyoPay akan diaktifkan setelah metode pembayaran online siap. Untuk sementara saldo dapat berasal dari promo/voucher yang valid.',
+      'Top up AyoPay akan diaktifkan setelah metode pembayaran online siap.',
     );
   }
 
@@ -192,8 +193,10 @@ class _AyoPayPageState extends State<AyoPayPage> {
           _ledgerSection(),
         ] else ...<Widget>[
           _activationHero(),
-          const SizedBox(height: 16),
-          _voucherActivationTeaser(),
+          if (AyoFeatureFlags.vouchersEnabled) ...<Widget>[
+            const SizedBox(height: 16),
+            _voucherActivationTeaser(),
+          ],
           const SizedBox(height: 16),
           _whyAyoPayCard(),
         ],
@@ -240,7 +243,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
           ),
           const SizedBox(height: 7),
           const AyoText(
-            'Satu dompet untuk saldo promo, voucher, dan metode pembayaran Ayo Suruh yang akan tersedia bertahap.',
+            'Satu dompet untuk mengelola saldo dan fitur pembayaran Ayo Suruh yang tersedia bertahap.',
             style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF6D5C50)),
           ),
           const SizedBox(height: 18),
@@ -333,7 +336,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
           SizedBox(height: 13),
           _BenefitRow(
             icon: Icons.confirmation_number_outlined,
-            text: 'Siap menerima promo dan voucher Ayo Suruh.',
+            text: 'Saldo dan aktivitas finansial Ayo Suruh tersimpan dalam satu tempat.',
           ),
           SizedBox(height: 11),
           _BenefitRow(
@@ -413,14 +416,16 @@ class _AyoPayPageState extends State<AyoPayPage> {
             onTap: _showTopUpInfo,
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _actionButton(
-            icon: Icons.confirmation_number_outlined,
-            label: AyoI18n.t('Voucher'),
-            onTap: _openVouchers,
+        if (AyoFeatureFlags.vouchersEnabled) ...<Widget>[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _actionButton(
+              icon: Icons.confirmation_number_outlined,
+              label: AyoI18n.t('Voucher'),
+              onTap: _openVouchers,
+            ),
           ),
-        ),
+        ],
         const SizedBox(width: 8),
         Expanded(
           child: _actionButton(

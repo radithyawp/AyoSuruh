@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../navbar.dart';
+import '../phone/phone_confirmation_service.dart';
 import '../location/location_picker_page.dart';
 import '../location/osm_geocoding_service.dart';
 import '../syarat_ketentuan.dart';
@@ -56,6 +57,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   bool _isResolvingAddress = false;
+  bool _isRequestingPhoneHint = false;
+  bool _internalPhoneChange = false;
+  String _phoneVerificationLevel = PhoneConfirmationService.unverified;
+  String? _confirmedPhone;
   LatLng? _selectedPoint;
   String _resolvedAddressText = '';
 
@@ -88,22 +93,21 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       'sim' => 'SIM',
       'passport' => AyoI18n.isEnglish ? 'Passport' : 'Paspor',
       'kitas_kitap' => 'KITAS / KITAP',
-      _ =>
-        AyoI18n.isEnglish
-            ? 'Other legal photo ID'
-            : 'Identitas legal berfoto lainnya',
+      _ => AyoI18n.isEnglish ? 'Other legal photo ID' : 'Identitas legal berfoto lainnya',
     };
   }
 
   @override
   void initState() {
     super.initState();
+    _phoneController.addListener(_handlePhoneEdited);
     _loadInitialData();
   }
 
   @override
   void dispose() {
     _fullnameController.dispose();
+    _phoneController.removeListener(_handlePhoneEdited);
     _phoneController.dispose();
     _addressController.dispose();
     _accountController.dispose();
@@ -113,17 +117,16 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
   Future<void> _loadInitialData() async {
     try {
-      final List<dynamic> initial = await Future.wait<dynamic>(
-        <Future<dynamic>>[
-          _service.fetchMyProfile(),
-          widget.existingApplication != null
-              ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
-              : _service.fetchMyApplication(),
-          _service.fetchMitraBaseLocation(),
-          _service.fetchActiveContract(),
-        ],
-      );
-      final Map<String, dynamic> profile = initial[0] as Map<String, dynamic>;
+      final List<dynamic> initial = await Future.wait<dynamic>(<Future<dynamic>>[
+        _service.fetchMyProfile(),
+        widget.existingApplication != null
+            ? Future<Map<String, dynamic>?>.value(widget.existingApplication)
+            : _service.fetchMyApplication(),
+        _service.fetchMitraBaseLocation(),
+        _service.fetchActiveContract(),
+      ]);
+      final Map<String, dynamic> profile =
+          initial[0] as Map<String, dynamic>;
       final Map<String, dynamic>? application =
           initial[1] as Map<String, dynamic>?;
       final Map<String, dynamic>? baseLocation =
@@ -133,15 +136,24 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       _activeContract = activeContract;
 
       _fullnameController.text = (profile['fullname'] ?? '').toString();
-      _phoneController.text = _normalizePhone(
-        (profile['phone'] ?? '').toString(),
-      );
-      _addressController.text =
-          (baseLocation?['address'] ??
-                  application?['address'] ??
-                  profile['alamat'] ??
-                  '')
+      final String profilePhone = (profile['phone'] ?? '').toString();
+      _internalPhoneChange = true;
+      _phoneController.text = _normalizePhone(profilePhone);
+      _internalPhoneChange = false;
+      _phoneVerificationLevel =
+          (profile['phone_verification_level'] ??
+                  PhoneConfirmationService.unverified)
               .toString();
+      _confirmedPhone = PhoneConfirmationService.isConfirmed(
+        _phoneVerificationLevel,
+      )
+          ? PhoneConfirmationService.normalizeIndonesiaPhone(profilePhone)
+          : null;
+      _addressController.text = (baseLocation?['address'] ??
+              application?['address'] ??
+              profile['alamat'] ??
+              '')
+          .toString();
       final double? latitude = double.tryParse(
         baseLocation?['latitude']?.toString() ?? '',
       );
@@ -160,8 +172,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
         _selectedBank = savedBank;
       }
 
-      final String? savedIdentityType = application?['identity_document_type']
-          ?.toString();
+      final String? savedIdentityType =
+          application?['identity_document_type']?.toString();
       if (savedIdentityType != null &&
           _identityTypes.contains(savedIdentityType)) {
         _selectedIdentityType = savedIdentityType;
@@ -183,6 +195,55 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     if (phone.startsWith('62')) phone = phone.substring(2);
     if (phone.startsWith('0')) phone = phone.substring(1);
     return phone;
+  }
+
+  void _handlePhoneEdited() {
+    if (_internalPhoneChange || !mounted) return;
+    final String normalized = PhoneConfirmationService.normalizeIndonesiaPhone(
+      _phoneController.text,
+    );
+    if (_confirmedPhone != null && normalized == _confirmedPhone) return;
+    if (_phoneVerificationLevel == PhoneConfirmationService.unverified) return;
+    setState(() => _phoneVerificationLevel = PhoneConfirmationService.unverified);
+  }
+
+  Future<void> _pickPhoneFromDevice() async {
+    if (_isRequestingPhoneHint || !PhoneConfirmationService.supportsDeviceHint) {
+      return;
+    }
+    setState(() => _isRequestingPhoneHint = true);
+    try {
+      final String? phone =
+          await PhoneConfirmationService.requestPhoneNumberHint();
+      if (!mounted) return;
+      if (phone == null) {
+        AyoSnackBar.info(context, 'Pemilihan nomor dari perangkat dibatalkan.');
+        return;
+      }
+      if (!PhoneConfirmationService.isValidIndonesiaPhone(phone)) {
+        AyoSnackBar.error(
+          context,
+          'Nomor dari perangkat belum sesuai format nomor Indonesia.',
+        );
+        return;
+      }
+      _internalPhoneChange = true;
+      _phoneController.text = PhoneConfirmationService.nationalDigits(phone);
+      _internalPhoneChange = false;
+      setState(() {
+        _phoneVerificationLevel = PhoneConfirmationService.deviceConfirmed;
+        _confirmedPhone = phone;
+      });
+      AyoSnackBar.success(context, 'Nomor dari perangkat berhasil dipilih.');
+    } on PlatformException {
+      if (!mounted) return;
+      AyoSnackBar.info(
+        context,
+        'Nomor SIM belum dapat dibaca otomatis. Masukkan nomor secara manual.',
+      );
+    } finally {
+      if (mounted) setState(() => _isRequestingPhoneHint = false);
+    }
   }
 
   List<String> _geocodingQueryCandidates(String rawAddress) {
@@ -243,7 +304,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     final String query = _addressController.text.trim();
     if (query.length < 8) {
       if (showMessage && mounted) {
-        AyoSnackBar.info(context, 'Alamat terlalu singkat untuk dicari.');
+        AyoSnackBar.info(
+          context,
+          'Alamat terlalu singkat untuk dicari.',
+        );
       }
       return false;
     }
@@ -254,9 +318,8 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       OsmGeocodingResult? best;
       bool approximate = false;
       for (int index = 0; index < candidates.length; index++) {
-        final List<OsmGeocodingResult> results = await _geocodingService.search(
-          candidates[index],
-        );
+        final List<OsmGeocodingResult> results =
+            await _geocodingService.search(candidates[index]);
         if (results.isNotEmpty) {
           best = results.first;
           approximate = index > 0;
@@ -406,13 +469,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
   Future<void> _pickSelfieFromFrontCamera() async {
     try {
-      final SelfieCaptureResult? result = await Navigator.of(context)
-          .push<SelfieCaptureResult>(
-            MaterialPageRoute<SelfieCaptureResult>(
-              fullscreenDialog: true,
-              builder: (_) => const SelfieCameraPage(),
-            ),
-          );
+      final SelfieCaptureResult? result =
+          await Navigator.of(context).push<SelfieCaptureResult>(
+        MaterialPageRoute<SelfieCaptureResult>(
+          fullscreenDialog: true,
+          builder: (_) => const SelfieCameraPage(),
+        ),
+      );
       if (result == null || !mounted) return;
 
       if (result.bytes.lengthInBytes > 2 * 1024 * 1024) {
@@ -452,6 +515,15 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
     if (!mounted) return;
 
+    if (PhoneConfirmationService.supportsDeviceHint &&
+        !PhoneConfirmationService.isConfirmed(_phoneVerificationLevel)) {
+      AyoSnackBar.info(
+        context,
+        'Konfirmasi nomor HP dari perangkat sebelum mengirim pengajuan Mitra.',
+      );
+      return;
+    }
+
     if (_ktmBytes == null ||
         _identityBytes == null ||
         _selectedIdentityType == null ||
@@ -472,15 +544,20 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     }
 
     if (!_termsAccepted) {
-      AyoSnackBar.error(context, 'Setujui Syarat & Ketentuan terlebih dahulu.');
+      AyoSnackBar.error(
+        context,
+        'Setujui Syarat & Ketentuan terlebih dahulu.',
+      );
       return;
     }
 
-    final String contractVersion = (_activeContract?['version'] ?? '')
-        .toString()
-        .trim();
+    final String contractVersion =
+        (_activeContract?['version'] ?? '').toString().trim();
     if (contractVersion.isEmpty) {
-      AyoSnackBar.error(context, 'Kontrak/MoU Mitra aktif belum tersedia.');
+      AyoSnackBar.error(
+        context,
+        'Kontrak/MoU Mitra aktif belum tersedia.',
+      );
       return;
     }
     if (!_contractAccepted) {
@@ -494,6 +571,15 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
     setState(() => _isSubmitting = true);
 
     try {
+      final String submittedPhone =
+          PhoneConfirmationService.normalizeIndonesiaPhone(
+        _phoneController.text,
+      );
+      await PhoneConfirmationService.saveCurrentUserPhone(
+        phone: submittedPhone,
+        verificationLevel: _phoneVerificationLevel,
+      );
+
       final String ktmPath = await _service.uploadDocument(
         bytes: _ktmBytes!,
         originalName: _ktmName ?? 'ktm-upi.jpg',
@@ -514,7 +600,9 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
 
       final Map<String, dynamic> application = await _service.submitApplication(
         fullname: _fullnameController.text,
-        phone: '+62${_phoneController.text}',
+        phone: PhoneConfirmationService.normalizeIndonesiaPhone(
+          _phoneController.text,
+        ),
         address: _addressController.text,
         latitude: _selectedPoint!.latitude,
         longitude: _selectedPoint!.longitude,
@@ -537,7 +625,10 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, 'Pengajuan belum berhasil dikirim: $error');
+      AyoSnackBar.error(
+        context,
+        'Pengajuan belum berhasil dikirim: $error',
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -609,7 +700,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                     ),
                     const SizedBox(height: 6),
                     const AyoText(
-                      'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang andal dan terpercaya.',
+                      'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang handal dan terpercaya.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -637,7 +728,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             },
                           ),
                           const SizedBox(height: 17),
-                          _fieldLabel('Nomor WhatsApp'),
+                          _fieldLabel('Nomor HP'),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
@@ -672,10 +763,68 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                                     final String digits = (value ?? '')
                                         .replaceAll(RegExp(r'[^0-9]'), '');
                                     if (digits.length < 9) {
-                                      return 'Nomor WhatsApp belum valid.';
+                                      return 'Nomor HP belum valid.';
                                     }
                                     return null;
                                   },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 9),
+                          if (PhoneConfirmationService.supportsDeviceHint)
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _isRequestingPhoneHint
+                                    ? null
+                                    : _pickPhoneFromDevice,
+                                icon: _isRequestingPhoneHint
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.sim_card_outlined),
+                                label: const AyoText(
+                                  'Gunakan nomor dari perangkat ini',
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 7),
+                          Row(
+                            children: <Widget>[
+                              Icon(
+                                PhoneConfirmationService.isConfirmed(
+                                      _phoneVerificationLevel,
+                                    )
+                                    ? Icons.verified_user_outlined
+                                    : Icons.info_outline_rounded,
+                                size: 16,
+                                color: PhoneConfirmationService.isConfirmed(
+                                      _phoneVerificationLevel,
+                                    )
+                                    ? _mitraGreen
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: AyoText(
+                                  PhoneConfirmationService.isConfirmed(
+                                        _phoneVerificationLevel,
+                                      )
+                                      ? 'Nomor dikonfirmasi dari perangkat'
+                                      : 'Konfirmasi nomor dari perangkat sebelum mengajukan Mitra',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                                 ),
                               ),
                             ],
@@ -787,9 +936,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           AyoText(
-                            AyoI18n.isEnglish
-                                ? 'UPI Student Card (KTM)'
-                                : 'KTM UPI',
+                            AyoI18n.isEnglish ? 'UPI Student Card (KTM)' : 'KTM UPI',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -809,20 +956,14 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                           const SizedBox(height: 10),
                           _uploadBox(
                             bytes: _ktmBytes,
-                            title: AyoI18n.isEnglish
-                                ? 'Upload UPI Student Card'
-                                : 'Unggah KTM UPI',
-                            subtitle: AyoI18n.isEnglish
-                                ? 'JPG or PNG (Max 2MB)'
-                                : 'Format JPG, PNG (Maks 2MB)',
+                            title: AyoI18n.isEnglish ? 'Upload UPI Student Card' : 'Unggah KTM UPI',
+                            subtitle: AyoI18n.isEnglish ? 'JPG or PNG (Max 2MB)' : 'Format JPG, PNG (Maks 2MB)',
                             icon: Icons.school_outlined,
                             onTap: () => _pickDocument(isKtm: true),
                           ),
                           const SizedBox(height: 22),
                           AyoText(
-                            AyoI18n.isEnglish
-                                ? 'Photo Identity Document'
-                                : 'Kartu Identitas Berfoto',
+                            AyoI18n.isEnglish ? 'Photo Identity Document' : 'Kartu Identitas Berfoto',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -844,9 +985,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             initialValue: _selectedIdentityType,
                             isExpanded: true,
                             decoration: _inputDecoration(
-                              AyoI18n.isEnglish
-                                  ? 'Select identity type'
-                                  : 'Pilih jenis identitas',
+                              AyoI18n.isEnglish ? 'Select identity type' : 'Pilih jenis identitas',
                             ),
                             items: _identityTypes
                                 .map(
@@ -861,19 +1000,15 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             },
                             validator: (String? value) => value == null
                                 ? (AyoI18n.isEnglish
-                                      ? 'Choose a photo identity type.'
-                                      : 'Pilih jenis kartu identitas berfoto.')
+                                    ? 'Choose a photo identity type.'
+                                    : 'Pilih jenis kartu identitas berfoto.')
                                 : null,
                           ),
                           const SizedBox(height: 10),
                           _uploadBox(
                             bytes: _identityBytes,
-                            title: AyoI18n.isEnglish
-                                ? 'Upload Photo ID'
-                                : 'Unggah Identitas Berfoto',
-                            subtitle: AyoI18n.isEnglish
-                                ? 'KTP / SIM / Passport / other legal photo ID · max. 2 MB'
-                                : 'KTP / SIM / Paspor / identitas legal lain · maks. 2 MB',
+                            title: AyoI18n.isEnglish ? 'Upload Photo ID' : 'Unggah Identitas Berfoto',
+                            subtitle: AyoI18n.isEnglish ? 'KTP / SIM / Passport / other legal photo ID · max. 2 MB' : 'KTP / SIM / Paspor / identitas legal lain · maks. 2 MB',
                             icon: Icons.badge_outlined,
                             onTap: () => _pickDocument(isKtm: false),
                           ),
@@ -1022,13 +1157,13 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                             onPressed: _activeContract == null
                                 ? null
                                 : () => Navigator.push<void>(
-                                    context,
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => MitraContractPage(
-                                        contract: _activeContract!,
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => MitraContractPage(
+                                          contract: _activeContract!,
+                                        ),
                                       ),
                                     ),
-                                  ),
                             icon: const Icon(Icons.description_outlined),
                             label: const AyoText('Baca Kontrak Lengkap'),
                           ),
@@ -1147,12 +1282,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                     const SizedBox(height: 16),
                     AyoText(
                       'Proses verifikasi membutuhkan waktu 1–3 hari kerja.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
                     ),
                   ],
                 ),
@@ -1194,11 +1324,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                   color: iconColor,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.surface,
-                  size: 21,
-                ),
+                child: Icon(icon, color: Theme.of(context).colorScheme.surface, size: 21),
               ),
               const SizedBox(width: 12),
               AyoText(
@@ -1336,12 +1462,7 @@ class _MitraApplicationPageState extends State<MitraApplicationPage> {
                   const SizedBox(height: 4),
                   AyoText(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
-                    ),
+                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
                   ),
                 ],
               ),
@@ -1381,7 +1502,10 @@ class _MitraApplicationStatusPageState
       if (mounted) setState(() => _application = latest);
     } catch (error) {
       if (mounted) {
-        AyoSnackBar.error(context, 'Status belum dapat diperbarui: $error');
+        AyoSnackBar.error(
+          context,
+          'Status belum dapat diperbarui: $error',
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -1630,12 +1754,7 @@ class _MitraApplicationStatusPageState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
-          child: AyoText(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          child: AyoText(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ),
         const SizedBox(width: 12),
         Expanded(

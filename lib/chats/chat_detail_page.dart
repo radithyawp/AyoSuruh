@@ -3,8 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../calls/voice_call_page.dart';
+import '../calls/voice_call_service.dart';
 import '../jobs/job_helpers.dart';
 import '../widgets/ayo_snackbar.dart';
 import '../widgets/ayo_avatar.dart';
@@ -440,24 +441,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final bool canCall = _room?['can_call'] == true;
     final String partnerName =
         (_room?['partner_name'] ?? 'pengguna').toString().trim();
-    final String rawPhone =
-        (_room?['partner_phone'] ?? '').toString().trim();
 
-    if (!canCall || rawPhone.isEmpty) {
+    if (!canCall) {
       if (!mounted) return;
       AyoSnackBar.info(
         context,
-        'Telepon hanya tersedia saat pekerjaan masih aktif dan nomor lawan transaksi tersedia.',
-      );
-      return;
-    }
-
-    final String phone = _sanitizePhoneForDialer(rawPhone);
-    if (phone.isEmpty) {
-      if (!mounted) return;
-      AyoSnackBar.error(
-        context,
-        'Nomor telepon $partnerName belum valid.',
+        'Panggilan hanya tersedia selama pekerjaan masih aktif.',
       );
       return;
     }
@@ -470,13 +459,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             children: <Widget>[
               Icon(Icons.call_rounded, color: jobOrangeColor),
               SizedBox(width: 10),
-              Expanded(child: AyoText('Telepon sekarang?')),
+              Expanded(child: AyoText('Telepon di Ayo Suruh?')),
             ],
           ),
           content: AyoText(
-            'Kamu akan membuka aplikasi Telepon untuk menghubungi '
-            '$partnerName. Gunakan panggilan hanya untuk koordinasi '
-            'pekerjaan aktif. Biaya operator dapat berlaku.',
+            AyoI18n.isEnglish
+                ? 'Your voice call with $partnerName happens directly in '
+                    'Ayo Suruh over the internet. Your phone number and the '
+                    'other party’s number are not shared. Use calls only to '
+                    'coordinate an active job.'
+                : 'Panggilan suara dengan $partnerName dilakukan langsung di '
+                    'Ayo Suruh menggunakan internet. Nomor telepon kamu dan '
+                    'lawan transaksi tidak dibagikan. Gunakan panggilan hanya '
+                    'untuk koordinasi pekerjaan aktif.',
             style: const TextStyle(height: 1.45),
           ),
           actions: <Widget>[
@@ -501,47 +496,56 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       },
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted) {
+      return;
+    }
 
-    final Uri uri = Uri(
-      scheme: 'tel',
-      path: phone,
-    );
-
+    final VoiceCallService callService = VoiceCallService();
     try {
-      final bool launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched && mounted) {
-        AyoSnackBar.error(
-          context,
-          'Aplikasi Telepon belum dapat dibuka di perangkat ini.',
-        );
+      final bool allowed = await callService.ensureCallPermissions();
+      if (!mounted) {
+        return;
       }
+      if (!allowed) {
+        AyoSnackBar.info(
+          context,
+          'Izinkan mikrofon agar panggilan suara dapat digunakan.',
+        );
+        return;
+      }
+
+      final Map<String, dynamic> call =
+          await callService.startCall(widget.roomId);
+      if (!mounted) {
+        return;
+      }
+
+      final String callId = (call['id'] ?? '').toString().trim();
+      if (callId.isEmpty) {
+        throw StateError('ID panggilan belum tersedia.');
+      }
+
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => VoiceCallPage(
+            callId: callId,
+            initialCall: call,
+          ),
+        ),
+      );
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+      String message = error.toString().replaceFirst('StateError: ', '').trim();
+      if (message.contains('Salah satu pengguna sedang berada')) {
+        message = 'Lawan transaksi sedang berada dalam panggilan lain.';
+      }
       AyoSnackBar.error(
         context,
-        'Panggilan belum dapat dibuka: $error',
+        message.isEmpty ? 'Panggilan belum dapat dimulai.' : message,
       );
     }
-  }
-
-  String _sanitizePhoneForDialer(String value) {
-    String phone = value.replaceAll(RegExp(r'[^0-9+]'), '');
-
-    if (phone.startsWith('00')) {
-      phone = '+${phone.substring(2)}';
-    }
-
-    // Tanda + hanya valid di karakter pertama.
-    if (phone.length > 1) {
-      phone = '${phone.startsWith('+') ? '+' : ''}'
-          '${phone.replaceAll('+', '')}';
-    }
-
-    return phone;
   }
 
   void _scrollToBottom() {

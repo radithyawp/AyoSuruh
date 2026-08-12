@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../admin/admin_mitras_page.dart';
 import '../admin/admin_operations_page.dart';
+import '../calls/voice_call_page.dart';
+import '../calls/voice_call_service.dart';
 import '../chats/chat_detail_page.dart';
 import '../jobs/customer_job_detail_page.dart';
 import '../jobs/job_bids_page.dart';
@@ -62,6 +64,48 @@ class NotificationRouter {
     final String type = (_string(notification['type']) ?? '').toLowerCase();
     final String? roomId = _string(notification['room_id']);
     final String? jobId = _string(notification['job_id']);
+
+    if (type == 'voice_call_incoming') {
+      final String? callId = _voiceCallId(notification);
+      if (callId == null) {
+        return false;
+      }
+      if (VoiceCallPage.isOpen(callId)) {
+        return true;
+      }
+
+      bool reserved = false;
+      try {
+        final Map<String, dynamic> call =
+            await VoiceCallService().fetchCall(callId);
+        if (!context.mounted) {
+          return false;
+        }
+
+        reserved = VoiceCallPage.tryReserve(callId);
+        if (!reserved) {
+          return true;
+        }
+
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (_) => VoiceCallPage(
+              callId: callId,
+              initialCall: call,
+              incoming: true,
+            ),
+          ),
+        );
+        return true;
+      } catch (_) {
+        return false;
+      } finally {
+        if (reserved) {
+          VoiceCallPage.release(callId);
+        }
+      }
+    }
 
     if (type == 'admin_mitra_application_new') {
       await Navigator.of(context).push<void>(
@@ -199,6 +243,9 @@ class NotificationRouter {
     if (type == 'admin_refund_review') return 'Buka review refund';
     if (type.startsWith('mitra_application_')) return 'Lihat status pengajuan';
     if (type.startsWith('payout_')) return 'Buka dompet Mitra';
+    if (type == 'voice_call_incoming' && _voiceCallId(notification) != null) {
+      return 'Buka panggilan';
+    }
     if (type == 'chat_message' && _string(notification['room_id']) != null) {
       return 'Buka percakapan';
     }
@@ -249,6 +296,14 @@ class NotificationRouter {
     }
 
     return Map<String, dynamic>.from(source);
+  }
+
+  static String? _voiceCallId(Map<String, dynamic> notification) {
+    final dynamic data = notification['data'];
+    if (data is Map) {
+      return _string(data['call_id']);
+    }
+    return _string(notification['call_id']);
   }
 
   static String? _string(dynamic value) {
