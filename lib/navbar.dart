@@ -14,6 +14,7 @@ import 'notifications/notification_router.dart';
 import 'services/notification_service.dart' as push_notifications;
 import 'widgets/ayo_snackbar.dart';
 import 'chats/presence_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MainNavigation extends StatefulWidget {
   /// Mode awal opsional. Nilai yang didukung: `customer` / `user` / `mitra`.
@@ -47,10 +48,6 @@ class _MainNavigationState extends State<MainNavigation>
   StreamSubscription<Map<String, dynamic>>? _notificationTapSubscription;
   Map<String, dynamic>? _pendingNotificationTap;
 
-  static const Color _navBgColor = Color(0xFFFAF7F5);
-  static const Color _inactiveColor = Color(0xFF524538);
-  static const Color _activeColor = Color(0xFF4B613E);
-  static const Color _borderColor = Color(0xFFF0ECE6);
 
   @override
   void initState() {
@@ -341,8 +338,8 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   Widget build(BuildContext context) {
     if (_isLoadingAccess) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: CircularProgressIndicator(color: Color(0xFFFA6623)),
         ),
@@ -384,7 +381,7 @@ class _MainNavigationState extends State<MainNavigation>
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: List<Widget>.generate(4, (int index) {
           if (!_mountedTabs.contains(index)) {
@@ -425,10 +422,14 @@ class _MainNavigationState extends State<MainNavigation>
         }),
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: _navBgColor,
+        decoration: BoxDecoration(
+          color: Theme.of(context).navigationBarTheme.backgroundColor ??
+              Theme.of(context).colorScheme.surface,
           border: Border(
-            top: BorderSide(color: _borderColor, width: 1.0),
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              width: 1.0,
+            ),
           ),
         ),
         child: SafeArea(
@@ -467,28 +468,28 @@ class _MainNavigationState extends State<MainNavigation>
                         _buildNavButton(
                           icon: Icons.home_outlined,
                           activeIcon: Icons.home_rounded,
-                          label: 'Beranda',
+                          label: AyoI18n.t('Beranda'),
                           index: 0,
                           tutorialKey: _tutorialAnchors.navHome,
                         ),
                         _buildNavButton(
                           icon: Icons.work_outline_rounded,
                           activeIcon: Icons.work_rounded,
-                          label: 'Pekerjaan',
+                          label: AyoI18n.t('Pekerjaan'),
                           index: 1,
                           tutorialKey: _tutorialAnchors.navJobs,
                         ),
                         _buildNavButton(
                           icon: Icons.chat_bubble_outline_rounded,
                           activeIcon: Icons.chat_bubble_rounded,
-                          label: 'Chat',
+                          label: AyoI18n.t('Chat'),
                           index: 2,
                           tutorialKey: _tutorialAnchors.navChat,
                         ),
                         _buildNavButton(
                           icon: Icons.person_outline_rounded,
                           activeIcon: Icons.person_rounded,
-                          label: 'Profil',
+                          label: AyoI18n.t('Profil'),
                           index: 3,
                           tutorialKey: _tutorialAnchors.navProfile,
                         ),
@@ -512,6 +513,8 @@ class _MainNavigationState extends State<MainNavigation>
     Key? tutorialKey,
   }) {
     final bool isActive = _currentIndex == index;
+    final Color activeColor = Theme.of(context).colorScheme.secondary;
+    final Color inactiveColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Expanded(
       child: KeyedSubtree(
@@ -549,7 +552,7 @@ class _MainNavigationState extends State<MainNavigation>
                         child: Icon(
                           isActive ? activeIcon : icon,
                           key: ValueKey<bool>(isActive),
-                          color: isActive ? _activeColor : _inactiveColor,
+                          color: isActive ? activeColor : inactiveColor,
                           size: 22,
                         ),
                       ),
@@ -562,9 +565,9 @@ class _MainNavigationState extends State<MainNavigation>
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                      color: isActive ? _activeColor : _inactiveColor,
+                      color: isActive ? activeColor : inactiveColor,
                     ),
-                    child: Text(label),
+                    child: AyoText(label),
                   ),
                 ],
               ),

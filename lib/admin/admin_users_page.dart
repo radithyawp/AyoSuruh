@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -11,10 +13,9 @@ class AdminUsersPage extends StatefulWidget {
 }
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFF5F784F);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final AdminService _service = AdminService();
   final TextEditingController _searchController = TextEditingController();
@@ -74,7 +75,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> users = _filtered;
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           color: _orange,
@@ -84,13 +85,13 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  const Expanded(
-                    child: Text(
+                  Expanded(
+                    child: AyoText(
                       'Manajemen Pengguna',
                       style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _brown),
                     ),
                   ),
-                  IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded, color: _brown)),
+                  IconButton(onPressed: _load, icon: Icon(Icons.refresh_rounded, color: _brown)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -98,7 +99,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 controller: _searchController,
                 onChanged: (String value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'Cari nama, email, atau nomor...',
+                  hintText: AyoI18n.t('Cari nama, email, atau nomor...'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: Colors.white,
@@ -120,7 +121,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               ),
               if (_error != null) ...<Widget>[
                 const SizedBox(height: 10),
-                Text(_error!, style: TextStyle(color: Colors.red.shade700, fontSize: 11)),
+                AyoText(_error!, style: TextStyle(color: Colors.red.shade700, fontSize: 11)),
               ],
               const SizedBox(height: 12),
               if (_loading)
@@ -131,7 +132,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               else if (users.isEmpty)
                 const Padding(
                   padding: EdgeInsets.only(top: 80),
-                  child: Center(child: Text('Pengguna tidak ditemukan.')),
+                  child: Center(child: AyoText('Pengguna tidak ditemukan.')),
                 )
               else
                 ...users.map(_userCard),
@@ -146,7 +147,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final bool selected = _filter == value;
     return ChoiceChip(
       selected: selected,
-      label: Text(label),
+      label: AyoText(label),
       onSelected: (_) => setState(() => _filter = value),
       selectedColor: const Color(0xFFE9F1E3),
       side: BorderSide(color: selected ? _green : const Color(0xFFE7DDD6)),
@@ -172,7 +173,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -186,7 +187,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 ? null
                 : NetworkImage(user['avatar_url'].toString()),
             child: (user['avatar_url'] ?? '').toString().isEmpty
-                ? Text(initials.isEmpty ? 'U' : initials, style: const TextStyle(fontWeight: FontWeight.w900, color: _brown))
+                ? AyoText(initials.isEmpty ? 'U' : initials, style: TextStyle(fontWeight: FontWeight.w900, color: _brown))
                 : null,
           ),
           const SizedBox(width: 11),
@@ -196,14 +197,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))),
+                    Expanded(child: AyoText(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isMitra ? const Color(0xFFE9F2E4) : const Color(0xFFFFF0D9),
                         borderRadius: BorderRadius.circular(99),
                       ),
-                      child: Text(
+                      child: AyoText(
                         isMitra ? (mitraActive ? 'Mitra Aktif' : 'Mitra Nonaktif') : 'Customer',
                         style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: isMitra ? _green : _brown),
                       ),
@@ -211,11 +212,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(email, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6F635C))),
-                Text(phone, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6F635C))),
+                AyoText(email, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6F635C))),
+                AyoText(phone, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6F635C))),
                 if (created != null) ...<Widget>[
                   const SizedBox(height: 5),
-                  Text('Terdaftar ${DateFormat('dd MMM yyyy').format(created)}', style: const TextStyle(fontSize: 9.5, color: Colors.black45)),
+                  AyoText('Terdaftar ${DateFormat('dd MMM yyyy').format(created)}', style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78))),
                 ],
               ],
             ),

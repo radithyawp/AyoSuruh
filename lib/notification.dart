@@ -6,7 +6,9 @@ import 'notifications/notification_router.dart';
 import 'notifications/notification_service.dart';
 import 'widgets/home_shortcut_button.dart';
 import 'widgets/ayo_pressable.dart';
+import 'widgets/ayo_empty_state.dart';
 import 'widgets/ayo_snackbar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({
@@ -56,21 +58,21 @@ class _NotificationPageState extends State<NotificationPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Hapus semua notifikasi?'),
-        content: const Text(
+        title: const AyoText('Hapus semua notifikasi?'),
+        content: const AyoText(
           'Riwayat notifikasi akan dihapus dari akun ini dan tidak dapat dikembalikan.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: const AyoText('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFB5473D),
             ),
-            child: const Text('Hapus Semua'),
+            child: const AyoText('Hapus Semua'),
           ),
         ],
       ),
@@ -122,9 +124,9 @@ class _NotificationPageState extends State<NotificationPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Notifikasi',
           style: TextStyle(
             color: jobDarkBrownColor,
@@ -136,9 +138,9 @@ class _NotificationPageState extends State<NotificationPage> {
           const HomeShortcutButton(),
           PopupMenuButton<String>(
             enabled: !_isActionLoading,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             icon: _isActionLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
@@ -146,7 +148,7 @@ class _NotificationPageState extends State<NotificationPage> {
                       color: jobBrownColor,
                     ),
                   )
-                : const Icon(Icons.more_vert_rounded, color: jobBrownColor),
+                : Icon(Icons.more_vert_rounded, color: jobBrownColor),
             onSelected: (String value) {
               if (value == 'read') _markAllRead();
               if (value == 'delete') _deleteAll();
@@ -158,7 +160,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   children: <Widget>[
                     Icon(Icons.done_all_rounded, size: 20),
                     SizedBox(width: 10),
-                    Text('Tandai semua dibaca'),
+                    AyoText('Tandai semua dibaca'),
                   ],
                 ),
               ),
@@ -168,7 +170,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   children: <Widget>[
                     Icon(Icons.delete_outline_rounded, size: 20),
                     SizedBox(width: 10),
-                    Text('Hapus semua'),
+                    AyoText('Hapus semua'),
                   ],
                 ),
               ),
@@ -239,7 +241,7 @@ class _NotificationPageState extends State<NotificationPage> {
             top: widgets.isEmpty ? 2 : 20,
             bottom: 8,
           ),
-          child: Text(
+          child: AyoText(
             label,
             style: const TextStyle(
               color: Color(0xFF75685F),
@@ -264,7 +266,7 @@ class _NotificationPageState extends State<NotificationPage> {
               size: 34,
             ),
             SizedBox(height: 8),
-            Text(
+            AyoText(
               'Tidak ada notifikasi lama lainnya',
               style: TextStyle(
                 color: Color(0xFFB7ACA5),
@@ -288,7 +290,12 @@ class _NotificationPageState extends State<NotificationPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: isUnread ? const Color(0xFFFFF4E9) : Colors.white,
+        color: isUnread
+            ? Color.alphaBlend(
+                jobOrangeColor.withValues(alpha: 0.10),
+                Theme.of(context).colorScheme.surface,
+              )
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
         child: InkWell(
           onTap: () => _openNotification(notification),
@@ -299,8 +306,8 @@ class _NotificationPageState extends State<NotificationPage> {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(
                 color: isUnread
-                    ? const Color(0xFFFFD2A0)
-                    : const Color(0xFFECE3DE),
+                    ? jobOrangeColor.withValues(alpha: 0.45)
+                    : Theme.of(context).dividerColor,
               ),
             ),
             child: Row(
@@ -328,10 +335,12 @@ class _NotificationPageState extends State<NotificationPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Expanded(
-                            child: Text(
-                              (notification['title'] ?? 'Notifikasi').toString(),
+                            child: AyoText(
+                              AyoI18n.notificationText(
+                                (notification['title'] ?? 'Notifikasi').toString(),
+                              ),
                               style: TextStyle(
-                                color: const Color(0xFF332C28),
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 13,
                                 fontWeight:
                                     isUnread ? FontWeight.w900 : FontWeight.w700,
@@ -339,7 +348,7 @@ class _NotificationPageState extends State<NotificationPage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          AyoText(
                             notificationRelativeTime(
                               notification['created_at'],
                             ),
@@ -362,12 +371,14 @@ class _NotificationPageState extends State<NotificationPage> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        (notification['body'] ?? '').toString(),
+                      AyoText(
+                        AyoI18n.notificationText(
+                          (notification['body'] ?? '').toString(),
+                        ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF6C6059),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 11,
                           height: 1.4,
                         ),
@@ -377,16 +388,16 @@ class _NotificationPageState extends State<NotificationPage> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            Text(
+                            AyoText(
                               actionLabel,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: jobBrownColor,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                             const SizedBox(width: 3),
-                            const Icon(
+                            Icon(
                               Icons.arrow_forward_rounded,
                               size: 13,
                               color: jobBrownColor,
@@ -406,47 +417,12 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 76,
-              height: 76,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFEEDB),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: jobBrownColor,
-                size: 38,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Belum Ada Notifikasi',
-              style: TextStyle(
-                color: Color(0xFF332C28),
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 7),
-            const Text(
-              'Pembaruan pekerjaan, penawaran, chat, dan rating akan tampil di sini.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF847870),
-                fontSize: 11,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const AyoEmptyState(
+      assetPath: 'assets/images/ayos/ayos_sleep.png',
+      badgeIcon: Icons.notifications_none_rounded,
+      title: 'Belum ada notifikasi',
+      description:
+          'Pembaruan pekerjaan, penawaran, chat, pembayaran, dan rating akan tampil di sini.',
     );
   }
 
@@ -463,12 +439,12 @@ class _NotificationPageState extends State<NotificationPage> {
               size: 44,
             ),
             const SizedBox(height: 12),
-            const Text(
+            const AyoText(
               'Notifikasi belum dapat dimuat',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 7),
-            Text(
+            AyoText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -486,12 +462,12 @@ class _NotificationPageState extends State<NotificationPage> {
 class NotificationBell extends StatefulWidget {
   const NotificationBell({
     super.key,
-    this.color = jobDarkBrownColor,
+    this.color,
     this.size = 26,
     this.activeMode = 'customer',
   });
 
-  final Color color;
+  final Color? color;
   final double size;
   final String activeMode;
 
@@ -519,8 +495,7 @@ class _NotificationBellState extends State<NotificationBell> {
           message: 'Notifikasi',
           child: AyoPressable(
             haptic: true,
-            pressedScale: 0.86,
-            pressedOpacity: 0.64,
+            pressedScale: 0.9,
             onTap: () {
               Navigator.push<void>(
                 context,
@@ -531,18 +506,16 @@ class _NotificationBellState extends State<NotificationBell> {
                 ),
               );
             },
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: <Widget>[
-                    Icon(
-                      Icons.notifications_rounded,
-                      color: widget.color,
-                      size: widget.size,
-                    ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    color: widget.color ?? jobDarkBrownColor,
+                    size: widget.size,
+                  ),
                   if (unreadCount > 0)
                     Positioned(
                       right: -5,
@@ -556,10 +529,10 @@ class _NotificationBellState extends State<NotificationBell> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFE53935),
                           borderRadius: BorderRadius.circular(9),
-                          border: Border.all(color: Colors.white, width: 1.5),
+                          border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
                         ),
                         alignment: Alignment.center,
-                        child: Text(
+                        child: AyoText(
                           unreadCount > 99 ? '99+' : unreadCount.toString(),
                           style: const TextStyle(
                             color: Colors.white,
@@ -569,8 +542,7 @@ class _NotificationBellState extends State<NotificationBell> {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),

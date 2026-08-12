@@ -6,6 +6,8 @@ import 'job_payment_page.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/ayo_empty_state.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class PaymentHistoryPage extends StatefulWidget {
   const PaymentHistoryPage({super.key});
@@ -70,16 +72,16 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: paymentBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: paymentBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: paymentBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Riwayat Transaksi',
           style: TextStyle(
             color: paymentBrown,
@@ -108,20 +110,20 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.receipt_long_outlined,
                 size: 58,
                 color: paymentBrown,
               ),
               const SizedBox(height: 12),
-              Text(
+              AyoText(
                 _errorMessage!,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _loadPayments,
-                child: const Text('Coba Lagi'),
+                child: const AyoText('Coba Lagi'),
               ),
             ],
           ),
@@ -175,27 +177,27 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
               Icon(Icons.account_balance_wallet_rounded, color: paymentBrown),
               SizedBox(width: 8),
-              Text(
+              AyoText(
                 'Ringkasan Pembayaran',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Text(
+          AyoText(
             formatRupiah(paidTotal),
-            style: const TextStyle(
+            style: TextStyle(
               color: paymentBrown,
               fontSize: 27,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          AyoText(
             '$paidCount transaksi berhasil • $pendingCount menunggu pembayaran',
             style: const TextStyle(
               color: Color(0xFF6D5A4E),
@@ -229,9 +231,9 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
             child: ChoiceChip(
               selected: selected,
               onSelected: (_) => setState(() => _filter = value),
-              label: Text(item['label']!),
+              label: AyoText(item['label']!),
               selectedColor: const Color(0xFFFFD99F),
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               side: BorderSide(
                 color: selected ? paymentOrange : paymentBorder,
               ),
@@ -262,7 +264,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
@@ -299,7 +301,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Expanded(
-                            child: Text(
+                            child: AyoText(
                               (payment['job_title'] ?? 'Pekerjaan').toString(),
                               style: const TextStyle(
                                 fontSize: 15,
@@ -307,9 +309,9 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                               ),
                             ),
                           ),
-                          Text(
+                          AyoText(
                             formatRupiah(payment['total']),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: paymentBrown,
                               fontWeight: FontWeight.w900,
                             ),
@@ -317,7 +319,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      AyoText(
                         (payment['mitra_name'] ?? 'Mitra Ayo Suruh').toString(),
                         style: const TextStyle(
                           color: Color(0xFF6D6059),
@@ -349,7 +351,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                         ],
                       ),
                       const SizedBox(height: 9),
-                      Text(
+                      AyoText(
                         _formatDate(
                           payment['paid_at'] ??
                               payment['updated_at'] ??
@@ -383,7 +385,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
         color: background,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
+      child: AyoText(
         text,
         style: TextStyle(
           color: foreground,
@@ -395,25 +397,12 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   }
 
   Widget _emptyState() {
-    return Container(
-      margin: const EdgeInsets.only(top: 70),
-      child: const Column(
-        children: <Widget>[
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 64,
-            color: Color(0xFFC3B5AC),
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Belum ada transaksi pada kategori ini.',
-            style: TextStyle(
-              color: Color(0xFF776A62),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+    return const AyoEmptyState(
+      compact: true,
+      assetPath: 'assets/images/ayos/ayos_empty.png',
+      badgeIcon: Icons.receipt_long_outlined,
+      title: 'Belum ada transaksi',
+      description: 'Transaksi yang sesuai filter akan tampil di sini.',
     );
   }
 

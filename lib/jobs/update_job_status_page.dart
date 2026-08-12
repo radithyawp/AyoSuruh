@@ -3,10 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../location/job_live_location_service.dart';
 import 'job_helpers.dart';
 import 'job_progress_widgets.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class UpdateJobStatusPage extends StatefulWidget {
   const UpdateJobStatusPage({super.key, required this.jobId});
@@ -67,7 +69,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
   Future<void> _chooseImageSource() async {
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -87,19 +89,19 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                const AyoText(
                   'Pilih Bukti Pekerjaan',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(Icons.photo_camera_outlined, color: jobBrownColor),
-                  title: const Text('Ambil dari kamera'),
+                  leading: Icon(Icons.photo_camera_outlined, color: jobBrownColor),
+                  title: const AyoText('Ambil dari kamera'),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: jobBrownColor),
-                  title: const Text('Pilih dari galeri'),
+                  leading: Icon(Icons.photo_library_outlined, color: jobBrownColor),
+                  title: const AyoText('Pilih dari galeri'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
               ],
@@ -127,7 +129,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Foto belum dapat dipilih: $error'),
+          content: AyoText('Foto belum dapat dipilih: $error'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -141,7 +143,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
     final String? nextStage = nextJobProgressStageFor(job, currentStage);
     if (nextStage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seluruh progres sudah diperbarui.')),
+        const SnackBar(content: AyoText('Seluruh progres sudah diperbarui.')),
       );
       return;
     }
@@ -165,6 +167,10 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
         note: _noteController.text,
         evidenceUrl: evidenceUrl,
       );
+      if (nextStage == 'completion_submitted' &&
+          JobLiveLocationService.instance.activeJobId == widget.jobId) {
+        await JobLiveLocationService.instance.stopSharing();
+      }
       _noteController.clear();
       if (!mounted) return;
       setState(() {
@@ -175,7 +181,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: AyoText(
             nextStage == 'completion_submitted'
                 ? 'Pekerjaan diajukan selesai. Menunggu konfirmasi customer.'
                 : 'Status diperbarui menjadi ${jobProgressLabelFor(job, nextStage)}.',
@@ -187,7 +193,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Status belum berhasil diperbarui: $error'),
+          content: AyoText('Status belum berhasil diperbarui: $error'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -227,9 +233,9 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, true),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Update Status Pekerjaan',
           style: TextStyle(
             color: jobBrownColor,
@@ -255,11 +261,11 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(Icons.error_outline_rounded, size: 48, color: jobBrownColor),
+              Icon(Icons.error_outline_rounded, size: 48, color: jobBrownColor),
               const SizedBox(height: 12),
-              Text(_errorMessage ?? 'Pekerjaan tidak ditemukan.'),
+              AyoText(_errorMessage ?? 'Pekerjaan tidak ditemukan.'),
               const SizedBox(height: 14),
-              FilledButton(onPressed: _loadData, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _loadData, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -279,7 +285,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
         children: <Widget>[
           _jobCard(job),
           const SizedBox(height: 24),
-          const Text(
+          const AyoText(
             'UPDATE PROGRES',
             style: TextStyle(
               fontSize: 12,
@@ -297,12 +303,12 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                 color: const Color(0xFFE2F1D8),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Row(
+              child: Row(
                 children: <Widget>[
                   Icon(Icons.hourglass_top_rounded, color: jobGreenColor),
                   SizedBox(width: 10),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       'Pekerjaan sudah diajukan selesai dan sedang menunggu konfirmasi customer.',
                       style: TextStyle(fontSize: 12, height: 1.4),
                     ),
@@ -312,7 +318,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
             ),
           ],
           const SizedBox(height: 18),
-          const Text(
+          const AyoText(
             'BUKTI PEKERJAAN (OPSIONAL)',
             style: TextStyle(
               fontSize: 12,
@@ -324,14 +330,14 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
           const SizedBox(height: 12),
           _evidencePicker(latest, enabled: nextStage != null),
           const SizedBox(height: 14),
-          const Text('Catatan Singkat', style: TextStyle(fontSize: 11)),
+          const AyoText('Catatan Singkat', style: TextStyle(fontSize: 11)),
           const SizedBox(height: 6),
           TextField(
             controller: _noteController,
             maxLines: 3,
             enabled: nextStage != null && !_isSaving,
             decoration: InputDecoration(
-              hintText: 'Contoh: Lampu teras dimatikan sesuai permintaan...',
+              hintText: AyoI18n.t('Contoh: Lampu teras dimatikan sesuai permintaan...'),
               hintStyle: const TextStyle(color: Color(0xFFB1A6A4), fontSize: 13),
               filled: true,
               fillColor: const Color(0xFFFFFBFD),
@@ -365,7 +371,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.sync_rounded),
-              label: Text(
+              label: AyoText(
                 nextStage == null
                     ? 'Menunggu Konfirmasi Customer'
                     : 'Perbarui ke ${jobProgressLabelFor(job, nextStage)}',
@@ -397,13 +403,13 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                   color: const Color(0xFFDDF0CF),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Text(
+                child: AyoText(
                   'AKTIF',
                   style: TextStyle(fontSize: 10, color: jobGreenColor),
                 ),
               ),
               const SizedBox(height: 14),
-              Text(
+              AyoText(
                 job['title'].toString(),
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
               ),
@@ -412,7 +418,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                 children: <Widget>[
                   const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF5E514A)),
                   const SizedBox(width: 4),
-                  Text(
+                  AyoText(
                     customerName(job),
                     style: const TextStyle(fontSize: 12, color: Color(0xFF5E514A)),
                   ),
@@ -431,7 +437,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                   ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       jobAddress(job),
                       style: const TextStyle(fontSize: 12, color: Color(0xFF5E514A)),
                     ),
@@ -471,12 +477,12 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                   width: 1.4,
                 ),
               ),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Icon(Icons.add_a_photo_outlined, color: jobBrownColor, size: 28),
                   SizedBox(height: 8),
-                  Text('Unggah Foto', style: TextStyle(fontSize: 11, color: jobBrownColor)),
+                  AyoText('Unggah Foto', style: TextStyle(fontSize: 11, color: jobBrownColor)),
                 ],
               ),
             ),
@@ -517,7 +523,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                     ? Image.network(
                         latestUrl,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        errorBuilder: (_, _, _) => Icon(
                           Icons.broken_image_outlined,
                           color: jobBrownColor,
                         ),
@@ -527,7 +533,7 @@ class _UpdateJobStatusPageState extends State<UpdateJobStatusPage> {
                         children: <Widget>[
                           Icon(Icons.image_outlined, color: Color(0xFF9B918D), size: 30),
                           SizedBox(height: 6),
-                          Text(
+                          AyoText(
                             'Belum ada foto',
                             style: TextStyle(fontSize: 10, color: Color(0xFF8A7F79)),
                           ),

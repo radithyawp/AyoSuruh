@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/ayo_empty_state.dart';
 import 'job_helpers.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class JobStatusChip extends StatelessWidget {
   const JobStatusChip({super.key, required this.status});
@@ -15,7 +18,7 @@ class JobStatusChip extends StatelessWidget {
         color: jobStatusBackground(status),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Text(
+      child: AyoText(
         jobStatusLabel(status),
         style: TextStyle(
           color: jobStatusForeground(status),
@@ -85,7 +88,7 @@ class JobListCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Expanded(
-                              child: Text(
+                              child: AyoText(
                                 (job['title'] ?? 'Pekerjaan').toString(),
                                 style: const TextStyle(
                                   fontSize: 15,
@@ -100,20 +103,26 @@ class JobListCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Icon(
-                              Icons.location_on_outlined,
+                            Icon(
+                              jobNeedsRouteEndpoints(job)
+                                  ? Icons.route_outlined
+                                  : jobWorkModeIcon(jobWorkMode(job)),
                               size: 14,
-                              color: Color(0xFF786C65),
+                              color: const Color(0xFF786C65),
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
                             Expanded(
-                              child: Text(
-                                jobAddress(job),
-                                maxLines: 1,
+                              child: AyoText(
+                                jobNeedsRouteEndpoints(job)
+                                    ? '${jobAddress(job)} → ${jobDestinationAddress(job)}'
+                                    : jobAddress(job),
+                                maxLines: jobNeedsRouteEndpoints(job) ? 2 : 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 11,
+                                  height: 1.3,
                                   color: Color(0xFF786C65),
                                 ),
                               ),
@@ -122,7 +131,7 @@ class JobListCard extends StatelessWidget {
                         ),
                         if (subtitle != null) ...<Widget>[
                           const SizedBox(height: 4),
-                          Text(
+                          AyoText(
                             subtitle!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -141,9 +150,9 @@ class JobListCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text(
+                  AyoText(
                     formatRupiah(job['budget']),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: jobBrownColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
@@ -152,12 +161,17 @@ class JobListCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDDEECE),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Color.alphaBlend(
+                              AyoColors.green.withValues(alpha: 0.16),
+                              Theme.of(context).colorScheme.surfaceContainerHighest,
+                            )
+                          : const Color(0xFFDDEECE),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: Text(
+                    child: AyoText(
                       trailingLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: jobGreenColor,
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
@@ -188,43 +202,11 @@ class EmptyJobState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFEBD0),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 34, color: jobBrownColor),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF312B28),
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF756A63),
-                height: 1.45,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AyoEmptyState(
+      title: title,
+      description: description,
+      badgeIcon: icon,
+      assetPath: 'assets/images/ayos/ayos_board_task.png',
     );
   }
 }

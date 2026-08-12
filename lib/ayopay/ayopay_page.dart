@@ -3,15 +3,17 @@ import 'package:intl/intl.dart';
 
 import '../jobs/job_helpers.dart';
 import '../widgets/ayo_snackbar.dart';
+import '../widgets/ayo_empty_state.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../wallet/wallet_pin_page.dart';
 import '../wallet/wallet_service.dart';
 import '../vouchers/voucher_page.dart';
 import 'ayopay_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 const Color _ayoPayOrange = Color(0xFFF6990E);
-const Color _ayoPayBrown = Color(0xFF8A5300);
-const Color _ayoPayBackground = Color(0xFFFFFAF7);
+Color get _ayoPayBrown => AyoAdaptiveColors.brown;
 const Color _ayoPayGreen = Color(0xFF5E774F);
 
 class AyoPayPage extends StatefulWidget {
@@ -123,16 +125,16 @@ class _AyoPayPageState extends State<AyoPayPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _ayoPayBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _ayoPayBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _ayoPayBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: _ayoPayBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'AyoPay',
           style: TextStyle(
             color: _ayoPayBrown,
@@ -167,11 +169,11 @@ class _AyoPayPageState extends State<AyoPayPage> {
         padding: const EdgeInsets.all(24),
         children: <Widget>[
           const SizedBox(height: 90),
-          const Icon(Icons.error_outline_rounded, size: 54, color: _ayoPayBrown),
+          Icon(Icons.error_outline_rounded, size: 54, color: _ayoPayBrown),
           const SizedBox(height: 12),
-          Text(_error!, textAlign: TextAlign.center),
+          AyoText(_error!, textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _load, child: const Text('Coba Lagi')),
+          FilledButton(onPressed: _load, child: const AyoText('Coba Lagi')),
         ],
       );
     }
@@ -218,17 +220,17 @@ class _AyoPayPageState extends State<AyoPayPage> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.account_balance_wallet_rounded,
               color: _ayoPayBrown,
               size: 29,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          AyoText(
             'Aktifkan AyoPay',
             style: TextStyle(
               color: _ayoPayBrown,
@@ -237,7 +239,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
             ),
           ),
           const SizedBox(height: 7),
-          const Text(
+          const AyoText(
             'Satu dompet untuk saldo promo, voucher, dan metode pembayaran Ayo Suruh yang akan tersedia bertahap.',
             style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF6D5C50)),
           ),
@@ -264,7 +266,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
                       ),
                     )
                   : const Icon(Icons.lock_open_rounded),
-              label: const Text(
+              label: const AyoText(
                 'Aktifkan Sekarang',
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
@@ -277,7 +279,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
 
   Widget _voucherActivationTeaser() {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -302,7 +304,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
                 child: Row(
                   children: <Widget>[
                     const Expanded(
-                      child: Text(
+                      child: AyoText(
                         'Aktifkan AyoPay untuk membuka voucher spesial. Benefit masuk otomatis ke akun setelah aktivasi.',
                         style: TextStyle(fontSize: 11.5, height: 1.4, color: Color(0xFF6D5C50)),
                       ),
@@ -324,7 +326,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             'Kenapa aktifkan AyoPay?',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
           ),
@@ -369,7 +371,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
             children: <Widget>[
               Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFFFD38B)),
               SizedBox(width: 8),
-              Text(
+              AyoText(
                 'Saldo AyoPay',
                 style: TextStyle(
                   color: Colors.white70,
@@ -380,7 +382,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
+          AyoText(
             formatRupiah(_balance),
             style: const TextStyle(
               color: Colors.white,
@@ -391,7 +393,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
           ),
           if (_summary['activated_at'] != null) ...<Widget>[
             const SizedBox(height: 10),
-            Text(
+            AyoText(
               'Aktif sejak ${_formatDate(_summary['activated_at'])}',
               style: const TextStyle(color: Colors.white60, fontSize: 10.5),
             ),
@@ -407,7 +409,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
         Expanded(
           child: _actionButton(
             icon: Icons.add_card_rounded,
-            label: 'Isi Saldo',
+            label: AyoI18n.t('Isi Saldo'),
             onTap: _showTopUpInfo,
           ),
         ),
@@ -415,7 +417,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
         Expanded(
           child: _actionButton(
             icon: Icons.confirmation_number_outlined,
-            label: 'Voucher',
+            label: AyoI18n.t('Voucher'),
             onTap: _openVouchers,
           ),
         ),
@@ -423,7 +425,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
         Expanded(
           child: _actionButton(
             icon: Icons.lock_outline_rounded,
-            label: 'PIN AyoPay',
+            label: AyoI18n.t('PIN AyoPay'),
             onTap: _openPin,
           ),
         ),
@@ -437,7 +439,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -453,9 +455,9 @@ class _AyoPayPageState extends State<AyoPayPage> {
             children: <Widget>[
               Icon(icon, color: _ayoPayBrown, size: 24),
               const SizedBox(height: 5),
-              Text(
+              AyoText(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _ayoPayBrown,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -481,7 +483,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
           Icon(Icons.verified_user_outlined, color: _ayoPayGreen),
           SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AyoText(
               'AyoPay aktif. Saldo dan setiap mutasinya dicatat di server. Top up online belum dibuka sampai metode pembayaran siap.',
               style: TextStyle(
                 color: Color(0xFF526347),
@@ -499,27 +501,19 @@ class _AyoPayPageState extends State<AyoPayPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
+        const AyoText(
           'Riwayat AyoPay',
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 11),
         if (_ledger.isEmpty)
           _card(
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: Column(
-                  children: <Widget>[
-                    Icon(Icons.receipt_long_outlined, color: Color(0xFF9B918C), size: 34),
-                    SizedBox(height: 8),
-                    Text(
-                      'Belum ada transaksi AyoPay.',
-                      style: TextStyle(color: Color(0xFF746A64)),
-                    ),
-                  ],
-                ),
-              ),
+            child: const AyoEmptyState(
+              compact: true,
+              assetPath: 'assets/images/ayos/ayos_empty.png',
+              badgeIcon: Icons.receipt_long_outlined,
+              title: 'Belum ada transaksi AyoPay',
+              description: 'Mutasi saldo AyoPay akan tampil di sini setelah ada aktivitas.',
             ),
           )
         else
@@ -535,7 +529,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEAD8CB)),
       ),
@@ -557,14 +551,14 @@ class _AyoPayPageState extends State<AyoPayPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   (row['description'] ?? _entryLabel(row['entry_type'])).toString(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 3),
-                Text(
+                AyoText(
                   _formatDate(row['created_at']),
                   style: const TextStyle(fontSize: 10.5, color: Color(0xFF8A7B72)),
                 ),
@@ -572,7 +566,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
+          AyoText(
             '${positive ? '+' : '-'}${formatRupiah(amount.abs())}',
             style: TextStyle(
               color: positive ? _ayoPayGreen : Colors.red.shade700,
@@ -590,7 +584,7 @@ class _AyoPayPageState extends State<AyoPayPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFEAD8CB)),
       ),
@@ -653,7 +647,7 @@ class _BenefitRow extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 7),
-            child: Text(
+            child: AyoText(
               text,
               style: const TextStyle(fontSize: 12.5, height: 1.4),
             ),

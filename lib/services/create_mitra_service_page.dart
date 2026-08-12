@@ -8,6 +8,7 @@ import 'mitra_service_service.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/ayo_snackbar.dart';
 import '../widgets/rupiah_input_formatter.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class CreateMitraServicePage extends StatefulWidget {
   const CreateMitraServicePage({
@@ -199,21 +200,21 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const ListTile(
-                title: Text(
+                title: AyoText(
                   'Tambah Foto Katalog',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
-                subtitle: Text('Foto pertama akan digunakan sebagai cover jasa.'),
+                subtitle: AyoText('Foto pertama akan digunakan sebagai cover jasa.'),
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Ambil dari Kamera'),
+                title: const AyoText('Ambil dari Kamera'),
                 onTap: () => Navigator.pop(sheetContext, 'camera'),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Pilih dari Galeri'),
-                subtitle: const Text('Bisa memilih beberapa foto sekaligus.'),
+                title: const AyoText('Pilih dari Galeri'),
+                subtitle: const AyoText('Bisa memilih beberapa foto sekaligus.'),
                 onTap: () => Navigator.pop(sheetContext, 'gallery'),
               ),
               const SizedBox(height: 10),
@@ -263,7 +264,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
+        AyoText(
           count == 0
               ? 'Minimal 1 cover · maksimal 5 foto'
               : '$count/5 foto · foto pertama menjadi cover',
@@ -288,12 +289,12 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(color: jobOrangeColor),
                     ),
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
                         Icon(Icons.add_photo_alternate_outlined, color: jobBrownColor),
                         SizedBox(height: 6),
-                        Text(
+                        AyoText(
                           'Tambah Foto',
                           style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
                         ),
@@ -355,7 +356,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                           color: Colors.black.withValues(alpha: 0.62),
                           borderRadius: BorderRadius.circular(99),
                         ),
-                        child: const Text(
+                        child: const AyoText(
                           'COVER',
                           style: TextStyle(
                             color: Colors.white,
@@ -369,7 +370,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     top: -7,
                     right: -7,
                     child: Material(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       shape: const CircleBorder(),
                       elevation: 2,
                       child: InkWell(
@@ -406,7 +407,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
           ),
         ),
         const SizedBox(height: 7),
-        const Text(
+        const AyoText(
           'Gunakan foto hasil kerja/portofolio sendiri. Hindari watermark atau data pribadi customer.',
           style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF81736B)),
         ),
@@ -433,11 +434,11 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
         elevation: 0,
         leading: IconButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: Text(
+        title: AyoText(
           _isEditing ? 'Edit Jasa' : 'Tambah Jasa',
-          style: const TextStyle(
+          style: TextStyle(
             color: jobBrownColor,
             fontWeight: FontWeight.w900,
           ),
@@ -462,13 +463,13 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                       color: const Color(0xFFFFEBCB),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Icon(Icons.storefront_rounded, color: jobBrownColor),
                         SizedBox(width: 10),
                         Expanded(
-                          child: Text(
+                          child: AyoText(
                             'Jasa ini akan tampil saat customer mencari layanan. Ketika dipesan, customer tetap membuat pekerjaan melalui alur Ayo Suruh.',
                             style: TextStyle(
                               fontSize: 11.5,
@@ -481,7 +482,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  const AyoText(
                     'Kategori',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -493,7 +494,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                           (Map<String, dynamic> category) =>
                               DropdownMenuItem<String>(
                             value: category['id'].toString(),
-                            child: Text(
+                            child: AyoText(
                               (category['name'] ?? 'Lainnya').toString(),
                             ),
                           ),
@@ -505,7 +506,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     decoration: _decoration('Pilih kategori'),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  const AyoText(
                     'Nama Jasa',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -522,7 +523,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                             : null,
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  const AyoText(
                     'Deskripsi Keahlian',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -539,7 +540,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                             : null,
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  const AyoText(
                     'Tag Jasa',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -563,7 +564,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     },
                   ),
                   const SizedBox(height: 7),
-                  const Text(
+                  const AyoText(
                     'Tag membantu customer menemukan jasa melalui pencarian.',
                     style: TextStyle(
                       color: Color(0xFF766A63),
@@ -571,14 +572,14 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  const AyoText(
                     'Foto Katalog Jasa',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   _buildCatalogPhotoPicker(),
                   const SizedBox(height: 18),
-                  const Text(
+                  const AyoText(
                     'Harga Mulai',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -602,7 +603,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  const AyoText(
                     'Minimal Rp1.000 • Maksimal Rp10.000.000. Harga ini hanya referensi awal; penawaran final tetap mengikuti sistem bidding.',
                     style: TextStyle(
                       color: Color(0xFF766A63),
@@ -632,7 +633,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
                               ),
                             )
                           : const Icon(Icons.save_rounded),
-                      label: Text(
+                      label: AyoText(
                         _isEditing ? 'Simpan Perubahan' : 'Publikasikan Jasa',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
@@ -656,7 +657,7 @@ class _CreateMitraServicePageState extends State<CreateMitraServicePage> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: jobBorderColor),
+        borderSide: BorderSide(color: jobBorderColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

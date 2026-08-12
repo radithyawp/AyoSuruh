@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'job_helpers.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobProgressTimeline extends StatelessWidget {
   const JobProgressTimeline({
@@ -99,7 +100,7 @@ class _ProgressStep extends StatelessWidget {
                   color: circleColor,
                   shape: BoxShape.circle,
                   border: active
-                      ? Border.all(color: Colors.white, width: 3)
+                      ? Border.all(color: Theme.of(context).colorScheme.surface, width: 3)
                       : null,
                   boxShadow: active
                       ? const <BoxShadow>[
@@ -135,7 +136,7 @@ class _ProgressStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   job == null
                       ? jobProgressLabel(stage)
                       : jobProgressLabelFor(job!, stage),
@@ -149,7 +150,7 @@ class _ProgressStep extends StatelessWidget {
                 ),
                 if (!compact) ...<Widget>[
                   const SizedBox(height: 2),
-                  Text(
+                  AyoText(
                     job == null
                         ? jobProgressDescription(stage)
                         : jobProgressDescriptionFor(job!, stage),

@@ -6,6 +6,7 @@ import '../widgets/ayo_snackbar.dart';
 import '../widgets/home_shortcut_button.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class CashCheckoutPage extends StatefulWidget {
   const CashCheckoutPage({
@@ -113,19 +114,19 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(26),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                const AyoText(
                   'Pilih Voucher',
                   style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AyoText(
                   'Voucher dihitung dari harga jasa ${formatRupiah(subtotal)}.',
                   style: const TextStyle(
                     fontSize: 11.5,
@@ -135,11 +136,11 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
                 const SizedBox(height: 14),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Color(0xFFF3EEE9),
                     child: Icon(Icons.block_rounded, color: paymentBrown),
                   ),
-                  title: const Text(
+                  title: const AyoText(
                     'Tanpa Voucher',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -152,7 +153,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 18),
                     child: Center(
-                      child: Text(
+                      child: AyoText(
                         'Belum ada voucher yang bisa digunakan.',
                         style: TextStyle(color: Color(0xFF766A63)),
                       ),
@@ -162,19 +163,19 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
                   ...options.map((Map<String, dynamic> voucher) {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
+                      leading: CircleAvatar(
                         backgroundColor: Color(0xFFFFE8C6),
                         child: Icon(
                           Icons.local_activity_rounded,
                           color: paymentBrown,
                         ),
                       ),
-                      title: Text(
+                      title: AyoText(
                         (voucher['title'] ?? voucher['code'] ?? 'Voucher')
                             .toString(),
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      subtitle: Text(
+                      subtitle: AyoText(
                         '${_discountText(voucher)} • Min. ${formatRupiah(_asNum(voucher['min_transaction']))}',
                       ),
                       onTap: () => Navigator.pop(sheetContext, voucher),
@@ -282,19 +283,19 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Sudah bayar tunai?'),
-          content: Text(
+          title: const AyoText('Sudah bayar tunai?'),
+          content: AyoText(
             'Pastikan kamu sudah menyerahkan ${formatRupiah(total)} langsung kepada Mitra. Setelah dikonfirmasi, transaksi tunai akan dicatat sebagai dibayar.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Belum'),
+              child: const AyoText('Belum'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: FilledButton.styleFrom(backgroundColor: paymentGreen),
-              child: const Text('Sudah Bayar'),
+              child: const AyoText('Sudah Bayar'),
             ),
           ],
         );
@@ -320,12 +321,12 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: paymentBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: paymentBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: AyoText(
           'Bayar Tunai',
           style: TextStyle(
             color: paymentBrown,
@@ -351,9 +352,9 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(_error!, textAlign: TextAlign.center),
+              AyoText(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 14),
-              FilledButton(onPressed: _load, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _load, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -398,13 +399,13 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
             color: const Color(0xFFFFE9CA),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Icon(Icons.payments_rounded, color: paymentBrown),
               SizedBox(width: 11),
               Expanded(
-                child: Text(
+                child: AyoText(
                   'Bayar langsung kepada Mitra setelah pekerjaan selesai. Ayo Suruh tetap mencatat transaksi dan penggunaan voucher di aplikasi.',
                   style: TextStyle(fontSize: 11.5, height: 1.45),
                 ),
@@ -417,12 +418,12 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              const AyoText(
                 'Rincian Pembayaran',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 4),
-              Text(
+              AyoText(
                 widget.jobTitle,
                 style: const TextStyle(color: Color(0xFF746A64)),
               ),
@@ -458,12 +459,12 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
+                    const AyoText(
                       'Voucher',
                       style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       _selectedVoucher == null
                           ? 'Tanpa voucher'
                           : (_selectedVoucher!['title'] ??
@@ -479,7 +480,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               ),
               TextButton(
                 onPressed: paid || _saving ? null : _chooseVoucher,
-                child: const Text(
+                child: const AyoText(
                   'Pilih',
                   style: TextStyle(
                     decoration: TextDecoration.underline,
@@ -499,7 +500,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               backgroundColor: paymentGreen,
             ),
             icon: const Icon(Icons.check_circle_rounded),
-            label: const Text(
+            label: const AyoText(
               'Tunai Sudah Dibayar',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -513,7 +514,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               foregroundColor: paymentDarkBrown,
             ),
             icon: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
@@ -522,7 +523,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
                     ),
                   )
                 : const Icon(Icons.payments_rounded),
-            label: const Text(
+            label: const AyoText(
               'Pilih Pembayaran Tunai',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -534,10 +535,10 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               minimumSize: const Size.fromHeight(52),
             ),
             icon: const Icon(Icons.schedule_rounded),
-            label: const Text('Bayar setelah Mitra menyelesaikan pekerjaan'),
+            label: const AyoText('Bayar setelah Mitra menyelesaikan pekerjaan'),
           ),
           const SizedBox(height: 9),
-          const Text(
+          const AyoText(
             'Metode tunai sudah tersimpan. Mitra tetap dapat memulai pekerjaan meskipun pembayaran belum dikonfirmasi.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, color: Color(0xFF746A64)),
@@ -550,7 +551,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
               backgroundColor: paymentGreen,
             ),
             icon: const Icon(Icons.task_alt_rounded),
-            label: Text(
+            label: AyoText(
               'Saya Sudah Bayar ${formatRupiah(total)}',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -563,7 +564,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: paymentBorder),
       ),
@@ -580,7 +581,7 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
+          child: AyoText(
             label,
             style: TextStyle(
               fontWeight: emphasized ? FontWeight.w800 : FontWeight.w500,
@@ -588,10 +589,10 @@ class _CashCheckoutPageState extends State<CashCheckoutPage> {
             ),
           ),
         ),
-        Text(
+        AyoText(
           value,
           style: TextStyle(
-            color: valueColor ?? (emphasized ? paymentBrown : Colors.black87),
+            color: valueColor ?? (emphasized ? paymentBrown : Theme.of(context).colorScheme.onSurface),
             fontSize: emphasized ? 19 : 13,
             fontWeight: emphasized ? FontWeight.w900 : FontWeight.w800,
           ),

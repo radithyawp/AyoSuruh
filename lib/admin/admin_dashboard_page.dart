@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../jobs/job_helpers.dart';
-import '../notification.dart';
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({
@@ -19,16 +20,14 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFF5F784F);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final AdminService _service = AdminService();
   bool _loading = true;
   String? _error;
   Map<String, dynamic> _summary = <String, dynamic>{};
-  Map<String, dynamic> _operationalSummary = <String, dynamic>{};
   Map<String, dynamic> _profile = <String, dynamic>{};
 
   @override
@@ -41,14 +40,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       final List<dynamic> result = await Future.wait<dynamic>(<Future<dynamic>>[
         _service.fetchDashboardSummary(),
-        _service.fetchOperationalSummary(),
         _service.fetchMyProfile(),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = result[0] as Map<String, dynamic>;
-        _operationalSummary = result[1] as Map<String, dynamic>;
-        _profile = result[2] as Map<String, dynamic>;
+        _profile = result[1] as Map<String, dynamic>;
         _loading = false;
         _error = null;
       });
@@ -67,16 +64,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return num.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  num _operationalNumber(String key) {
-    final dynamic value = _operationalSummary[key];
-    if (value is num) return value;
-    return num.tryParse(value?.toString() ?? '') ?? 0;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: _orange))
@@ -92,24 +83,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              const Text(
+                              AyoText(
                                 'Ayo Suruh Admin',
                                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _brown),
                               ),
                               const SizedBox(height: 2),
-                              Text(
+                              AyoText(
                                 'Halo, ${(_profile['fullname'] ?? 'Admin').toString()}',
                                 style: const TextStyle(fontSize: 11.5, color: Color(0xFF756860)),
                               ),
                             ],
                           ),
                         ),
-                        const NotificationBell(
-                          color: _brown,
-                          size: 27,
-                          activeMode: 'admin',
-                        ),
-                        const SizedBox(width: 4),
                         CircleAvatar(
                           radius: 22,
                           backgroundColor: const Color(0xFFFFE5BD),
@@ -117,7 +102,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               ? null
                               : NetworkImage(_profile['avatar_url'].toString()),
                           child: (_profile['avatar_url'] ?? '').toString().isEmpty
-                              ? const Icon(Icons.admin_panel_settings_rounded, color: _brown)
+                              ? Icon(Icons.admin_panel_settings_rounded, color: _brown)
                               : null,
                         ),
                       ],
@@ -138,17 +123,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Text(
+                          const AyoText(
                             'Pendapatan Platform',
                             style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 5),
-                          Text(
+                          AyoText(
                             formatRupiah(_number('platform_revenue')),
                             style: const TextStyle(color: Colors.white, fontSize: 29, fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 5),
-                          Text(
+                          AyoText(
                             'GMV ${formatRupiah(_number('gmv_paid'))} · Take rate transaksi tersimpan di setiap payment',
                             style: const TextStyle(color: Colors.white70, fontSize: 10.5, height: 1.35),
                           ),
@@ -172,71 +157,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ],
                     ),
                     const SizedBox(height: 18),
-                    Row(
-                      children: <Widget>[
-                        const Expanded(
-                          child: Text(
-                            'Monitor Operasional',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: _brown,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: widget.onOpenOperations,
-                          icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                          label: const Text('Buka'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: _metric(
-                            'Menunggu Bid',
-                            _operationalNumber('waiting_jobs'),
-                            Icons.manage_search_rounded,
-                            const Color(0xFFFFE8C4),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _metric(
-                            'Dikerjakan',
-                            _operationalNumber('in_progress_jobs'),
-                            Icons.handyman_outlined,
-                            const Color(0xFFE6F0DF),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: _metric(
-                            'Payment Pending',
-                            _operationalNumber('pending_payments'),
-                            Icons.hourglass_top_rounded,
-                            const Color(0xFFFFF0D8),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _metric(
-                            'Payment Paid',
-                            _operationalNumber('paid_payments'),
-                            Icons.payments_outlined,
-                            const Color(0xFFE7F2E2),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
+                    AyoText(
                       'Perlu Ditinjau',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _brown),
                     ),
@@ -254,11 +175,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       title: 'Pencairan Menunggu',
                       value: _number('pending_payouts'),
                       color: _green,
-                      onTap: widget.onOpenPartners,
+                      onTap: widget.onOpenOperations,
                     ),
                     const SizedBox(height: 16),
                     _notice(
-                      'Dashboard admin memakai revenue platform (komisi 6%), bukan total GMV. Monitor Operasional bersifat read-only agar admin dapat mengawasi job dan transaksi tanpa mengubah lifecycle user.',
+                      'Dashboard admin memakai revenue platform (komisi 6%), bukan total GMV. Ini memisahkan omzet transaksi dari pendapatan Ayo Suruh.',
                       const Color(0xFFFFF1DA),
                       _brown,
                     ),
@@ -273,7 +194,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -285,8 +206,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(value.toStringAsFixed(0), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-                Text(label, style: const TextStyle(fontSize: 10.5, color: Color(0xFF766A63))),
+                AyoText(value.toStringAsFixed(0), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                AyoText(label, style: const TextStyle(fontSize: 10.5, color: Color(0xFF766A63))),
               ],
             ),
           ),
@@ -303,23 +224,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     VoidCallback? onTap,
   }) {
     return Material(
-      color: Colors.transparent,
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: Color(0xFFEDE3DC)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: const Color(0xFFEDE3DC)),
-          ),
           child: Row(
             children: <Widget>[
               Icon(icon, color: color),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: AyoText(
                   title,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -330,14 +250,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(99),
                 ),
-                child: Text(
+                child: AyoText(
                   value.toStringAsFixed(0),
                   style: TextStyle(fontWeight: FontWeight.w900, color: color),
                 ),
               ),
               if (onTap != null) ...<Widget>[
-                const SizedBox(width: 5),
-                const Icon(Icons.chevron_right_rounded, size: 18),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 19,
+                  color: Color(0xFF9A8D85),
+                ),
               ],
             ],
           ),
@@ -350,7 +274,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(13)),
-      child: Text(text, style: TextStyle(fontSize: 11, height: 1.4, color: foreground)),
+      child: AyoText(text, style: TextStyle(fontSize: 11, height: 1.4, color: foreground)),
     );
   }
 }

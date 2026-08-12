@@ -6,6 +6,7 @@ import '../jobs/create_job_page.dart';
 import '../jobs/job_helpers.dart';
 import '../widgets/ayo_avatar.dart';
 import 'mitra_service_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraPublicProfilePage extends StatefulWidget {
   const MitraPublicProfilePage({
@@ -119,7 +120,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
       appBar: AppBar(
         backgroundColor: jobBackgroundColor,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Profil Mitra'),
+        title: const AyoText('Profil Mitra'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: jobOrangeColor))
@@ -127,7 +128,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(28),
-                    child: Text(
+                    child: AyoText(
                       'Profil Mitra belum dapat dimuat.\n$_error',
                       textAlign: TextAlign.center,
                     ),
@@ -146,7 +147,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
                           spacing: 7,
                           runSpacing: 7,
                           children: _categories
-                              .map((name) => Chip(label: Text(name)))
+                              .map((name) => Chip(label: AyoText(name)))
                               .toList(),
                         ),
                       ],
@@ -177,7 +178,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: jobBorderColor),
       ),
@@ -190,7 +191,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
             logoPadding: 12,
           ),
           const SizedBox(height: 12),
-          Text(
+          AyoText(
             _name,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
@@ -201,7 +202,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
             children: <Widget>[
               Icon(Icons.verified_rounded, size: 15, color: Color(0xFF4B613E)),
               SizedBox(width: 5),
-              Text(
+              AyoText(
                 'Mitra terverifikasi',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
               ),
@@ -209,7 +210,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
           ),
           if (_location.isNotEmpty) ...<Widget>[
             const SizedBox(height: 6),
-            Text(
+            AyoText(
               _location,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 11, color: Color(0xFF786C65)),
@@ -233,16 +234,16 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
     return Expanded(
       child: Column(
         children: <Widget>[
-          Text(
+          AyoText(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               color: jobBrownColor,
               fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 2),
-          Text(
+          AyoText(
             label,
             style: const TextStyle(fontSize: 9.5, color: Color(0xFF8B7F78)),
           ),
@@ -255,12 +256,12 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
+          child: AyoText(
             title,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
         ),
-        Text(meta, style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B7F78))),
+        AyoText(meta, style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B7F78))),
       ],
     );
   }
@@ -277,7 +278,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: jobBorderColor),
       ),
@@ -301,16 +302,16 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   (service['title'] ?? 'Jasa Mitra').toString(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   'Mulai ${_currency.format(price)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: jobBrownColor,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
@@ -323,7 +324,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
             onPressed: Supabase.instance.client.auth.currentUser?.id == widget.mitraId
                 ? null
                 : () => _order(service),
-            child: const Text('Pesan'),
+            child: const AyoText('Pesan'),
           ),
         ],
       ),
@@ -340,7 +341,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: jobBorderColor),
       ),
@@ -358,7 +359,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
                 ),
               ),
               const Spacer(),
-              Text(
+              AyoText(
                 formatJobDate(review['created_at']),
                 style: const TextStyle(fontSize: 9.5, color: Color(0xFF8B7F78)),
               ),
@@ -366,7 +367,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
           ),
           if ((review['review'] ?? '').toString().trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
+            AyoText(
               review['review'].toString(),
               style: const TextStyle(fontSize: 12, height: 1.45),
             ),
@@ -378,7 +379,7 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
               runSpacing: 6,
               children: tags.take(5).map((tag) => Chip(
                 visualDensity: VisualDensity.compact,
-                label: Text(tag, style: const TextStyle(fontSize: 9)),
+                label: AyoText(tag, style: const TextStyle(fontSize: 9)),
               )).toList(),
             ),
           ],
@@ -391,11 +392,11 @@ class _MitraPublicProfilePageState extends State<MitraPublicProfilePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: jobBorderColor),
       ),
-      child: Text(message, style: const TextStyle(fontSize: 11.5)),
+      child: AyoText(message, style: const TextStyle(fontSize: 11.5)),
     );
   }
 }

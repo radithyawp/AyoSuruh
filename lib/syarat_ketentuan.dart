@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class SyaratKetentuanPage extends StatelessWidget {
   const SyaratKetentuanPage({super.key});
 
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: AyoText(
           'Syarat & Ketentuan',
           style: TextStyle(
             color: _brown,
@@ -33,7 +34,7 @@ class SyaratKetentuanPage extends StatelessWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
-        children: const <Widget>[
+        children: <Widget>[
           _TermsHeader(),
           SizedBox(height: 20),
           _TermsSection(
@@ -56,9 +57,10 @@ class SyaratKetentuanPage extends StatelessWidget {
           ),
           _TermsSection(
             number: '4',
-            title: 'Peran Mitra',
-            body:
-                'Mitra wajib memberikan informasi pendaftaran yang benar, mematuhi proses verifikasi dan Kontrak/MoU Mitra versi aktif yang disetujui secara elektronik, hanya mengambil pekerjaan yang dapat ditangani, menjaga komunikasi profesional, serta menyelesaikan pekerjaan sesuai kesepakatan dengan customer. Versi dan waktu persetujuan kontrak dicatat oleh sistem.',
+            title: AyoI18n.isEnglish ? 'Partner Responsibilities' : 'Peran Mitra',
+            body: AyoI18n.isEnglish
+                ? 'For the current release, Partner registration is limited to active UPI students. Applicants must provide accurate registration information, upload a UPI Student Card (KTM) as proof of student eligibility, upload a valid legal photo ID, take the verification selfie directly with the front camera, and approve the active Partner Contract/MoU electronically. The admin verifies the KTM and manually compares the selfie with the portrait on the submitted photo ID before approval. Partners must only take jobs they can handle, maintain professional communication, and complete work according to the agreement with the Customer. The contract version and approval timestamp are recorded by the system.'
+                : 'Untuk rilis saat ini, pendaftaran Mitra dibatasi bagi mahasiswa aktif UPI. Pendaftar wajib memberikan informasi yang benar, mengunggah KTM UPI sebagai bukti status mahasiswa, mengunggah identitas legal berfoto yang masih berlaku, mengambil selfie verifikasi langsung melalui kamera depan, serta menyetujui Kontrak/MoU Mitra versi aktif secara elektronik. Admin memeriksa KTM dan mencocokkan selfie secara manual dengan pas foto pada identitas yang dikirim sebelum menyetujui pengajuan. Mitra hanya boleh mengambil pekerjaan yang dapat ditangani, menjaga komunikasi profesional, dan menyelesaikan pekerjaan sesuai kesepakatan dengan Customer. Versi dan waktu persetujuan kontrak dicatat oleh sistem.',
           ),
           _TermsSection(
             number: '5',
@@ -116,8 +118,8 @@ class SyaratKetentuanPage extends StatelessWidget {
                 'Ketersediaan fitur dapat berbeda menurut akun, wilayah, metode pembayaran, status mitra layanan pihak ketiga, kebutuhan keamanan, dan pemeliharaan sistem. Ayo Suruh dapat membatasi sementara fitur tertentu untuk menjaga keamanan, kualitas layanan, atau kepatuhan yang berlaku.',
           ),
           SizedBox(height: 6),
-          Text(
-            'Pembaruan terakhir: 9 Agustus 2026.',
+          AyoText(
+            AyoI18n.isEnglish ? 'Last updated: 12 August 2026.' : 'Pembaruan terakhir: 12 Agustus 2026.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF7C716A)),
           ),
@@ -135,18 +137,23 @@ class _TermsHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: <Color>[Color(0xFFFFE5B8), Color(0xFFFFF2DD)],
+        gradient: LinearGradient(
+          colors: Theme.of(context).brightness == Brightness.dark
+              ? <Color>[
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                  Theme.of(context).colorScheme.surface,
+                ]
+              : const <Color>[Color(0xFFFFE5B8), Color(0xFFFFF2DD)],
         ),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(Icons.handshake_outlined, color: SyaratKetentuanPage._brown, size: 30),
           SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: AyoText(
               'Ketentuan ini menjelaskan aturan penggunaan Ayo Suruh untuk customer, mitra, transaksi, dan fitur pendukungnya.',
               style: TextStyle(
                 fontSize: 13,
@@ -181,18 +188,24 @@ class _TermsSection extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFFFFF0D7) : Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surface
+            : highlight
+                ? const Color(0xFFFFF0D7)
+                : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: highlight ? SyaratKetentuanPage._orange : const Color(0xFFEFE5DE),
+          color: highlight
+              ? SyaratKetentuanPage._orange
+              : Theme.of(context).colorScheme.outline,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             '$number.',
-            style: const TextStyle(
+            style: TextStyle(
               color: SyaratKetentuanPage._brown,
               fontWeight: FontWeight.w900,
               fontSize: 13,
@@ -203,7 +216,7 @@ class _TermsSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   title,
                   style: const TextStyle(
                     fontSize: 13.5,
@@ -212,7 +225,7 @@ class _TermsSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   body,
                   textAlign: TextAlign.justify,
                   style: const TextStyle(

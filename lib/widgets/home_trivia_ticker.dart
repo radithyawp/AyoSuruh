@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 
 class HomeTriviaTicker extends StatefulWidget {
@@ -25,11 +26,13 @@ class _HomeTriviaTickerState extends State<HomeTriviaTicker> {
 
   String get _tickerText {
     final List<String> safe = widget.items
-        .map((String item) => item.trim())
+        .map((String item) => AyoI18n.trivia(item.trim()))
         .where((String item) => item.isNotEmpty)
         .toList();
     if (safe.isEmpty) {
-      return 'Ada aja hal menarik di dunia. Siapa tahu ada yang bikin kamu bilang, "oh iya juga ya".';
+      return AyoI18n.isEnglish
+          ? 'There is always something interesting in the world. Maybe one of these will make you go, “huh, good point.”'
+          : 'Ada aja hal menarik di dunia. Siapa tahu ada yang bikin kamu bilang, "oh iya juga ya".';
     }
     return safe.join('     •     ');
   }
@@ -106,7 +109,9 @@ class _HomeTriviaTickerState extends State<HomeTriviaTicker> {
       height: 46,
       padding: const EdgeInsets.fromLTRB(6, 5, 0, 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7F1),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF20251E)
+            : const Color(0xFFF4F7F1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _sageColor.withValues(alpha: 0.22),
@@ -139,7 +144,7 @@ class _HomeTriviaTickerState extends State<HomeTriviaTicker> {
                   color: Colors.white,
                 ),
                 SizedBox(width: 4),
-                Text(
+                AyoText(
                   'Sekilas',
                   style: TextStyle(
                     fontSize: 10.5,
@@ -165,27 +170,31 @@ class _HomeTriviaTickerState extends State<HomeTriviaTicker> {
                       key: _cycleKey,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Text(
+                        AyoText(
                           _tickerText,
                           maxLines: 1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             height: 1.2,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF4E564A),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Theme.of(context).colorScheme.onSurfaceVariant
+                                : const Color(0xFF4E564A),
                           ),
                         ),
                         const SizedBox(width: _loopGap),
                       ],
                     ),
-                    Text(
+                    AyoText(
                       _tickerText,
                       maxLines: 1,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         height: 1.2,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF4E564A),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
+                            : const Color(0xFF4E564A),
                       ),
                     ),
                     const SizedBox(width: _loopGap),

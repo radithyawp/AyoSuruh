@@ -11,6 +11,8 @@ import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/ayo_snackbar.dart';
 import '../widgets/rupiah_input_formatter.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class CreateJobPage extends StatefulWidget {
   const CreateJobPage({
@@ -42,6 +44,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _destinationAddressController = TextEditingController();
   final TextEditingController _budgetController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -54,10 +57,13 @@ class _CreateJobPageState extends State<CreateJobPage> {
   String? _selectedCategoryId;
   String _selectedWorkMode = jobWorkModeOnsite;
   String? _selectedAddressId;
+  String? _selectedDestinationAddressId;
   bool _useNewAddress = false;
+  bool _useNewDestinationAddress = true;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   LatLng? _selectedPoint;
+  LatLng? _destinationPoint;
 
   @override
   void initState() {
@@ -76,6 +82,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     _titleController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
+    _destinationAddressController.dispose();
     _budgetController.dispose();
     _geocodingService.dispose();
     super.dispose();
@@ -169,8 +176,10 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return LatLng(latitude, longitude);
   }
 
-  Map<String, dynamic>? _selectedAddress() {
-    final String? addressId = _selectedAddressId;
+  Map<String, dynamic>? _selectedAddress({bool destination = false}) {
+    final String? addressId = destination
+        ? _selectedDestinationAddressId
+        : _selectedAddressId;
     if (addressId == null) return null;
     for (final Map<String, dynamic> address in _addresses) {
       if (address['id'].toString() == addressId) return address;
@@ -178,12 +187,21 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return null;
   }
 
-  String _currentAddressLabel() {
-    if (_useNewAddress || _addresses.isEmpty) {
-      final String value = _addressController.text.trim();
-      return value.isEmpty ? 'Alamat pekerjaan baru' : value;
+  String _currentAddressLabel({bool destination = false}) {
+    final bool useNew = destination
+        ? _useNewDestinationAddress
+        : _useNewAddress;
+    final TextEditingController controller = destination
+        ? _destinationAddressController
+        : _addressController;
+    if (useNew || _addresses.isEmpty) {
+      final String value = controller.text.trim();
+      if (value.isNotEmpty) return value;
+      return destination ? 'Alamat tujuan baru' : 'Alamat pekerjaan baru';
     }
-    return (_selectedAddress()?['address'] ?? 'Lokasi pekerjaan').toString();
+    return (_selectedAddress(destination: destination)?['address'] ??
+            (destination ? 'Lokasi tujuan' : 'Lokasi pekerjaan'))
+        .toString();
   }
 
   String _selectedCategoryName() {
@@ -199,6 +217,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
 
   bool get _requiresPhysicalLocation =>
       _selectedWorkMode != jobWorkModeRemote;
+
+  bool get _requiresRouteDestination =>
+      workModeNeedsRouteEndpoints(_selectedWorkMode);
 
   String _workModeRecommendation() {
     final String recommended =
@@ -301,8 +322,14 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return queries;
   }
 
-  Future<bool> _resolveTypedAddress({bool showMessage = true}) async {
-    final String query = _addressController.text.trim();
+  Future<bool> _resolveTypedAddress({
+    bool showMessage = true,
+    bool destination = false,
+  }) async {
+    final TextEditingController controller = destination
+        ? _destinationAddressController
+        : _addressController;
+    final String query = controller.text.trim();
     if (query.length < 8) {
       if (showMessage && mounted) {
         _showMessage('Alamat terlalu singkat untuk dicari.', isError: true);
@@ -337,14 +364,23 @@ class _CreateJobPageState extends State<CreateJobPage> {
 
       if (!mounted) return false;
       setState(() {
-        _selectedPoint = best!.point;
-        // Untuk fallback area yang lebih luas, pertahankan alamat yang diketik
-        // pengguna. Titik hanya menjadi perkiraan dan tetap perlu diverifikasi.
-        if (!approximate) {
-          _addressController.text = best.displayName;
+        if (destination) {
+          _destinationPoint = best!.point;
+          if (!approximate) {
+            _destinationAddressController.text = best.displayName;
+          }
+          _useNewDestinationAddress = true;
+          _selectedDestinationAddressId = null;
+        } else {
+          _selectedPoint = best!.point;
+          // Untuk fallback area yang lebih luas, pertahankan alamat yang diketik
+          // pengguna. Titik hanya menjadi perkiraan dan tetap perlu diverifikasi.
+          if (!approximate) {
+            _addressController.text = best.displayName;
+          }
+          _useNewAddress = true;
+          _selectedAddressId = null;
         }
-        _useNewAddress = true;
-        _selectedAddressId = null;
       });
       if (showMessage) {
         _showMessage(
@@ -362,28 +398,37 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
-  Future<void> _pickLocationOnMap() async {
+  Future<void> _pickLocationOnMap({bool destination = false}) async {
     FocusScope.of(context).unfocus();
+    final LatLng? currentPoint = destination ? _destinationPoint : _selectedPoint;
     final PickedLocation? location = await Navigator.push<PickedLocation>(
       context,
       MaterialPageRoute<PickedLocation>(
         builder: (_) => LocationPickerPage(
-          initialPoint: _selectedPoint,
-          addressLabel: _currentAddressLabel(),
+          initialPoint: currentPoint,
+          addressLabel: _currentAddressLabel(destination: destination),
         ),
       ),
     );
     if (location != null && mounted) {
       setState(() {
-        _selectedPoint = location.point;
         final String resolvedAddress = location.addressLabel.trim();
-        if (resolvedAddress.isNotEmpty &&
-            resolvedAddress != _currentAddressLabel().trim()) {
-          // Hasil pencarian OSM dianggap tujuan pekerjaan baru agar label alamat
-          // dan koordinat tidak menunjuk dua tempat yang berbeda.
-          _useNewAddress = true;
-          _selectedAddressId = null;
-          _addressController.text = resolvedAddress;
+        if (destination) {
+          _destinationPoint = location.point;
+          if (resolvedAddress.isNotEmpty &&
+              resolvedAddress != _currentAddressLabel(destination: true).trim()) {
+            _useNewDestinationAddress = true;
+            _selectedDestinationAddressId = null;
+            _destinationAddressController.text = resolvedAddress;
+          }
+        } else {
+          _selectedPoint = location.point;
+          if (resolvedAddress.isNotEmpty &&
+              resolvedAddress != _currentAddressLabel().trim()) {
+            _useNewAddress = true;
+            _selectedAddressId = null;
+            _addressController.text = resolvedAddress;
+          }
         }
       });
     }
@@ -421,6 +466,34 @@ class _CreateJobPageState extends State<CreateJobPage> {
           isError: true,
         );
         return;
+      }
+
+      if (_requiresRouteDestination) {
+        if (!_useNewDestinationAddress && _selectedDestinationAddressId == null) {
+          _showMessage('Pilih alamat tujuan.', isError: true);
+          return;
+        }
+        if (_destinationPoint == null &&
+            (_useNewDestinationAddress || _addresses.isEmpty)) {
+          final bool resolved = await _resolveTypedAddress(
+            showMessage: false,
+            destination: true,
+          );
+          if (!resolved) {
+            _showMessage(
+              'Alamat tujuan belum memiliki titik lokasi. Cari titik otomatis atau pilih di peta.',
+              isError: true,
+            );
+            return;
+          }
+        }
+        if (_destinationPoint == null) {
+          _showMessage(
+            'Pilih titik tujuan pada peta terlebih dahulu.',
+            isError: true,
+          );
+          return;
+        }
       }
     }
 
@@ -460,6 +533,18 @@ class _CreateJobPageState extends State<CreateJobPage> {
             : null,
         latitude: _requiresPhysicalLocation ? _selectedPoint?.latitude : null,
         longitude: _requiresPhysicalLocation ? _selectedPoint?.longitude : null,
+        destinationAddressId: _requiresRouteDestination &&
+                !_useNewDestinationAddress
+            ? _selectedDestinationAddressId
+            : null,
+        newDestinationAddress: _requiresRouteDestination &&
+                _useNewDestinationAddress
+            ? _destinationAddressController.text
+            : null,
+        destinationLatitude:
+            _requiresRouteDestination ? _destinationPoint?.latitude : null,
+        destinationLongitude:
+            _requiresRouteDestination ? _destinationPoint?.longitude : null,
         preferredMitraId: widget.preferredMitraId,
       );
 
@@ -487,17 +572,17 @@ class _CreateJobPageState extends State<CreateJobPage> {
         builder: (BuildContext dialogContext) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-            icon: const CircleAvatar(
+            icon: CircleAvatar(
               radius: 30,
               backgroundColor: Color(0xFFD9EDCB),
               child: Icon(Icons.check_rounded, color: jobGreenColor, size: 34),
             ),
-            title: const Text(
+            title: const AyoText(
               'Pekerjaan Dipublikasikan',
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: Text(
+            content: AyoText(
               successMessage,
               textAlign: TextAlign.center,
             ),
@@ -506,7 +591,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
               FilledButton(
                 onPressed: () => Navigator.pop(dialogContext),
                 style: FilledButton.styleFrom(backgroundColor: jobOrangeColor),
-                child: const Text('Lihat Pekerjaan'),
+                child: const AyoText('Lihat Pekerjaan'),
               ),
             ],
           );
@@ -534,25 +619,25 @@ class _CreateJobPageState extends State<CreateJobPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const Text(
+                const AyoText(
                   'Tambah Foto Pekerjaan',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                const AyoText(
                   'Tambahkan kondisi barang/lokasi agar Mitra lebih mudah memahami pekerjaan.',
                   style: TextStyle(fontSize: 11.5, color: Color(0xFF756960)),
                 ),
                 const SizedBox(height: 14),
                 ListTile(
                   leading: const Icon(Icons.camera_alt_outlined),
-                  title: const Text('Ambil dari Kamera'),
+                  title: const AyoText('Ambil dari Kamera'),
                   onTap: () => Navigator.pop(sheetContext, 'camera'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Pilih dari Galeri'),
-                  subtitle: const Text('Bisa memilih beberapa foto sekaligus.'),
+                  title: const AyoText('Pilih dari Galeri'),
+                  subtitle: const AyoText('Bisa memilih beberapa foto sekaligus.'),
                   onTap: () => Navigator.pop(sheetContext, 'gallery'),
                 ),
               ],
@@ -601,7 +686,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
         Row(
           children: <Widget>[
             Expanded(
-              child: Text(
+              child: AyoText(
                 _jobImages.isEmpty
                     ? 'Opsional · maksimal 5 foto'
                     : '${_jobImages.length}/5 foto dipilih',
@@ -614,7 +699,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
             TextButton.icon(
               onPressed: _jobImages.length >= 5 ? null : _addJobPhoto,
               icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-              label: Text(_jobImages.isEmpty ? 'Tambah Foto' : 'Tambah'),
+              label: AyoText(_jobImages.isEmpty ? 'Tambah Foto' : 'Tambah'),
             ),
           ],
         ),
@@ -656,7 +741,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                       top: -7,
                       right: -7,
                       child: Material(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         shape: const CircleBorder(),
                         elevation: 2,
                         child: InkWell(
@@ -682,7 +767,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
           ),
         ],
         const SizedBox(height: 5),
-        const Text(
+        const AyoText(
           'Tips: foto kerusakan, kondisi barang, ukuran, atau area kerja membantu Mitra memberi penawaran yang lebih tepat.',
           style: TextStyle(fontSize: 10.5, height: 1.4, color: Color(0xFF81736B)),
         ),
@@ -709,9 +794,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Buat Pekerjaan',
           style: TextStyle(
             color: jobBrownColor,
@@ -742,14 +827,14 @@ class _CreateJobPageState extends State<CreateJobPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Icon(
+                            Icon(
                               Icons.verified_outlined,
                               color: jobGreenColor,
                               size: 21,
                             ),
                             const SizedBox(width: 9),
                             Expanded(
-                              child: Text(
+                              child: AyoText(
                                 'Permintaan jasa untuk ${widget.preferredMitraName ?? 'Mitra pilihan'}. Job ini akan ditampilkan kepada mitra tersebut dan tetap memakai sistem penawaran Ayo Suruh.',
                                 style: const TextStyle(
                                   fontSize: 10.8,
@@ -789,7 +874,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _descriptionController,
-                      hintText: 'Jelaskan apa yang perlu dikerjakan secara detail...',
+                      hintText: AyoI18n.t('Jelaskan apa yang perlu dikerjakan secara detail...'),
                       maxLines: 5,
                       validator: (String? value) {
                         if (value == null || value.trim().length < 10) {
@@ -804,9 +889,28 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     _buildJobPhotoPicker(),
                     const SizedBox(height: 18),
                     if (_requiresPhysicalLocation) ...<Widget>[
-                      _sectionLabel('Lokasi Pekerjaan'),
-                      const SizedBox(height: 8),
+                      _sectionLabel(
+                        _requiresRouteDestination
+                            ? 'Rute Pekerjaan'
+                            : 'Lokasi Pekerjaan',
+                      ),
+                      const SizedBox(height: 6),
+                      if (_requiresRouteDestination) ...<Widget>[
+                        const AyoText(
+                          'Isi titik awal dan tujuan. Customer dapat melihat live location Mitra saat perjalanan berlangsung.',
+                          style: TextStyle(
+                            fontSize: 10.8,
+                            height: 1.4,
+                            color: Color(0xFF786B63),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                       _buildAddressSection(),
+                      if (_requiresRouteDestination) ...<Widget>[
+                        const SizedBox(height: 12),
+                        _buildAddressSection(destination: true),
+                      ],
                       const SizedBox(height: 18),
                     ] else ...<Widget>[
                       Container(
@@ -816,7 +920,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: const Color(0xFFC7DDB8)),
                         ),
-                        child: const Row(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Icon(
@@ -826,7 +930,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                             ),
                             SizedBox(width: 10),
                             Expanded(
-                              child: Text(
+                              child: AyoText(
                                 'Pekerjaan dilakukan secara online. Alamat dan tahap menuju lokasi tidak diperlukan.',
                                 style: TextStyle(
                                   fontSize: 11.5,
@@ -844,7 +948,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                       children: <Widget>[
                         Expanded(
                           child: _dateTimeBox(
-                            label: 'Tanggal',
+                            label: AyoI18n.t('Tanggal'),
                             value: _selectedDate == null
                                 ? 'dd/mm/yyyy'
                                 : '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}',
@@ -855,7 +959,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _dateTimeBox(
-                            label: 'Waktu',
+                            label: AyoI18n.t('Waktu'),
                             value: _selectedTime == null
                                 ? '--:--'
                                 : _selectedTime!.format(context),
@@ -870,7 +974,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _budgetController,
-                      hintText: '0',
+                      hintText: AyoI18n.t('0'),
                       prefixText: 'Rp ',
                       keyboardType: TextInputType.number,
                       inputFormatters: const <TextInputFormatter>[
@@ -888,7 +992,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                       },
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    const AyoText(
                       'Minimal Rp1.000 • Maksimal Rp10.000.000. Harga yang wajar membantu Mitra memberikan penawaran yang sesuai.',
                       style: TextStyle(fontSize: 11, color: Color(0xFF7C6F67)),
                     ),
@@ -913,7 +1017,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text(
+                            : const AyoText(
                                 'Buat Pekerjaan',
                                 style: TextStyle(
                                   color: Color(0xFF5E3B00),
@@ -931,9 +1035,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
   }
 
   Widget _sectionLabel(String value) {
-    return Text(
+    return AyoText(
       value,
-      style: const TextStyle(
+      style: TextStyle(
         color: jobBrownColor,
         fontSize: 13,
         fontWeight: FontWeight.w700,
@@ -946,11 +1050,11 @@ class _CreateJobPageState extends State<CreateJobPage> {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: jobBorderColor),
         ),
-        child: const Text('Belum ada kategori pada database.'),
+        child: const AyoText('Belum ada kategori pada database.'),
       );
     }
     return Wrap(
@@ -972,14 +1076,21 @@ class _CreateJobPageState extends State<CreateJobPage> {
             size: 17,
             color: selected ? jobGreenColor : jobDarkBrownColor,
           ),
-          label: Text(name),
+          label: AyoText(name),
           labelStyle: TextStyle(
-            color: selected ? jobGreenColor : const Color(0xFF4C4038),
+            color: selected
+                ? jobGreenColor
+                : Theme.of(context).colorScheme.onSurface,
             fontSize: 12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
-          selectedColor: const Color(0xFFDDEBD5),
-          backgroundColor: Colors.white,
+          selectedColor: Theme.of(context).brightness == Brightness.dark
+              ? Color.alphaBlend(
+                  AyoColors.green.withValues(alpha: 0.18),
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                )
+              : const Color(0xFFDDEBD5),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           side: BorderSide(
             color: selected ? const Color(0xFFA8C895) : jobBorderColor,
           ),
@@ -1007,14 +1118,21 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 size: 17,
                 color: selected ? jobGreenColor : jobDarkBrownColor,
               ),
-              label: Text(jobWorkModeLabel(mode)),
+              label: AyoText(jobWorkModeLabel(mode)),
               labelStyle: TextStyle(
-                color: selected ? jobGreenColor : const Color(0xFF4C4038),
+                color: selected
+                ? jobGreenColor
+                : Theme.of(context).colorScheme.onSurface,
                 fontSize: 11.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
-              selectedColor: const Color(0xFFDDEBD5),
-              backgroundColor: Colors.white,
+              selectedColor: Theme.of(context).brightness == Brightness.dark
+              ? Color.alphaBlend(
+                  AyoColors.green.withValues(alpha: 0.18),
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                )
+              : const Color(0xFFDDEBD5),
+              backgroundColor: Theme.of(context).colorScheme.surface,
               side: BorderSide(
                 color: selected ? const Color(0xFFA8C895) : jobBorderColor,
               ),
@@ -1025,149 +1143,232 @@ class _CreateJobPageState extends State<CreateJobPage> {
           }).toList(),
         ),
         const SizedBox(height: 7),
-        Text(
-          '${jobWorkModeDescription(_selectedWorkMode)} '
-          '${_workModeRecommendation()}',
-          style: const TextStyle(
+        AyoText(
+          '${AyoI18n.t(jobWorkModeDescription(_selectedWorkMode))} '
+          '${AyoI18n.t(_workModeRecommendation())}',
+          style: TextStyle(
             fontSize: 10.5,
             height: 1.4,
-            color: Color(0xFF786B63),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAddressSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        if (_addresses.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: jobBorderColor),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value: _useNewAddress ? '__new__' : _selectedAddressId,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                items: <DropdownMenuItem<String>>[
-                  ..._addresses.map((Map<String, dynamic> address) {
-                    final String label = (address['label'] ?? 'Alamat').toString();
-                    final String value = address['address'].toString();
-                    return DropdownMenuItem<String>(
-                      value: address['id'].toString(),
-                      child: Text(
-                        '$label · $value',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }),
-                  const DropdownMenuItem<String>(
-                    value: '__new__',
-                    child: Text('+ Gunakan alamat baru'),
+  Widget _buildAddressSection({bool destination = false}) {
+    final bool useNew = destination
+        ? _useNewDestinationAddress
+        : _useNewAddress;
+    final String? selectedAddressId = destination
+        ? _selectedDestinationAddressId
+        : _selectedAddressId;
+    final LatLng? selectedPoint = destination
+        ? _destinationPoint
+        : _selectedPoint;
+    final TextEditingController controller = destination
+        ? _destinationAddressController
+        : _addressController;
+    final String endpointLabel = destination
+        ? jobDestinationLabelForCategory(_selectedCategoryName())
+        : (_requiresRouteDestination
+            ? jobOriginLabelForCategory(_selectedCategoryName())
+            : 'Lokasi Pekerjaan');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: jobBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: destination
+                      ? const Color(0xFFFFF0DE)
+                      : const Color(0xFFEAF3E4),
+                  shape: BoxShape.circle,
+                ),
+                child: AyoText(
+                  _requiresRouteDestination ? (destination ? 'B' : 'A') : '•',
+                  style: TextStyle(
+                    color: destination ? jobBrownColor : jobGreenColor,
+                    fontWeight: FontWeight.w900,
                   ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _useNewAddress = value == '__new__';
-                    _selectedAddressId = _useNewAddress ? null : value;
-                    _selectedPoint = _useNewAddress
-                        ? null
-                        : _pointFromAddress(_selectedAddress());
-                  });
-                },
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: AyoText(
+                  endpointLabel,
+                  style: TextStyle(
+                    color: jobDarkBrownColor,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_addresses.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFAF7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: jobBorderColor),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: useNew ? '__new__' : selectedAddressId,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  items: <DropdownMenuItem<String>>[
+                    ..._addresses.map((Map<String, dynamic> address) {
+                      final String label =
+                          (address['label'] ?? 'Alamat').toString();
+                      final String value = address['address'].toString();
+                      return DropdownMenuItem<String>(
+                        value: address['id'].toString(),
+                        child: AyoText(
+                          '$label · $value',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }),
+                    const DropdownMenuItem<String>(
+                      value: '__new__',
+                      child: AyoText('+ Gunakan alamat baru'),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      final bool newValue = value == '__new__';
+                      if (destination) {
+                        _useNewDestinationAddress = newValue;
+                        _selectedDestinationAddressId = newValue ? null : value;
+                        _destinationPoint = newValue
+                            ? null
+                            : _pointFromAddress(
+                                _selectedAddress(destination: true),
+                              );
+                      } else {
+                        _useNewAddress = newValue;
+                        _selectedAddressId = newValue ? null : value;
+                        _selectedPoint = newValue
+                            ? null
+                            : _pointFromAddress(_selectedAddress());
+                      }
+                    });
+                  },
+                ),
               ),
             ),
-          ),
-        if (_addresses.isNotEmpty && _useNewAddress) const SizedBox(height: 10),
-        if (_useNewAddress || _addresses.isEmpty)
-          _buildTextField(
-            controller: _addressController,
-            hintText: 'Masukkan alamat lengkap',
-            prefixIcon: Icons.location_on_outlined,
-            maxLines: 3,
-            onFieldSubmitted: (_) => _resolveTypedAddress(),
-            validator: (String? value) {
-              if ((_useNewAddress || _addresses.isEmpty) &&
-                  (value == null || value.trim().length < 8)) {
-                return 'Alamat lengkap minimal 8 karakter.';
-              }
-              return null;
-            },
-          ),
-        if (_useNewAddress || _addresses.isEmpty) ...<Widget>[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _isSubmitting ? null : _resolveTypedAddress,
-              icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
-              label: const Text('Tentukan titik otomatis'),
-              style: TextButton.styleFrom(foregroundColor: jobBrownColor),
-            ),
-          ),
-        ],
-        const SizedBox(height: 10),
-        if (_selectedPoint != null) ...<Widget>[
-          JobLocationMapCard(
-            title: 'Titik Lokasi Terpilih',
-            enableOpenMap: false,
-            job: <String, dynamic>{
-              'latitude': _selectedPoint!.latitude,
-              'longitude': _selectedPoint!.longitude,
-              'addresses': <String, dynamic>{
-                'address': _currentAddressLabel(),
+          if (_addresses.isNotEmpty && useNew) const SizedBox(height: 10),
+          if (useNew || _addresses.isEmpty)
+            _buildTextField(
+              controller: controller,
+              hintText: destination
+                  ? 'Masukkan alamat tujuan lengkap'
+                  : 'Masukkan alamat lengkap',
+              prefixIcon: destination
+                  ? Icons.flag_outlined
+                  : Icons.location_on_outlined,
+              maxLines: 3,
+              onFieldSubmitted: (_) => _resolveTypedAddress(
+                destination: destination,
+              ),
+              validator: (String? value) {
+                if ((useNew || _addresses.isEmpty) &&
+                    (value == null || value.trim().length < 8)) {
+                  return 'Alamat lengkap minimal 8 karakter.';
+                }
+                return null;
               },
-            },
-          ),
-          const SizedBox(height: 10),
-        ],
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton.icon(
-            onPressed: _pickLocationOnMap,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: jobBrownColor,
-              side: const BorderSide(color: jobOrangeColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
             ),
-            icon: Icon(
-              _selectedPoint == null
-                  ? Icons.add_location_alt_outlined
-                  : Icons.edit_location_alt_outlined,
-            ),
-            label: Text(
-              _selectedPoint == null
-                  ? 'Pilih Titik di Peta'
-                  : 'Ubah Titik Lokasi',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(Icons.info_outline_rounded, size: 15, color: jobBrownColor),
-            SizedBox(width: 5),
-            Expanded(
-              child: Text(
-                'Pastikan pin berada di lokasi pekerjaan yang benar agar mitra tidak tersesat.',
-                style: TextStyle(fontSize: 11, color: Color(0xFF786B62)),
+          if (useNew || _addresses.isEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () => _resolveTypedAddress(destination: destination),
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                label: const AyoText('Tentukan titik otomatis'),
+                style: TextButton.styleFrom(foregroundColor: jobBrownColor),
               ),
             ),
           ],
-        ),
-      ],
+          const SizedBox(height: 10),
+          if (selectedPoint != null) ...<Widget>[
+            JobLocationMapCard(
+              title: '$endpointLabel Terpilih',
+              enableOpenMap: false,
+              job: <String, dynamic>{
+                'latitude': selectedPoint.latitude,
+                'longitude': selectedPoint.longitude,
+                'addresses': <String, dynamic>{
+                  'address': _currentAddressLabel(destination: destination),
+                },
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _pickLocationOnMap(destination: destination),
+              icon: Icon(
+                selectedPoint == null
+                    ? Icons.add_location_alt_outlined
+                    : Icons.edit_location_alt_outlined,
+              ),
+              label: AyoText(
+                selectedPoint == null
+                    ? 'Pilih Titik di Peta'
+                    : 'Ubah Titik Lokasi',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                Icons.info_outline_rounded,
+                size: 15,
+                color: jobBrownColor,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: AyoText(
+                  destination
+                      ? 'Pastikan titik tujuan tepat agar Mitra mengantar ke lokasi yang benar.'
+                      : (_requiresRouteDestination
+                          ? 'Titik A adalah lokasi awal pengambilan atau penjemputan.'
+                          : 'Pastikan pin berada di lokasi pekerjaan yang benar agar Mitra tidak tersesat.'),
+                  style: const TextStyle(
+                    fontSize: 10.8,
+                    height: 1.35,
+                    color: Color(0xFF786B62),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1189,7 +1390,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
             height: 52,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: jobBorderColor),
             ),
@@ -1198,12 +1399,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 Icon(icon, size: 19, color: jobBrownColor),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
+                  child: AyoText(
                     value,
                     style: TextStyle(
                       color: value.contains('-') || value.contains('dd')
                           ? Colors.grey.shade500
-                          : Colors.black87,
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                     ),
                   ),
@@ -1241,11 +1442,13 @@ class _CreateJobPageState extends State<CreateJobPage> {
         prefixText: prefixText,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: jobBrownColor),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: jobBorderColor),
+          borderSide: BorderSide(color: jobBorderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

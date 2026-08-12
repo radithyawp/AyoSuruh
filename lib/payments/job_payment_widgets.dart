@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../jobs/job_helpers.dart';
 import 'payment_helpers.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobPaymentStatusCard extends StatelessWidget {
   const JobPaymentStatusCard({
@@ -58,7 +59,7 @@ class JobPaymentStatusCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                   border: Border.all(color: paymentStatusColor(payment)),
                 ),
@@ -72,14 +73,14 @@ class JobPaymentStatusCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       cash ? 'Status Pembayaran Tunai' : 'Status Pembayaran',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF72665F),
                       ),
                     ),
-                    Text(
+                    AyoText(
                       paymentStatusLabel(payment),
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
@@ -87,9 +88,9 @@ class JobPaymentStatusCard extends StatelessWidget {
                 ),
               ),
               if (total > 0)
-                Text(
+                AyoText(
                   formatRupiah(total),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: paymentBrown,
                     fontWeight: FontWeight.w900,
                   ),
@@ -97,7 +98,7 @@ class JobPaymentStatusCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
+          AyoText(
             description,
             style: const TextStyle(
               fontSize: 11,
@@ -125,7 +126,7 @@ class JobPaymentStatusCard extends StatelessWidget {
                           ? Icons.payments_rounded
                           : Icons.payment_rounded,
                 ),
-                label: Text(
+                label: AyoText(
                   paid ? 'Lihat Pembayaran' : 'Buka Pembayaran',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),

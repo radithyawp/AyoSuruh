@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'job_helpers.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobReviewCard extends StatelessWidget {
   const JobReviewCard({
@@ -21,7 +22,7 @@ class JobReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: jobBorderColor),
       ),
@@ -33,7 +34,7 @@ class JobReviewCard extends StatelessWidget {
               const Icon(Icons.star_rounded, color: jobOrangeColor),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: AyoText(
                   title,
                   style: const TextStyle(
                     fontSize: 13,
@@ -41,9 +42,9 @@ class JobReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
+              AyoText(
                 '$rating/5',
-                style: const TextStyle(
+                style: TextStyle(
                   color: jobBrownColor,
                   fontWeight: FontWeight.w900,
                 ),
@@ -68,9 +69,9 @@ class JobReviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFF3D5AE)),
                   ),
-                  child: Text(
+                  child: AyoText(
                     tag,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: jobDarkBrownColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -82,7 +83,7 @@ class JobReviewCard extends StatelessWidget {
           ],
           if (comment.isNotEmpty) ...<Widget>[
             const SizedBox(height: 13),
-            Text(
+            AyoText(
               comment,
               style: const TextStyle(
                 color: Color(0xFF665A53),

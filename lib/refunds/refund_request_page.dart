@@ -7,6 +7,7 @@ import '../payments/payment_helpers.dart';
 import 'refund_helpers.dart';
 import 'refund_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class RefundRequestPage extends StatefulWidget {
   const RefundRequestPage({
@@ -75,8 +76,8 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Ajukan pembatalan dan refund?'),
-        content: const Text(
+        title: const AyoText('Ajukan pembatalan dan refund?'),
+        content: const AyoText(
           'Jika pekerjaan belum dimulai, sistem akan mencoba membatalkan atau '
           'merefund transaksi melalui Midtrans. Pekerjaan yang sudah berjalan '
           'akan masuk pemeriksaan manual.',
@@ -84,12 +85,12 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Kembali'),
+            child: const AyoText('Kembali'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            child: const Text('Ajukan Refund'),
+            child: const AyoText('Ajukan Refund'),
           ),
         ],
       ),
@@ -124,16 +125,16 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: refundBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: refundBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, _refund != null),
-          icon: const Icon(Icons.arrow_back_rounded, color: refundBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: refundBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Pembatalan & Refund',
           style: TextStyle(
             color: refundBrown,
@@ -166,19 +167,19 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFEAD8CB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          const AyoText(
             'Transaksi yang Dibatalkan',
             style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
           ),
           const SizedBox(height: 6),
-          Text(widget.jobTitle),
+          AyoText(widget.jobTitle),
           const SizedBox(height: 14),
           _row('Order ID', (widget.payment['order_id'] ?? '-').toString()),
           const SizedBox(height: 8),
@@ -198,7 +199,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFEAD8CB)),
       ),
@@ -207,7 +208,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
+            const AyoText(
               'Alasan Pembatalan',
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
             ),
@@ -218,7 +219,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
               children: _quickReasons
                   .map(
                     (String reason) => ActionChip(
-                      label: Text(reason),
+                      label: AyoText(reason),
                       onPressed: () {
                         _reasonController.text = reason;
                         setState(() {});
@@ -233,7 +234,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
               maxLines: 4,
               maxLength: 255,
               decoration: InputDecoration(
-                hintText: 'Jelaskan alasan refund minimal 10 karakter...',
+                hintText: AyoI18n.t('Jelaskan alasan refund minimal 10 karakter...'),
                 filled: true,
                 fillColor: const Color(0xFFFFFBF8),
                 border: OutlineInputBorder(
@@ -270,7 +271,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                         ),
                       )
                     : const Icon(Icons.currency_exchange_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Ajukan Pembatalan & Refund',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -298,7 +299,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
         children: <Widget>[
           Icon(refundStatusIcon(refund['status']), color: color, size: 40),
           const SizedBox(height: 12),
-          Text(
+          AyoText(
             refundStatusLabel(refund['status']),
             style: TextStyle(
               color: color,
@@ -307,7 +308,7 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          AyoText(
             (refund['status_message'] ??
                     'Status permintaan akan diperbarui otomatis.')
                 .toString(),
@@ -334,13 +335,13 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
         color: const Color(0xFFFFEBCB),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(Icons.info_outline_rounded, color: refundBrown),
           SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AyoText(
               'Transaksi pending akan dibatalkan. Transaksi settlement akan '
               'direfund jika metode pembayaran dan akun merchant mendukungnya. '
               'Pekerjaan yang sudah berjalan membutuhkan pemeriksaan manual.',
@@ -358,13 +359,13 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
       children: <Widget>[
         SizedBox(
           width: 86,
-          child: Text(
+          child: AyoText(
             label,
             style: const TextStyle(fontSize: 11, color: Color(0xFF81756E)),
           ),
         ),
         Expanded(
-          child: Text(
+          child: AyoText(
             value,
             textAlign: TextAlign.right,
             style: TextStyle(

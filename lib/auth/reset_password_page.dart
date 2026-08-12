@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_preferences.dart';
 import '../login.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -20,9 +21,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
 
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _background = Color(0xFFFAF6F3);
+  static const Color _orange = Color(0xFFF6990E);
+  static Color get _brown => AyoAdaptiveColors.brown;
 
   @override
   void dispose() {
@@ -67,12 +67,19 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       );
     } on AuthException catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, error.message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AyoText(error.message),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(
-        context,
-        'Password belum dapat diperbarui: $error',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AyoText('Password belum dapat diperbarui: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -82,12 +89,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: _background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
+        title: AyoText(
           'Buat Password Baru',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
@@ -101,7 +108,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             children: <Widget>[
               const Icon(Icons.password_rounded, size: 64, color: _orange),
               const SizedBox(height: 20),
-              const Text(
+              const AyoText(
                 'Masukkan password baru untuk akun Ayo Suruh Anda.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF746760), height: 1.4),
@@ -109,7 +116,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               const SizedBox(height: 28),
               _passwordField(
                 controller: _passwordController,
-                label: 'Password Baru',
+                label: AyoI18n.t('Password Baru'),
                 obscure: _obscurePassword,
                 onToggle: () => setState(
                   () => _obscurePassword = !_obscurePassword,
@@ -124,7 +131,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               const SizedBox(height: 14),
               _passwordField(
                 controller: _confirmController,
-                label: 'Konfirmasi Password Baru',
+                label: AyoI18n.t('Konfirmasi Password Baru'),
                 obscure: _obscureConfirm,
                 onToggle: () => setState(
                   () => _obscureConfirm = !_obscureConfirm,
@@ -157,7 +164,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
+                      : const AyoText(
                           'Simpan Password Baru',
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),

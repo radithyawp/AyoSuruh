@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _pinFieldBrown = Color(0xFF8A5300);
+Color get _pinFieldBrown => AyoAdaptiveColors.brown;
 const Color _pinFieldOrange = Color(0xFFF6990E);
 
 class SixDigitPinField extends StatefulWidget {
@@ -111,9 +113,9 @@ class _SixDigitPinFieldState extends State<SixDigitPinField> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             if (widget.label != null) ...<Widget>[
-              Text(
+              AyoText(
                 widget.label!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: _pinFieldBrown,
@@ -173,7 +175,7 @@ class _SixDigitPinFieldState extends State<SixDigitPinField> {
                               ),
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 100),
-                                child: Text(
+                                child: AyoText(
                                   filled
                                       ? (widget.obscureText
                                           ? '●'
@@ -182,7 +184,7 @@ class _SixDigitPinFieldState extends State<SixDigitPinField> {
                                   key: ValueKey<String>(
                                     '$index-${filled ? value[index] : ''}',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     height: 1,
                                     fontWeight: FontWeight.w900,
@@ -231,7 +233,7 @@ class _SixDigitPinFieldState extends State<SixDigitPinField> {
               const SizedBox(height: 6),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Text(
+                child: AyoText(
                   effectiveError,
                   style: TextStyle(
                     color: Colors.red.shade700,

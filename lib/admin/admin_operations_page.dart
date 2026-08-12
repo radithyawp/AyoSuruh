@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../jobs/job_helpers.dart';
 import 'admin_refunds_tab.dart';
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminOperationsPage extends StatefulWidget {
   const AdminOperationsPage({
@@ -19,10 +21,9 @@ class AdminOperationsPage extends StatefulWidget {
 
 class _AdminOperationsPageState extends State<AdminOperationsPage>
     with SingleTickerProviderStateMixin {
-  static const Color _brown = Color(0xFF7B4B00);
+  static Color get _brown => AyoAdaptiveColors.brown;
   static const Color _orange = Color(0xFFFF9800);
   static const Color _green = Color(0xFF5F784F);
-  static const Color _background = Color(0xFFFFFAFD);
 
   final AdminService _service = AdminService();
   final TextEditingController _searchController = TextEditingController();
@@ -150,7 +151,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -160,17 +161,17 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                 children: <Widget>[
                   if (Navigator.of(context).canPop()) ...<Widget>[
                     IconButton(
-                      tooltip: 'Kembali',
+                      tooltip: AyoI18n.t('Kembali'),
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+                      icon: Icon(Icons.arrow_back_rounded, color: _brown),
                     ),
                     const SizedBox(width: 2),
                   ],
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
+                        AyoText(
                           'Monitor Operasional',
                           style: TextStyle(
                             fontSize: 21,
@@ -179,7 +180,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                           ),
                         ),
                         SizedBox(height: 2),
-                        Text(
+                        AyoText(
                           'Pantau pekerjaan, transaksi, dan refund yang memerlukan tindakan admin.',
                           style: TextStyle(
                             fontSize: 10.5,
@@ -191,7 +192,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                   ),
                   IconButton(
                     onPressed: _loading ? null : _load,
-                    icon: const Icon(Icons.refresh_rounded, color: _brown),
+                    icon: Icon(Icons.refresh_rounded, color: _brown),
                   ),
                 ],
               ),
@@ -203,7 +204,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                 controller: _searchController,
                 onChanged: (String value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'Cari job, customer, mitra, order ID, atau alasan refund...',
+                  hintText: AyoI18n.t('Cari job, customer, mitra, order ID, atau alasan refund...'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _query.isEmpty
                       ? null
@@ -230,7 +231,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
             TabBar(
               controller: _tabController,
               labelColor: _brown,
-              unselectedLabelColor: Colors.black45,
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
               indicatorColor: _orange,
               tabs: const <Tab>[
                 Tab(text: 'Pekerjaan'),
@@ -319,7 +320,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -336,14 +337,14 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   value.toStringAsFixed(0),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                Text(
+                AyoText(
                   label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -379,7 +380,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
         ),
         Expanded(
           child: rows.isEmpty
-              ? const Center(child: Text('Tidak ada pekerjaan pada filter ini.'))
+              ? const Center(child: AyoText('Tidak ada pekerjaan pada filter ini.'))
               : RefreshIndicator(
                   color: _orange,
                   onRefresh: _load,
@@ -410,7 +411,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
         ),
         Expanded(
           child: rows.isEmpty
-              ? const Center(child: Text('Tidak ada transaksi pada filter ini.'))
+              ? const Center(child: AyoText('Tidak ada transaksi pada filter ini.'))
               : RefreshIndicator(
                   color: _orange,
                   onRefresh: _load,
@@ -441,13 +442,13 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
     return Padding(
       padding: const EdgeInsets.only(right: 7),
       child: ChoiceChip(
-        label: Text(label),
+        label: AyoText(label),
         selected: _jobFilter == value,
         onSelected: (_) => setState(() => _jobFilter = value),
         selectedColor: const Color(0xFFFFE2B6),
         labelStyle: TextStyle(
           fontWeight: FontWeight.w800,
-          color: _jobFilter == value ? _brown : Colors.black54,
+          color: _jobFilter == value ? _brown : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10.5,
         ),
         side: const BorderSide(color: Color(0xFFE7D9CF)),
@@ -459,13 +460,13 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
     return Padding(
       padding: const EdgeInsets.only(right: 7),
       child: ChoiceChip(
-        label: Text(label),
+        label: AyoText(label),
         selected: _paymentFilter == value,
         onSelected: (_) => setState(() => _paymentFilter = value),
         selectedColor: const Color(0xFFE6F0DF),
         labelStyle: TextStyle(
           fontWeight: FontWeight.w800,
-          color: _paymentFilter == value ? _green : Colors.black54,
+          color: _paymentFilter == value ? _green : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10.5,
         ),
         side: const BorderSide(color: Color(0xFFE7D9CF)),
@@ -486,7 +487,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -508,14 +509,14 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       (row['title'] ?? 'Pekerjaan').toString(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       'Customer: ${(row['customer_name'] ?? '-').toString()}',
                       style: const TextStyle(
                         fontSize: 10.5,
@@ -571,9 +572,9 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
           ],
           if (created != null) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
+            AyoText(
               'Dibuat ${DateFormat('dd MMM yyyy, HH:mm').format(created)}',
-              style: const TextStyle(fontSize: 9.5, color: Colors.black45),
+              style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
             ),
           ],
         ],
@@ -596,7 +597,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -615,14 +616,14 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       (row['job_title'] ?? 'Transaksi').toString(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       (row['customer_name'] ?? '-').toString(),
                       style: const TextStyle(
                         fontSize: 10.5,
@@ -636,9 +637,9 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
             ],
           ),
           const SizedBox(height: 10),
-          Text(
+          AyoText(
             formatRupiah(row['amount']),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w900,
               color: _brown,
@@ -695,9 +696,9 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
           ],
           if (updated != null) ...<Widget>[
             const SizedBox(height: 7),
-            Text(
+            AyoText(
               'Update ${DateFormat('dd MMM yyyy, HH:mm').format(updated)}',
-              style: const TextStyle(fontSize: 9.5, color: Colors.black45),
+              style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
             ),
           ],
         ],
@@ -711,16 +712,16 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          AyoText(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 8.5,
               fontWeight: FontWeight.w900,
-              color: Colors.black38,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.62),
             ),
           ),
           const SizedBox(height: 1),
-          Text(
+          AyoText(
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -742,7 +743,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(99),
       ),
-      child: Text(
+      child: AyoText(
         text,
         style: TextStyle(
           fontSize: 8.5,
@@ -789,7 +790,7 @@ class _AdminOperationsPageState extends State<AdminOperationsPage>
         color: background,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
+      child: AyoText(
         text,
         style: TextStyle(fontSize: 10.5, color: foreground, height: 1.35),
       ),

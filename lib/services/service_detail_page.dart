@@ -10,6 +10,7 @@ import '../widgets/ayo_snackbar.dart';
 import '../widgets/network_photo_gallery.dart';
 import 'mitra_public_profile_page.dart';
 import 'mitra_service_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class ServiceDetailPage extends StatefulWidget {
   const ServiceDetailPage({
@@ -212,11 +213,11 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
       appBar: AppBar(
         backgroundColor: jobBackgroundColor,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Detail Jasa'),
+        title: const AyoText('Detail Jasa'),
         actions: <Widget>[
           IconButton(
             onPressed: _share,
-            tooltip: 'Bagikan jasa',
+            tooltip: AyoI18n.t('Bagikan jasa'),
             icon: const Icon(Icons.ios_share_rounded),
           ),
           IconButton(
@@ -243,16 +244,16 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
               borderRadius: 20,
             ),
           const SizedBox(height: 18),
-          Text(
+          AyoText(
             category,
-            style: const TextStyle(
+            style: TextStyle(
               color: jobBrownColor,
               fontWeight: FontWeight.w800,
               fontSize: 12,
             ),
           ),
           const SizedBox(height: 5),
-          Text(
+          AyoText(
             title,
             style: const TextStyle(
               fontSize: 23,
@@ -262,7 +263,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
             ),
           ),
           const SizedBox(height: 9),
-          Text(
+          AyoText(
             'Mulai ${_currency.format(_price)}',
             style: const TextStyle(
               fontSize: 18,
@@ -279,7 +280,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                   .map(
                     (tag) => Chip(
                       visualDensity: VisualDensity.compact,
-                      label: Text('#$tag'),
+                      label: AyoText('#${AyoI18n.serviceTag(tag)}'),
                     ),
                   )
                   .toList(),
@@ -289,7 +290,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: jobBorderColor),
             ),
@@ -317,7 +318,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
+                        AyoText(
                           mitraName,
                           style: const TextStyle(
                             fontSize: 15,
@@ -330,14 +331,14 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                             const Icon(Icons.verified_rounded,
                                 size: 14, color: Color(0xFF4B613E)),
                             const SizedBox(width: 4),
-                            const Text(
+                            const AyoText(
                               'Mitra terverifikasi',
                               style: TextStyle(fontSize: 10.5),
                             ),
                             const SizedBox(width: 10),
                             const Icon(Icons.star_rounded,
                                 size: 14, color: jobOrangeColor),
-                            Text(
+                            AyoText(
                               rating > 0 ? rating.toStringAsFixed(1) : 'Baru',
                               style: const TextStyle(
                                 fontSize: 10.5,
@@ -348,7 +349,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                         ),
                         if (location.isNotEmpty) ...<Widget>[
                           const SizedBox(height: 3),
-                          Text(
+                          AyoText(
                             location,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -367,12 +368,12 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          const AyoText(
             'Tentang jasa',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
+          AyoText(
             (_item['description'] ?? '').toString(),
             style: const TextStyle(
               fontSize: 13,
@@ -385,7 +386,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
             const Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ] else if (_otherServices.isNotEmpty) ...<Widget>[
             const SizedBox(height: 28),
-            const Text(
+            const AyoText(
               'Jasa lain dari Mitra ini',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
@@ -406,7 +407,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
               foregroundColor: const Color(0xFF553600),
             ),
             icon: Icon(isOwn ? Icons.person_rounded : Icons.arrow_forward_rounded),
-            label: Text(
+            label: AyoText(
               isOwn ? 'Jasa Anda' : 'Pesan Jasa',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -425,7 +426,7 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -461,16 +462,16 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
+                      AyoText(
                         title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      AyoText(
                         'Mulai ${_currency.format(price)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           color: jobBrownColor,
                           fontWeight: FontWeight.w800,

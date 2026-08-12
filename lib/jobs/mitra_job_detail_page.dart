@@ -4,6 +4,7 @@ import '../chats/chat_detail_page.dart';
 import '../chats/chat_service.dart';
 import '../notifications/notification_service.dart';
 import '../location/job_location_map.dart';
+import '../location/job_live_tracking_card.dart';
 import '../payments/job_payment_widgets.dart';
 import '../payments/payment_helpers.dart';
 import '../payments/payment_service.dart';
@@ -16,6 +17,7 @@ import 'submit_bid_page.dart';
 import 'update_job_status_page.dart';
 import '../widgets/home_shortcut_button.dart';
 import '../widgets/network_photo_gallery.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraJobDetailPage extends StatefulWidget {
   const MitraJobDetailPage({super.key, required this.jobId});
@@ -98,8 +100,8 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
         customerId.toLowerCase() == currentUserId.toLowerCase()) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: AyoText(
             'Pekerjaan ini dibuat oleh akunmu sendiri. Buka dari mode Customer untuk melihat penawaran.',
           ),
           backgroundColor: jobBrownColor,
@@ -147,7 +149,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Chat belum dapat dibuka: $error'),
+          content: AyoText('Chat belum dapat dibuka: $error'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -163,8 +165,8 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       await _loadData();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.'),
+        SnackBar(
+          content: AyoText('Pekerjaan dimulai. Status berubah menjadi Sedang Dikerjakan.'),
           backgroundColor: jobGreenColor,
         ),
       );
@@ -172,7 +174,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pekerjaan belum dapat dimulai: $error'),
+          content: AyoText('Pekerjaan belum dapat dimulai: $error'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -191,9 +193,9 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, true),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Detail Pekerjaan',
           style: TextStyle(
             color: jobBrownColor,
@@ -216,7 +218,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
+          child: AyoText(
             _errorMessage ?? 'Pekerjaan tidak ditemukan.',
             textAlign: TextAlign.center,
           ),
@@ -251,7 +253,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               JobStatusChip(status: status),
-              Text(
+              AyoText(
                 formatJobDateTime(job['created_at']),
                 style: const TextStyle(fontSize: 10, color: Color(0xFF7B7069)),
               ),
@@ -261,7 +263,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: jobBorderColor),
             ),
@@ -288,16 +290,16 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
+                          AyoText(
                             categoryName(job).toUpperCase(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: jobBrownColor,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
+                          AyoText(
                             job['title'].toString(),
                             style: const TextStyle(
                               fontSize: 21,
@@ -320,7 +322,19 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                 ),
                 if (jobNeedsPhysicalLocation(job)) ...<Widget>[
                   const SizedBox(height: 10),
-                  _info(Icons.location_on_outlined, 'Lokasi', jobAddress(job)),
+                  _info(
+                    Icons.location_on_outlined,
+                    jobNeedsRouteEndpoints(job) ? jobOriginLabel(job) : 'Lokasi',
+                    jobAddress(job),
+                  ),
+                  if (jobNeedsRouteEndpoints(job)) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _info(
+                      Icons.flag_outlined,
+                      jobDestinationLabel(job),
+                      jobDestinationAddress(job),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 10),
                 _info(
@@ -333,12 +347,20 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           ),
           const SizedBox(height: 14),
           if (jobNeedsPhysicalLocation(job) && jobLatLng(job) != null) ...<Widget>[
-            JobLocationMapCard(job: job),
+            if (jobNeedsRouteEndpoints(job) && jobDestinationLatLng(job) != null)
+              JobRouteMapCard(job: job)
+            else
+              JobLocationMapCard(job: job),
+            const SizedBox(height: 14),
+          ],
+          if (jobWorkMode(job) == jobWorkModeMobile &&
+              status == 'on_progress') ...<Widget>[
+            JobLiveTrackingCard(job: job, isMitra: true),
             const SizedBox(height: 14),
           ],
           _card(
             title: 'Deskripsi Pekerjaan',
-            child: Text(
+            child: AyoText(
               (job['description'] ?? 'Tidak ada deskripsi.').toString(),
               style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF625750)),
             ),
@@ -353,9 +375,9 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           const SizedBox(height: 14),
           _card(
             title: 'Budget Customer',
-            child: Text(
+            child: AyoText(
               formatRupiah(job['budget']),
-              style: const TextStyle(
+              style: TextStyle(
                 color: jobBrownColor,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -407,7 +429,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                   ),
                 ),
                 icon: _isOpeningChat
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 17,
                         height: 17,
                         child: CircularProgressIndicator(
@@ -416,7 +438,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                         ),
                       )
                     : const Icon(Icons.chat_bubble_outline_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Chat dengan Customer',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -427,7 +449,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           if (isOwnCustomerJob) ...<Widget>[
             _card(
               title: 'Pekerjaan Milik Akunmu',
-              child: const Text(
+              child: const AyoText(
                 'Pekerjaan ini kamu buat sebagai Customer. Kembali ke mode Customer untuk melihat dan memilih penawaran Mitra.',
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
@@ -444,7 +466,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                 ),
                 icon: const Icon(Icons.send_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Ajukan Penawaran',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -466,7 +488,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.play_arrow_rounded),
-                label: Text(
+                label: AyoText(
                   paymentAllowsStart
                       ? 'Mulai Pekerjaan'
                       : mitraPaymentGateLabel(_payment),
@@ -489,7 +511,7 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
                       ? Icons.sync_rounded
                       : Icons.lock_outline_rounded,
                 ),
-                label: Text(
+                label: AyoText(
                   paymentAllowsStart
                       ? 'Update Status Pekerjaan'
                       : mitraPaymentGateLabel(_payment),
@@ -528,8 +550,8 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text('Penawaran Saya', style: TextStyle(fontWeight: FontWeight.w800)),
-              Text(
+              const AyoText('Penawaran Saya', style: TextStyle(fontWeight: FontWeight.w800)),
+              AyoText(
                 bidStatusLabel(status),
                 style: TextStyle(
                   color: status == 'rejected' ? Colors.red.shade700 : jobGreenColor,
@@ -540,17 +562,17 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
+          AyoText(
             formatRupiah(bid['price']),
-            style: const TextStyle(fontSize: 20, color: jobBrownColor, fontWeight: FontWeight.w900),
+            style: TextStyle(fontSize: 20, color: jobBrownColor, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
-          Text(
+          AyoText(
             'Estimasi: ${bid['estimated_time'] ?? '-'}',
             style: const TextStyle(fontSize: 12),
           ),
           const SizedBox(height: 4),
-          Text(
+          AyoText(
             (bid['message'] ?? '').toString(),
             style: const TextStyle(fontSize: 12, height: 1.4, color: Color(0xFF5F554E)),
           ),
@@ -569,8 +591,8 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF7B706A))),
-              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              AyoText(label, style: const TextStyle(fontSize: 10, color: Color(0xFF7B706A))),
+              AyoText(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -582,14 +604,14 @@ class _MitraJobDetailPageState extends State<MitraJobDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFF0E9E4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+          AyoText(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
           child,
         ],

@@ -7,9 +7,11 @@ import 'chats/chat_helpers.dart';
 import 'chats/chat_service.dart';
 import 'chats/presence_service.dart';
 import 'jobs/job_helpers.dart';
-import 'notification.dart';
 import 'services/service_marketplace_page.dart';
+import 'widgets/ayo_empty_state.dart';
+import 'notification.dart';
 import 'widgets/ayo_avatar.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
@@ -164,8 +166,8 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.fromLTRB(18, 8, 10, 2),
               child: Row(
                 children: <Widget>[
-                  const Expanded(
-                    child: Text(
+                  Expanded(
+                    child: AyoText(
                       'Chat',
                       style: TextStyle(
                         color: jobBrownColor,
@@ -183,7 +185,7 @@ class _ChatPageState extends State<ChatPage> {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 18),
-              child: Text(
+              child: AyoText(
                 'Koordinasikan pekerjaan dengan customer atau mitra.',
                 style: TextStyle(
                   color: Color(0xFF81746C),
@@ -199,7 +201,7 @@ class _ChatPageState extends State<ChatPage> {
                 controller: _searchController,
                 onChanged: (String value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'Cari nama atau pekerjaan...',
+                  hintText: AyoI18n.t('Cari nama atau pekerjaan...'),
                   prefixIcon: const Icon(
                     Icons.search_rounded,
                     color: Color(0xFF8B7E76),
@@ -214,7 +216,7 @@ class _ChatPageState extends State<ChatPage> {
                           icon: const Icon(Icons.close_rounded),
                         ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).colorScheme.surface,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -248,28 +250,18 @@ class _ChatPageState extends State<ChatPage> {
 
     if (_errorMessage != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 50,
-                color: jobBrownColor,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Daftar chat belum dapat dimuat.\n$_errorMessage',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, height: 1.4),
-              ),
-              const SizedBox(height: 14),
-              FilledButton(
-                onPressed: _loadRooms,
-                child: const Text('Coba Lagi'),
-              ),
-            ],
+        child: AyoEmptyState(
+          compact: true,
+          assetPath: 'assets/images/ayos/ayos_sorry.png',
+          badgeIcon: Icons.error_outline_rounded,
+          title: AyoI18n.t('Chat belum dapat dimuat'),
+          description: AyoI18n.t(
+            'Periksa koneksi lalu coba muat ulang percakapan.',
+          ),
+          action: FilledButton.icon(
+            onPressed: _loadRooms,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const AyoText('Coba Lagi'),
           ),
         ),
       );
@@ -284,77 +276,46 @@ class _ChatPageState extends State<ChatPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: <Widget>[
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.13),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 34),
-              child: Column(
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFE8C8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.forum_outlined,
-                      size: 36,
-                      color: jobBrownColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _query.isEmpty
-                        ? 'Belum ada percakapan'
-                        : 'Percakapan tidak ditemukan',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    _query.isEmpty && widget.activeMode == 'customer'
-                        ? 'Temukan jasa yang kamu butuhkan dari Mitra Ayo Suruh, lalu mulai percakapan dari layanan yang kamu pilih.'
-                        : _query.isEmpty
-                            ? 'Chat akan tersedia setelah kamu terhubung dengan customer melalui suatu pekerjaan.'
-                            : 'Coba gunakan nama customer, mitra, atau judul pekerjaan lainnya.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF776C65),
-                      fontSize: 12,
-                      height: 1.45,
-                    ),
-                  ),
-                  if (_query.isEmpty && widget.activeMode == 'customer') ...<Widget>[
-                    const SizedBox(height: 18),
-                    KeyedSubtree(
-                      key: widget.firstActionTutorialKey,
-                      child: FilledButton.icon(
-                        onPressed: _openServiceMarketplace,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: jobOrangeColor,
-                          foregroundColor: const Color(0xFF553600),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 13,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        icon: const Icon(
-                          Icons.chat_bubble_rounded,
-                          size: 18,
-                        ),
-                        label: const Text(
-                          'Mulai Chat Pertamamu',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+            AyoEmptyState(
+              compact: true,
+              assetPath: _query.isNotEmpty
+                  ? 'assets/images/ayos/ayos_search.png'
+                  : widget.activeMode == 'mitra'
+                      ? 'assets/images/ayos/ayos_support_headset.png'
+                      : 'assets/images/ayos/ayos_chat_phone.png',
+              badgeIcon: Icons.forum_outlined,
+              title: AyoI18n.t(
+                _query.isEmpty
+                    ? (widget.activeMode == 'mitra'
+                        ? 'Belum ada percakapan dengan Customer'
+                        : 'Belum ada percakapan')
+                    : 'Percakapan tidak ditemukan',
+              ),
+              description: AyoI18n.t(
+                _query.isEmpty
+                    ? (widget.activeMode == 'mitra'
+                        ? 'Chat akan tersedia setelah Customer memilih penawaranmu atau pekerjaan diterima.'
+                        : 'Chat tersedia setelah Customer terhubung dengan Mitra dalam suatu pekerjaan.')
+                    : 'Coba nama Customer, Mitra, atau judul pekerjaan lainnya.',
               ),
             ),
+            if (_query.isEmpty && widget.activeMode == 'customer') ...<Widget>[
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 34),
+                child: KeyedSubtree(
+                  key: widget.firstActionTutorialKey,
+                  child: FilledButton.icon(
+                    onPressed: _openServiceMarketplace,
+                    icon: const Icon(Icons.search_rounded),
+                    label: const AyoText(
+                      'Mulai Chat Pertamamu',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -393,9 +354,9 @@ class _ChatPageState extends State<ChatPage> {
         child: Container(
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(17),
-            border: Border.all(color: const Color(0xFFEDE5E0)),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +367,9 @@ class _ChatPageState extends State<ChatPage> {
                   AyoAvatar(
                     imageUrl: avatarUrl,
                     size: 50,
-                    backgroundColor: const Color(0xFFFFE7C5),
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : const Color(0xFFFFE7C5),
                     logoPadding: 8,
                   ),
                   if (_presenceService.isOnline(
@@ -421,7 +384,7 @@ class _ChatPageState extends State<ChatPage> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF38A169),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                         ),
                       ),
                     ),
@@ -438,7 +401,7 @@ class _ChatPageState extends State<ChatPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
+                              AyoText(
                                 partnerName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -448,7 +411,7 @@ class _ChatPageState extends State<ChatPage> {
                                   color: Color(0xFF2F2A28),
                                 ),
                               ),
-                              Text(
+                              AyoText(
                                 _presenceService.presenceLabel(
                                   _presenceByUser[(room['partner_id'] ?? '').toString()],
                                 ),
@@ -468,7 +431,7 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
+                        AyoText(
                           chatListTime(lastTime),
                           style: const TextStyle(
                             color: Color(0xFF948880),
@@ -481,11 +444,11 @@ class _ChatPageState extends State<ChatPage> {
                     Row(
                       children: <Widget>[
                         Expanded(
-                          child: Text(
+                          child: AyoText(
                             jobTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: jobBrownColor,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -503,7 +466,7 @@ class _ChatPageState extends State<ChatPage> {
                               color: jobStatusBackground(status),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
+                            child: AyoText(
                               jobStatusLabel(status),
                               style: TextStyle(
                                 color: jobStatusForeground(status),
@@ -515,7 +478,7 @@ class _ChatPageState extends State<ChatPage> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
+                    AyoText(
                       lastMessage,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

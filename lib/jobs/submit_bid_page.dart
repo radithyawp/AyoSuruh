@@ -5,6 +5,7 @@ import '../widgets/rupiah_input_formatter.dart';
 import 'job_helpers.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class SubmitBidPage extends StatefulWidget {
   const SubmitBidPage({
@@ -90,17 +91,17 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            icon: const CircleAvatar(
+            icon: CircleAvatar(
               radius: 28,
               backgroundColor: Color(0xFFDDEED2),
               child: Icon(Icons.check_rounded, color: jobGreenColor, size: 32),
             ),
-            title: const Text(
+            title: const AyoText(
               'Penawaran Terkirim',
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
-            content: const Text(
+            content: const AyoText(
               'Customer akan melihat harga dan pesanmu. Status pengajuan dapat dipantau pada tab Pengajuan.',
               textAlign: TextAlign.center,
             ),
@@ -109,7 +110,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
               FilledButton(
                 onPressed: () => Navigator.pop(context),
                 style: FilledButton.styleFrom(backgroundColor: jobOrangeColor),
-                child: const Text('Selesai'),
+                child: const AyoText('Selesai'),
               ),
             ],
           );
@@ -137,9 +138,9 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Ajukan Penawaran',
           style: TextStyle(
             color: jobBrownColor,
@@ -166,7 +167,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
+                    AyoText(
                       'PEKERJAAN',
                       style: TextStyle(
                         fontSize: 10,
@@ -175,12 +176,12 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
+                    AyoText(
                       widget.jobTitle,
                       style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 5),
-                    Text(
+                    AyoText(
                       'Budget customer: ${formatRupiah(widget.initialBudget)}',
                       style: const TextStyle(fontSize: 12, color: Color(0xFF72512A)),
                     ),
@@ -209,7 +210,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                 decoration: _inputDecoration(
                   '0',
                   prefixText: 'Rp ',
-                  helperText: 'Maksimal Rp 10.000.000',
+                  helperText: AyoI18n.t('Maksimal Rp 10.000.000'),
                 ),
               ),
               const SizedBox(height: 10),
@@ -241,7 +242,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                 ),
               ),
               const SizedBox(height: 7),
-              const Text(
+              const AyoText(
                 'Komisi platform disnapshot saat transaksi dibuat. Biaya pencairan, jika ada, ditampilkan terpisah ketika withdraw.',
                 style: TextStyle(
                   fontSize: 10.5,
@@ -281,13 +282,13 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Row(
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Icon(Icons.info_outline_rounded, size: 16, color: jobBrownColor),
                   SizedBox(width: 6),
                   Expanded(
-                    child: Text(
+                    child: AyoText(
                       'Satu mitra hanya dapat mengirim satu penawaran untuk setiap pekerjaan.',
                       style: TextStyle(fontSize: 11, color: Color(0xFF766A62)),
                     ),
@@ -310,7 +311,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.send_rounded),
-                  label: const Text(
+                  label: const AyoText(
                     'Kirim Penawaran',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -331,7 +332,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
+          child: AyoText(
             label,
             style: TextStyle(
               fontSize: emphasize ? 12 : 11,
@@ -340,7 +341,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
             ),
           ),
         ),
-        Text(
+        AyoText(
           value,
           style: TextStyle(
             fontSize: emphasize ? 13 : 11.5,
@@ -353,9 +354,9 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
   }
 
   Widget _label(String value) {
-    return Text(
+    return AyoText(
       value,
-      style: const TextStyle(
+      style: TextStyle(
         color: jobBrownColor,
         fontSize: 13,
         fontWeight: FontWeight.w700,
@@ -377,7 +378,7 @@ class _SubmitBidPageState extends State<SubmitBidPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: jobBorderColor),
+        borderSide: BorderSide(color: jobBorderColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

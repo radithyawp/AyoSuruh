@@ -14,6 +14,7 @@ import 'cash_checkout_page.dart';
 import 'payment_helpers.dart';
 import 'payment_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobPaymentPage extends StatefulWidget {
   const JobPaymentPage({
@@ -284,16 +285,16 @@ class _JobPaymentPageState extends State<JobPaymentPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: paymentBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: paymentBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context, isPaymentPaid(_payment)),
-          icon: const Icon(Icons.arrow_back_rounded, color: paymentBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: paymentBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Pembayaran Pekerjaan',
           style: TextStyle(
             color: paymentBrown,
@@ -323,17 +324,17 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.error_outline_rounded,
                 size: 54,
                 color: paymentBrown,
               ),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center),
+              AyoText(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _loadPayment,
-                child: const Text('Coba Lagi'),
+                child: const AyoText('Coba Lagi'),
               ),
             ],
           ),
@@ -395,7 +396,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                     ),
                   ),
                   icon: const Icon(Icons.currency_exchange_rounded),
-                  label: Text(
+                  label: AyoText(
                     _refund == null
                         ? 'Ajukan Pembatalan & Refund'
                         : 'Lihat Status Refund',
@@ -416,7 +417,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   ),
                 ),
                 icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text(
+                label: const AyoText(
                   'Kembali ke Detail Pekerjaan',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -429,7 +430,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                 child: OutlinedButton.icon(
                   onPressed: _openRefund,
                   icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text(
+                  label: const AyoText(
                     'Lihat Rincian Refund',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
@@ -448,7 +449,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   ),
                 ),
                 icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Kembali ke Detail Pekerjaan'),
+                label: const AyoText('Kembali ke Detail Pekerjaan'),
               ),
             ),
           ] else ...<Widget>[
@@ -465,7 +466,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                     ),
                   ),
                   icon: const Icon(Icons.payments_rounded),
-                  label: const Text(
+                  label: const AyoText(
                     'Buka Pembayaran Tunai',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
@@ -484,7 +485,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                     ),
                   ),
                   icon: const Icon(Icons.payments_rounded),
-                  label: const Text(
+                  label: const AyoText(
                     'Bayar Tunai / Cash',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
@@ -508,7 +509,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                       ),
                     ),
                     icon: _isCreating
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
@@ -517,7 +518,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                             ),
                           )
                         : const Icon(Icons.science_outlined),
-                    label: Text(
+                    label: AyoText(
                       activeLink
                           ? 'Lanjutkan Midtrans Sandbox'
                           : 'Uji Midtrans Sandbox',
@@ -542,7 +543,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                       ),
                     ),
                     icon: const Icon(Icons.cancel_outlined),
-                    label: Text(
+                    label: AyoText(
                       _refund == null
                           ? 'Batalkan Transaksi & Pekerjaan'
                           : 'Lihat Permintaan Pembatalan',
@@ -566,7 +567,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                       ),
                     ),
                     icon: _isRefreshing
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 17,
                             height: 17,
                             child: CircularProgressIndicator(
@@ -575,7 +576,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                             ),
                           )
                         : const Icon(Icons.refresh_rounded),
-                    label: const Text(
+                    label: const AyoText(
                       'Cek Status Midtrans',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
@@ -632,12 +633,12 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             size: 38,
           ),
           const SizedBox(height: 14),
-          Text(
+          AyoText(
             paymentStatusLabel(_payment),
             style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
-          Text(
+          AyoText(
             description,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -660,19 +661,19 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: paymentBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          const AyoText(
             'Rincian Pembayaran',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
-          Text(
+          AyoText(
             widget.jobTitle,
             style: const TextStyle(color: Color(0xFF6D6059)),
           ),
@@ -723,18 +724,18 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         Expanded(
-          child: Text(
+          child: AyoText(
             label,
             style: TextStyle(
-              color: emphasized ? Colors.black87 : const Color(0xFF6D6059),
+              color: emphasized ? Theme.of(context).colorScheme.onSurface : const Color(0xFF6D6059),
               fontWeight: emphasized ? FontWeight.w800 : FontWeight.w500,
             ),
           ),
         ),
-        Text(
+        AyoText(
           value,
           style: TextStyle(
-            color: emphasized ? paymentBrown : Colors.black87,
+            color: emphasized ? paymentBrown : Theme.of(context).colorScheme.onSurface,
             fontSize: emphasized ? 20 : 14,
             fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
           ),
@@ -749,13 +750,13 @@ class _JobPaymentPageState extends State<JobPaymentPage>
       children: <Widget>[
         SizedBox(
           width: 92,
-          child: Text(
+          child: AyoText(
             label,
             style: const TextStyle(fontSize: 11, color: Color(0xFF8A7B72)),
           ),
         ),
         Expanded(
-          child: Text(
+          child: AyoText(
             value,
             textAlign: TextAlign.right,
             style: const TextStyle(
@@ -773,7 +774,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: paymentBorder),
       ),
@@ -782,15 +783,15 @@ class _JobPaymentPageState extends State<JobPaymentPage>
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Icon(Icons.history_rounded, color: paymentBrown),
+              Icon(Icons.history_rounded, color: paymentBrown),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text(
+                child: AyoText(
                   'Riwayat Percobaan',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
                 ),
               ),
-              Text(
+              AyoText(
                 '${_attempts.length} percobaan',
                 style: const TextStyle(color: Color(0xFF8A7B72), fontSize: 11),
               ),
@@ -832,7 +833,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   paymentStatusLabel(statusMap),
                   style: const TextStyle(
                     fontSize: 12,
@@ -840,7 +841,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AyoText(
                   method.isEmpty
                       ? _formatDate(attempt['created_at'])
                       : '$method • ${_formatDate(attempt['created_at'])}',
@@ -852,11 +853,11 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               ],
             ),
           ),
-          Text(
+          AyoText(
             formatRupiah(
               _asNum(attempt['amount']) + _asNum(attempt['service_fee']),
             ),
-            style: const TextStyle(
+            style: TextStyle(
               color: paymentBrown,
               fontSize: 11,
               fontWeight: FontWeight.w900,
@@ -885,7 +886,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   refundStatusLabel(refund['status']),
                   style: TextStyle(
                     color: color,
@@ -894,7 +895,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AyoText(
                   (refund['status_message'] ??
                           'Status refund akan diperbarui otomatis.')
                       .toString(),
@@ -908,7 +909,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                     padding: EdgeInsets.zero,
                   ),
                   icon: const Icon(Icons.open_in_new_rounded, size: 17),
-                  label: const Text('Buka rincian'),
+                  label: const AyoText('Buka rincian'),
                 ),
               ],
             ),
@@ -931,7 +932,7 @@ class _JobPaymentPageState extends State<JobPaymentPage>
           const Icon(Icons.verified_user_outlined, color: paymentGreen),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AyoText(
               cash
                   ? 'Pembayaran tunai dilakukan langsung Customer ke Mitra. Ayo Suruh mencatat nominal, voucher, dan konfirmasi pembayarannya.'
                   : 'Untuk release saat ini, pembayaran tunai tersedia. Midtrans tetap dipertahankan sebagai Sandbox pada debug sampai akun produksi disetujui.',

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/ayo_theme.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 /// Anchor yang dipasang pada UI asli Ayo Suruh.
 ///
@@ -186,7 +187,7 @@ class _AyosInteractiveTutorial extends StatefulWidget {
 
 class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
   static const Color _orange = Color(0xFFF6990E);
-  static const Color _brown = Color(0xFF6E481F);
+  static Color get _brown => AyoAdaptiveColors.brown;
 
   int _index = 0;
   Rect? _targetRect;
@@ -335,7 +336,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       title: 'AyoPay & transaksi ada di sini',
       body:
           'Cek saldo AyoPay dan riwayat pembayaran dari Profil. Pengaturan keamanan akun tetap ada di menu Pengaturan.',
-      assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
+      assetPath: 'assets/images/ayos/ayos_earnings.png',
       preferAbove: true,
     ),
   ];
@@ -355,7 +356,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       title: 'Penghasilanmu kelihatan dari sini',
       body:
           'Ringkasan ini bantu kamu lihat hasil kerja. Detail saldo tersedia, pending, atau ditahan bisa dicek dari Dompet Mitra.',
-      assetPath: 'assets/images/ayos/ayos_thumbs_up.png',
+      assetPath: 'assets/images/ayos/ayos_earnings.png',
     ),
     _TutorialStep(
       target: widget.anchors.homePromoOrService,
@@ -447,7 +448,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       title: 'Penghasilan dan pencairan ada di sini',
       body:
           'Saldo yang sudah tersedia bisa dicairkan ke rekening. PIN AyoPay 6 digit dipakai buat melindungi aksi sensitif seperti pencairan dan perubahan rekening.',
-      assetPath: 'assets/images/ayos/ayos_hooray_with_confetti.png',
+      assetPath: 'assets/images/ayos/ayos_earnings.png',
       preferAbove: true,
     ),
   ];
@@ -481,14 +482,42 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       await _skipUnavailableStep();
       return;
     }
+    if (!visibleTarget.mounted) {
+      await _skipUnavailableStep();
+      return;
+    }
 
     // Beberapa target berada di bawah fold. Scroll halaman asli dulu, lalu
     // ambil context baru setelah animasi selesai agar tidak memakai BuildContext
     // yang melewati async gap.
+    final bool keepAtTop =
+        identical(step.target, widget.anchors.homeHeader) ||
+        identical(step.target, widget.anchors.homeSearchOrIncome);
     try {
+      // Home can retain a small scroll offset after normal browsing. For the
+      // first tutorial anchors, reset the owning Scrollable to its true top
+      // before calculating the spotlight so the name + primary location are
+      // always inside the highlighted area.
+      if (keepAtTop) {
+        final ScrollableState? scrollable = Scrollable.maybeOf(visibleTarget);
+        if (scrollable != null && scrollable.position.hasPixels) {
+          await scrollable.position.animateTo(
+            scrollable.position.minScrollExtent,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          );
+          if (!mounted) return;
+          await WidgetsBinding.instance.endOfFrame;
+        }
+      }
+
+      final BuildContext? refreshedTarget = step.target.currentContext;
+      if (refreshedTarget == null || !refreshedTarget.mounted) return;
+
       await Scrollable.ensureVisible(
-        visibleTarget,
-        alignment: 0.34,
+        refreshedTarget,
+        alignment: keepAtTop ? 0.02 : 0.34,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
         duration: const Duration(milliseconds: 330),
         curve: Curves.easeOutCubic,
       );
@@ -501,7 +530,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
     if (!mounted) return;
 
     final BuildContext? targetContext = step.target.currentContext;
-    if (targetContext == null) {
+    if (targetContext == null || !targetContext.mounted) {
       await _skipUnavailableStep();
       return;
     }
@@ -616,17 +645,24 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
 
   Widget _buildCoachCard(_TutorialStep step) {
     final bool last = _index == _steps.length - 1;
+    final ThemeData theme = Theme.of(context);
+    final bool dark = theme.brightness == Brightness.dark;
+    final Color cardColor = dark ? const Color(0xFF241E1B) : const Color(0xFFFFFBF7);
+    final Color borderColor = dark ? const Color(0xFF5C493D) : const Color(0xFFFFDCA5);
+    final Color titleColor = dark ? const Color(0xFFFFE6D2) : _brown;
+    final Color bodyColor = dark ? const Color(0xFFD8C9C0) : const Color(0xFF625750);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF7),
+        color: cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFFDCA5)),
-        boxShadow: const <BoxShadow>[
+        border: Border.all(color: borderColor),
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color(0x33000000),
+            color: Colors.black.withValues(alpha: dark ? 0.42 : 0.20),
             blurRadius: 24,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -641,7 +677,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE8C5),
+                  color: dark ? const Color(0xFF3A2C24) : const Color(0xFFFFE8C5),
                   borderRadius: BorderRadius.circular(22),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -663,7 +699,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       widget.mode == 'mitra'
                           ? 'AYOS · Mode Mitra'
                           : 'AYOS · Kenalan Yuk',
@@ -675,12 +711,12 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    AyoText(
                       step.title,
                       style: AyoTypography.accent(
                         fontSize: 17.5,
                         fontWeight: FontWeight.w600,
-                        color: _brown,
+                        color: titleColor,
                         height: 1.12,
                       ),
                     ),
@@ -690,13 +726,13 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4EEE8),
+                  color: dark ? const Color(0xFF332B27) : const Color(0xFFF4EEE8),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(
+                child: AyoText(
                   '${_index + 1}/${_steps.length}',
-                  style: const TextStyle(
-                    color: Color(0xFF74665D),
+                  style: TextStyle(
+                    color: dark ? const Color(0xFFC8B8AF) : const Color(0xFF74665D),
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -705,10 +741,10 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
+          AyoText(
             step.body,
-            style: const TextStyle(
-              color: Color(0xFF625750),
+            style: TextStyle(
+              color: bodyColor,
               fontSize: 12,
               height: 1.48,
             ),
@@ -718,17 +754,19 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
             children: <Widget>[
               TextButton(
                 onPressed: _skip,
-                child: const Text(
+                child: AyoText(
                   'Lewati',
-                  style: TextStyle(color: Color(0xFF81766F)),
+                  style: TextStyle(
+                    color: dark ? const Color(0xFFB9AAA2) : const Color(0xFF81766F),
+                  ),
                 ),
               ),
               const Spacer(),
               FilledButton.icon(
                 onPressed: _next,
                 style: FilledButton.styleFrom(
-                  backgroundColor: _brown,
-                  foregroundColor: Colors.white,
+                  backgroundColor: dark ? _orange : _brown,
+                  foregroundColor: dark ? const Color(0xFF2F221A) : Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 11,
@@ -738,7 +776,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
                   last ? Icons.check_rounded : Icons.arrow_forward_rounded,
                   size: 17,
                 ),
-                label: Text(last ? 'Sip, ngerti!' : 'Lanjut'),
+                label: AyoText(last ? 'Sip, ngerti!' : 'Lanjut'),
               ),
             ],
           ),
@@ -746,6 +784,7 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       ),
     );
   }
+
 }
 
 class _SpotlightPainter extends CustomPainter {

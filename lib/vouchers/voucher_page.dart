@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../jobs/job_helpers.dart';
+import '../widgets/ayo_empty_state.dart';
 import '../widgets/home_shortcut_button.dart';
 import 'voucher_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
-const Color _voucherBackground = Color(0xFFFFFAF7);
-const Color _voucherBrown = Color(0xFF7A4B13);
+Color get _voucherBrown => AyoAdaptiveColors.brown;
 const Color _voucherOrange = Color(0xFFF6990E);
 const Color _voucherGreen = Color(0xFF5E774F);
 
@@ -55,16 +57,16 @@ class _VoucherPageState extends State<VoucherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _voucherBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _voucherBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _voucherBrown),
+          icon: Icon(Icons.arrow_back_rounded, color: _voucherBrown),
         ),
-        title: const Text(
+        title: AyoText(
           'Voucher Saya',
           style: TextStyle(
             color: _voucherBrown,
@@ -99,17 +101,17 @@ class _VoucherPageState extends State<VoucherPage> {
         padding: const EdgeInsets.all(24),
         children: <Widget>[
           const SizedBox(height: 110),
-          const Icon(Icons.local_activity_outlined, size: 58, color: _voucherBrown),
+          Icon(Icons.local_activity_outlined, size: 58, color: _voucherBrown),
           const SizedBox(height: 12),
-          const Text(
+          const AyoText(
             'Voucher belum dapat dimuat',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 7),
-          Text(_error!, textAlign: TextAlign.center),
+          AyoText(_error!, textAlign: TextAlign.center),
           const SizedBox(height: 18),
-          FilledButton(onPressed: _load, child: const Text('Coba Lagi')),
+          FilledButton(onPressed: _load, child: const AyoText('Coba Lagi')),
         ],
       );
     }
@@ -156,22 +158,22 @@ class _VoucherPageState extends State<VoucherPage> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(15),
             ),
-            child: const Icon(Icons.confirmation_number_rounded, color: _voucherBrown),
+            child: Icon(Icons.confirmation_number_rounded, color: _voucherBrown),
           ),
           const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   '$availableCount voucher tersedia',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 3),
-                const Text(
+                const AyoText(
                   'Voucher diberikan otomatis sesuai syarat akun. Pilih voucher saat checkout setelah metode pembayaran tersedia.',
                   style: TextStyle(fontSize: 11.5, height: 1.4, color: Color(0xFF6D5C50)),
                 ),
@@ -184,25 +186,21 @@ class _VoucherPageState extends State<VoucherPage> {
   }
 
   Widget _emptyCard() {
-    return Container(
-      padding: const EdgeInsets.all(22),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEAD8CB)),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+        border: Border.fromBorderSide(
+          BorderSide(color: Color(0xFFEAD8CB)),
+        ),
       ),
-      child: const Column(
-        children: <Widget>[
-          Icon(Icons.local_activity_outlined, size: 42, color: Color(0xFF9B8A80)),
-          SizedBox(height: 10),
-          Text('Belum ada voucher aktif', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 4),
-          Text(
-            'Promo baru akan muncul otomatis saat akunmu memenuhi syarat.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11.5, color: Color(0xFF7C716B)),
-          ),
-        ],
+      child: AyoEmptyState(
+        compact: true,
+        assetPath: 'assets/images/ayos/ayos_empty.png',
+        badgeIcon: Icons.local_activity_outlined,
+        title: 'Belum ada voucher aktif',
+        description:
+            'Promo akan masuk otomatis saat akunmu memenuhi syarat campaign Ayo Suruh.',
       ),
     );
   }
@@ -215,7 +213,7 @@ class _VoucherPageState extends State<VoucherPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -242,9 +240,9 @@ class _VoucherPageState extends State<VoucherPage> {
                         Row(
                           children: <Widget>[
                             Expanded(
-                              child: Text(
+                              child: AyoText(
                                 _discountLabel(voucher),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _voucherBrown,
                                   fontSize: 19,
                                   fontWeight: FontWeight.w900,
@@ -255,19 +253,19 @@ class _VoucherPageState extends State<VoucherPage> {
                           ],
                         ),
                         const SizedBox(height: 5),
-                        Text(
+                        AyoText(
                           'Min. transaksi ${formatRupiah(_asNum(voucher['min_transaction']))}',
                           style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 3),
-                        Text(
+                        AyoText(
                           _validityLabel(voucher),
                           style: const TextStyle(fontSize: 10.5, color: Color(0xFF7C716B)),
                         ),
                         const SizedBox(height: 7),
                         Row(
                           children: <Widget>[
-                            Text(
+                            AyoText(
                               (voucher['code'] ?? '').toString(),
                               style: const TextStyle(
                                 color: _voucherOrange,
@@ -277,7 +275,7 @@ class _VoucherPageState extends State<VoucherPage> {
                               ),
                             ),
                             const Spacer(),
-                            const Text(
+                            AyoText(
                               'Lihat S&K',
                               style: TextStyle(
                                 decoration: TextDecoration.underline,
@@ -322,7 +320,7 @@ class _VoucherPageState extends State<VoucherPage> {
         break;
       case 'reserved':
         label = 'Dipakai di Checkout';
-        foreground = const Color(0xFF8A5300);
+        foreground = const Color(0xFF6E481F);
         background = const Color(0xFFFFE7C0);
         break;
       default:
@@ -336,7 +334,7 @@ class _VoucherPageState extends State<VoucherPage> {
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
+      child: AyoText(
         label,
         style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: foreground),
       ),
@@ -354,7 +352,7 @@ class _VoucherPageState extends State<VoucherPage> {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(26),
             ),
             child: Column(
@@ -372,12 +370,12 @@ class _VoucherPageState extends State<VoucherPage> {
                   ),
                 ),
                 const SizedBox(height: 17),
-                Text(
+                AyoText(
                   (voucher['title'] ?? 'Voucher Ayo Suruh').toString(),
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 5),
-                Text(
+                AyoText(
                   (voucher['subtitle'] ?? '').toString(),
                   style: const TextStyle(color: Color(0xFF746A64)),
                 ),
@@ -418,7 +416,7 @@ class _VoucherPageState extends State<VoucherPage> {
                         borderRadius: BorderRadius.circular(18),
                       ),
                     ),
-                    child: const Text('Mengerti', style: TextStyle(fontWeight: FontWeight.w900)),
+                    child: const AyoText('Mengerti', style: TextStyle(fontWeight: FontWeight.w900)),
                   ),
                 ),
               ],
@@ -441,9 +439,9 @@ class _VoucherPageState extends State<VoucherPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: const TextStyle(fontSize: 10.5, color: Color(0xFF867B75))),
+                AyoText(title, style: const TextStyle(fontSize: 10.5, color: Color(0xFF867B75))),
                 const SizedBox(height: 1),
-                Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.35)),
+                AyoText(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.35)),
               ],
             ),
           ),
@@ -498,7 +496,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    return AyoText(
       text,
       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF302A27)),
     );

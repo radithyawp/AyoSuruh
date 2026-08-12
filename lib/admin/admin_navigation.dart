@@ -10,6 +10,7 @@ import 'admin_settings_page.dart';
 import 'admin_users_page.dart';
 import '../notifications/notification_router.dart';
 import '../services/notification_service.dart' as push_notifications;
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class AdminNavigation extends StatefulWidget {
   const AdminNavigation({super.key});
@@ -23,10 +24,6 @@ class _AdminNavigationState extends State<AdminNavigation> {
   int _refreshTick = 0;
   StreamSubscription<Map<String, dynamic>>? _notificationTapSubscription;
 
-  static const Color _background = Color(0xFFFFFAFD);
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
-  static const Color _green = Color(0xFF5F784F);
 
   @override
   void initState() {
@@ -86,7 +83,7 @@ class _AdminNavigationState extends State<AdminNavigation> {
     ];
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -94,34 +91,34 @@ class _AdminNavigationState extends State<AdminNavigation> {
           HapticFeedback.selectionClick();
           _select(index);
         },
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8F0E2),
+        backgroundColor: Theme.of(context).navigationBarTheme.backgroundColor,
+        indicatorColor: Theme.of(context).navigationBarTheme.indicatorColor,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const <NavigationDestination>[
+        destinations: <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined, color: _brown),
-            selectedIcon: Icon(Icons.dashboard_rounded, color: _green),
-            label: 'Beranda',
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: const Icon(Icons.dashboard_rounded),
+            label: AyoI18n.t('Dashboard'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline_rounded, color: _brown),
-            selectedIcon: Icon(Icons.people_rounded, color: _green),
-            label: 'Pengguna',
+            icon: const Icon(Icons.people_outline_rounded),
+            selectedIcon: const Icon(Icons.people_rounded),
+            label: AyoI18n.t('Users'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.handyman_outlined, color: _brown),
-            selectedIcon: Icon(Icons.handyman_rounded, color: _green),
-            label: 'Mitra',
+            icon: const Icon(Icons.handyman_outlined),
+            selectedIcon: const Icon(Icons.handyman_rounded),
+            label: AyoI18n.t('Mitra'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.analytics_outlined, color: _brown),
-            selectedIcon: Icon(Icons.analytics_rounded, color: _green),
-            label: 'Operasi',
+            icon: const Icon(Icons.analytics_outlined),
+            selectedIcon: const Icon(Icons.analytics_rounded),
+            label: AyoI18n.t('Operasi'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined, color: _brown),
-            selectedIcon: Icon(Icons.settings_rounded, color: _orange),
-            label: 'Setelan',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings_rounded),
+            label: AyoI18n.t('Setelan'),
           ),
         ],
       ),

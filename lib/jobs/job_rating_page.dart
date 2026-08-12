@@ -5,6 +5,7 @@ import 'job_helpers.dart';
 import 'job_review_widgets.dart';
 import 'job_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class JobRatingPage extends StatefulWidget {
   const JobRatingPage({super.key, required this.jobId});
@@ -194,9 +195,9 @@ class _JobRatingPageState extends State<JobRatingPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Beri Penilaian',
           style: TextStyle(
             color: jobBrownColor,
@@ -224,18 +225,18 @@ class _JobRatingPageState extends State<JobRatingPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.error_outline_rounded,
                 color: jobBrownColor,
                 size: 48,
               ),
               const SizedBox(height: 12),
-              Text(
+              AyoText(
                 _errorMessage ?? 'Data pekerjaan tidak ditemukan.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
-              FilledButton(onPressed: _loadData, child: const Text('Coba Lagi')),
+              FilledButton(onPressed: _loadData, child: const AyoText('Coba Lagi')),
             ],
           ),
         ),
@@ -269,13 +270,13 @@ class _JobRatingPageState extends State<JobRatingPage> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFF0E8E2)),
           ),
           child: Column(
             children: <Widget>[
-              const Text(
+              const AyoText(
                 'Bagaimana hasil pekerjaannya?',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
               ),
@@ -298,9 +299,9 @@ class _JobRatingPageState extends State<JobRatingPage> {
                 }),
               ),
               if (_rating > 0)
-                Text(
+                AyoText(
                   _ratingLabel(_rating),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: jobBrownColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -310,7 +311,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
+        const AyoText(
           'Apa yang kamu sukai?',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
         ),
@@ -323,7 +324,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
             return FilterChip(
               selected: selected,
               showCheckmark: false,
-              label: Text(tag),
+              label: AyoText(tag),
               avatar: Icon(
                 _tagIcon(tag),
                 size: 16,
@@ -339,7 +340,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
                 });
               },
               selectedColor: const Color(0xFFFFE4BE),
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               side: BorderSide(
                 color: selected ? jobOrangeColor : const Color(0xFFE5D7CB),
               ),
@@ -351,7 +352,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
           }).toList(),
         ),
         const SizedBox(height: 20),
-        const Text(
+        const AyoText(
           'Ceritakan pengalamanmu',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
         ),
@@ -362,7 +363,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
           maxLines: 6,
           maxLength: 500,
           decoration: InputDecoration(
-            hintText: 'Tuliskan ulasan detail tentang layanan mitra...',
+            hintText: AyoI18n.t('Tuliskan ulasan detail tentang layanan mitra...'),
             hintStyle: const TextStyle(fontSize: 12),
             filled: true,
             fillColor: Colors.white,
@@ -402,7 +403,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(
+                : const AyoText(
                     'Kirim Penilaian',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
@@ -439,7 +440,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                AyoText(
                   'Selesai',
                   style: TextStyle(
                     color: jobGreenColor,
@@ -448,7 +449,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AyoText(
                   job['title'].toString(),
                   style: const TextStyle(
                     fontSize: 14,
@@ -456,7 +457,7 @@ class _JobRatingPageState extends State<JobRatingPage> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
+                AyoText(
                   '${formatJobDate(job['schedule_date'])} · ${formatJobTime(job['schedule_time'])}',
                   style: const TextStyle(
                     fontSize: 10,
@@ -487,18 +488,18 @@ class _JobRatingPageState extends State<JobRatingPage> {
               ? NetworkImage(avatarUrl)
               : null,
           child: avatarUrl == null || avatarUrl.isEmpty
-              ? const Icon(Icons.person_rounded, size: 46, color: jobBrownColor)
+              ? Icon(Icons.person_rounded, size: 46, color: jobBrownColor)
               : null,
         ),
         const SizedBox(height: 10),
-        Text(
+        AyoText(
           name,
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 3),
-        Text(
-          'Mitra ${categoryName(job)}',
+        AyoText(
+          '${AyoI18n.t('Mitra')} ${AyoI18n.t(categoryName(job))}',
           style: const TextStyle(fontSize: 12, color: Color(0xFF776B64)),
         ),
       ],

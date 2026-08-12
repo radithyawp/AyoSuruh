@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -152,6 +150,8 @@ class MitraApplicationService {
     required String bankName,
     required String accountNumber,
     required String ktmPath,
+    required String identityDocumentPath,
+    required String identityDocumentType,
     required String selfiePath,
   }) async {
     await saveMitraBaseLocation(
@@ -169,6 +169,8 @@ class MitraApplicationService {
         'p_bank_name': bankName.trim(),
         'p_account_number': accountNumber.trim(),
         'p_ktm_path': ktmPath,
+        'p_identity_document_path': identityDocumentPath,
+        'p_identity_document_type': identityDocumentType.trim().toLowerCase(),
         'p_selfie_path': selfiePath,
         'p_terms_accepted': true,
       },

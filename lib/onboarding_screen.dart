@@ -5,12 +5,14 @@ import 'package:ayosuruh/admin/admin_service.dart';
 import 'package:ayosuruh/auth/auth_preferences.dart';
 import 'package:ayosuruh/auth/auth_service.dart';
 import 'package:ayosuruh/auth/reset_password_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 import 'package:ayosuruh/login.dart';
 import 'package:ayosuruh/navbar.dart';
+import 'package:ayosuruh/settings/app_settings.dart';
+import 'package:ayosuruh/theme/ayo_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// 1. SPLASH SCREEN
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -59,11 +61,8 @@ class _SplashScreenState extends State<SplashScreen> {
     final SupabaseClient supabase = Supabase.instance.client;
     final Session? session = supabase.auth.currentSession;
     if (session != null) {
-      final bool rememberSession =
-          await AuthPreferences.shouldRememberSession();
+      final bool rememberSession = await AuthPreferences.shouldRememberSession();
       if (!rememberSession) {
-        // Checkbox Remember Me mengontrol pemulihan session Supabase pada
-        // cold start. Password tidak disimpan oleh Ayo Suruh.
         await supabase.auth.signOut();
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
@@ -71,27 +70,28 @@ class _SplashScreenState extends State<SplashScreen> {
           MaterialPageRoute<void>(builder: (_) => const LoginPage()),
         );
         return;
-      } else {
-        try {
-          await AuthService.syncCurrentUserProfile();
-        } catch (_) {
-          // Profil dapat dicoba disinkronkan kembali setelah halaman utama terbuka.
-        }
-        bool isAdmin = false;
-        try {
-          isAdmin = await AdminService().isCurrentUserAdmin();
-        } catch (_) {
-          isAdmin = false;
-        }
-        if (!mounted || _hasNavigated) return;
-        _hasNavigated = true;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => isAdmin ? const AdminNavigation() : const MainNavigation(),
-          ),
-        );
-        return;
       }
+
+      try {
+        await AuthService.syncCurrentUserProfile();
+      } catch (_) {
+        // Profil dapat disinkronkan lagi setelah halaman utama terbuka.
+      }
+
+      bool isAdmin = false;
+      try {
+        isAdmin = await AdminService().isCurrentUserAdmin();
+      } catch (_) {
+        isAdmin = false;
+      }
+      if (!mounted || _hasNavigated) return;
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => isAdmin ? const AdminNavigation() : const MainNavigation(),
+        ),
+      );
+      return;
     }
 
     if (!mounted || _hasNavigated) return;
@@ -107,51 +107,48 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final bool dark = theme.brightness == Brightness.dark;
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFFFFF), Colors.white],
-            stops: [0.0, 0.4],
+            colors: dark
+                ? const <Color>[Color(0xFF1D1917), Color(0xFF12100F)]
+                : const <Color>[Color(0xFFFFFFFF), Color(0xFFFFFAF7)],
+            stops: const <double>[0.0, 0.55],
           ),
         ),
         child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+            children: <Widget>[
               const Spacer(),
-              // Ilustrasi / Logo Splash
-              Image.asset(
-                'assets/images/logo.jpeg', // Sesuaikan path gambar kamu
-                width: 480,
-                height: 480,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.directions_run_rounded,
-                  size: 120,
-                  color: Color(0xFFF39C12),
+              SizedBox(
+                width: 230,
+                height: 230,
+                child: Image.asset(
+                  'assets/images/logo_ayo_suruh_transparent.png',
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 24),
               const Spacer(),
-              // Loading Indicator
               const SizedBox(
                 width: 36,
                 height: 36,
                 child: CircularProgressIndicator(
-                  color: Color(0xFFF39C12),
+                  color: AyoColors.orange,
                   strokeWidth: 3.5,
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Menyiapkan layanan terbaik untuk Anda...',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[500],
-                ),
+              AyoText(
+                'Menyiapkan Ayo Suruh untukmu...',
+                style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 32),
             ],
@@ -162,18 +159,16 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-
-// 2. ONBOARDING SCREEN
 class OnboardingModel {
-  final String title;
-  final String description;
-  final String imagePath;
-
   OnboardingModel({
     required this.title,
     required this.description,
     required this.imagePath,
   });
+
+  final String title;
+  final String description;
+  final String imagePath;
 }
 
 class OnboardingScreen extends StatefulWidget {
@@ -187,7 +182,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  final List<OnboardingModel> _items = [
+  final List<OnboardingModel> _items = <OnboardingModel>[
     OnboardingModel(
       title: 'Butuh Bantuan?',
       description:
@@ -216,67 +211,104 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Future<void> _toggleLanguage() async {
+    final AppSettingsController settings = AppSettingsController.instance;
+    await settings.setLanguage(
+      settings.language == AyoLanguage.indonesia
+          ? AyoLanguage.english
+          : AyoLanguage.indonesia,
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isLastPage = _currentIndex == _items.length - 1;
+    final ThemeData theme = Theme.of(context);
+    final bool dark = theme.brightness == Brightness.dark;
+    final bool isLastPage = _currentIndex == _items.length - 1;
+    final bool english = AppSettingsController.instance.isEnglish;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFFFFF), Colors.white],
-            stops: [0.0, 0.35],
+            colors: dark
+                ? const <Color>[Color(0xFF1D1917), Color(0xFF12100F)]
+                : const <Color>[Color(0xFFFFFFFF), Color(0xFFFFFAF7)],
+            stops: const <double>[0.0, 0.45],
           ),
         ),
         child: SafeArea(
           child: Column(
-            children: [
-              // --- HEADER (Tombol Lewati) ---
+            children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _finishOnboarding,
-                    child: const Text(
-                      'Lewati',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
+                child: Row(
+                  children: <Widget>[
+                    Material(
+                      color: theme.colorScheme.surface.withValues(alpha: dark ? 0.85 : 0.9),
+                      shape: StadiumBorder(
+                        side: BorderSide(color: theme.colorScheme.outline),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: _toggleLanguage,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Icon(Icons.translate_rounded, size: 17),
+                              const SizedBox(width: 6),
+                              AyoText(
+                                english ? 'ID' : 'EN',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _finishOnboarding,
+                      child: AyoText(
+                        'Lewati',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
-              // --- SLIDER ONBOARDING ---
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _items.length,
-                  onPageChanged: (index) {
-                    setState(() => _currentIndex = index);
-                  },
-                  itemBuilder: (context, index) {
-                    final item = _items[index];
+                  onPageChanged: (int index) => setState(() => _currentIndex = index),
+                  itemBuilder: (BuildContext context, int index) {
+                    final OnboardingModel item = _items[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Card Gambar
+                        children: <Widget>[
                           Expanded(
                             child: Container(
                               margin: const EdgeInsets.symmetric(vertical: 16),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
+                                color: dark
+                                    ? theme.colorScheme.surface.withValues(alpha: 0.45)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(28),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(28),
                                 child: Image.asset(
                                   item.imagePath,
                                   fit: BoxFit.contain,
@@ -284,7 +316,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     child: Icon(
                                       Icons.image_outlined,
                                       size: 100,
-                                      color: Colors.orange[200],
+                                      color: AyoColors.orange.withValues(alpha: 0.45),
                                     ),
                                   ),
                                 ),
@@ -292,26 +324,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Judul
-                          Text(
+                          AyoText(
                             item.title,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C323A),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Deskripsi
-                          Text(
+                          AyoText(
                             item.description,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.5,
-                              color: Colors.grey[600],
-                            ),
+                            style: theme.textTheme.bodyMedium?.copyWith(height: 1.55),
                           ),
                           const SizedBox(height: 20),
                         ],
@@ -320,36 +345,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
               ),
-
-              // --- INDIKATOR HALAMAN (DOTS) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
+                children: List<Widget>.generate(
                   _items.length,
-                  (index) => AnimatedContainer(
+                  (int index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: _currentIndex == index ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
                       color: _currentIndex == index
-                          ? const Color(0xFFF39C12)
-                          : const Color(0xFFE0E0E0),
+                          ? AyoColors.orange
+                          : theme.colorScheme.outlineVariant,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // --- NAVIGASI TOMBOL BAWAH ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 child: Row(
-                  children: [
-                    // Tombol Kembali (hanya muncul jika bukan slide pertama)
-                    if (_currentIndex > 0) ...[
+                  children: <Widget>[
+                    if (_currentIndex > 0) ...<Widget>[
                       TextButton(
                         onPressed: () {
                           _pageController.previousPage(
@@ -357,19 +376,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             curve: Curves.easeInOut,
                           );
                         },
-                        child: const Text(
+                        child: AyoText(
                           'Kembali',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                     ],
-
-                    // Tombol Lanjut / Selanjutnya / Mulai
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
@@ -383,8 +398,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF39C12),
-                          foregroundColor: Colors.white,
+                          backgroundColor: AyoColors.orange,
+                          foregroundColor: AyoColors.brownDark,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -393,8 +408,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
+                          children: <Widget>[
+                            AyoText(
                               isLastPage
                                   ? 'Mulai Sekarang'
                                   : (_currentIndex == 0 ? 'Selanjutnya' : 'Lanjut'),

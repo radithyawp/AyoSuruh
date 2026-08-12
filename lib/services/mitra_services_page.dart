@@ -6,6 +6,8 @@ import '../jobs/job_helpers.dart';
 import 'create_mitra_service_page.dart';
 import 'mitra_service_service.dart';
 import '../widgets/home_shortcut_button.dart';
+import '../widgets/ayo_empty_state.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraServicesPage extends StatefulWidget {
   const MitraServicesPage({super.key});
@@ -78,19 +80,19 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Hapus jasa?'),
-        content: Text(
+        title: const AyoText('Hapus jasa?'),
+        content: AyoText(
           '"${(item['title'] ?? 'Jasa').toString()}" tidak akan tampil lagi di pencarian customer.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: const AyoText('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            child: const Text('Hapus'),
+            child: const AyoText('Hapus'),
           ),
         ],
       ),
@@ -123,9 +125,9 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+          icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
         ),
-        title: const Text(
+        title: AyoText(
           'Jasa Saya',
           style: TextStyle(color: jobBrownColor, fontWeight: FontWeight.w900),
         ),
@@ -139,33 +141,15 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
               onRefresh: _load,
               child: _items.isEmpty
                   ? ListView(
-                      padding: const EdgeInsets.fromLTRB(28, 90, 28, 120),
+                      padding: const EdgeInsets.fromLTRB(20, 54, 20, 120),
                       children: <Widget>[
-                        const Icon(
-                          Icons.storefront_outlined,
-                          size: 72,
-                          color: Color(0xFFC9B7AB),
-                        ),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Belum ada jasa yang dipublikasikan',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: jobBrownColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error == null
-                              ? 'Tambahkan keahlian yang bisa kamu handle agar customer dapat menemukan dan meminta jasamu.'
-                              : 'Data belum dapat dimuat. Pastikan migration marketplace jasa mitra sudah dijalankan.\n\n$_error',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF746760),
-                            height: 1.45,
-                          ),
+                        AyoEmptyState(
+                          assetPath: 'assets/images/ayos/ayos_idea.png',
+                          badgeIcon: Icons.storefront_outlined,
+                          title: 'Belum ada jasa yang dipublikasikan',
+                          description: _error == null
+                              ? 'Tambahkan keahlianmu agar Customer dapat menemukan dan memesan jasa langsung dari katalog.'
+                              : 'Jasa belum dapat dimuat. Tarik ke bawah untuk mencoba kembali.\n$_error',
                         ),
                       ],
                     )
@@ -191,7 +175,7 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                         return Container(
                           padding: const EdgeInsets.all(15),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: jobBorderColor),
                           ),
@@ -227,7 +211,7 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
-                                        Text(
+                                        AyoText(
                                           (item['title'] ?? 'Jasa').toString(),
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w900,
@@ -235,8 +219,8 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                                           ),
                                         ),
                                         const SizedBox(height: 3),
-                                        Text(
-                                          '$categoryName · mulai ${_currency.format(price)}',
+                                        AyoText(
+                                          '${AyoI18n.t(categoryName)} · ${AyoI18n.t('Mulai')} ${_currency.format(price)}',
                                           style: const TextStyle(
                                             fontSize: 10.8,
                                             color: Color(0xFF756960),
@@ -253,7 +237,7 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                                 ],
                               ),
                               const SizedBox(height: 11),
-                              Text(
+                              AyoText(
                                 (item['description'] ?? '').toString(),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
@@ -272,12 +256,14 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                                       vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: active
-                                          ? const Color(0xFFE5F3DB)
-                                          : const Color(0xFFF0ECE9),
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Theme.of(context).colorScheme.surfaceContainerHighest
+                                          : active
+                                              ? const Color(0xFFE5F3DB)
+                                              : const Color(0xFFF0ECE9),
                                       borderRadius: BorderRadius.circular(99),
                                     ),
-                                    child: Text(
+                                    child: AyoText(
                                       active ? 'Aktif di pencarian' : 'Disembunyikan',
                                       style: const TextStyle(
                                         fontSize: 9.5,
@@ -287,12 +273,12 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
                                   ),
                                   const Spacer(),
                                   IconButton(
-                                    tooltip: 'Edit',
+                                    tooltip: AyoI18n.t('Edit'),
                                     onPressed: () => _openForm(item),
                                     icon: const Icon(Icons.edit_outlined),
                                   ),
                                   IconButton(
-                                    tooltip: 'Hapus',
+                                    tooltip: AyoI18n.t('Hapus'),
                                     onPressed: () => _delete(item),
                                     icon: Icon(
                                       Icons.delete_outline_rounded,
@@ -312,7 +298,7 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
         backgroundColor: jobOrangeColor,
         foregroundColor: const Color(0xFF553600),
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
+        label: const AyoText(
           'Tambah Jasa',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),

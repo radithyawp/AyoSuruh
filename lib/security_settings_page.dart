@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_preferences.dart';
 import 'change_password.dart';
 import 'widgets/home_shortcut_button.dart';
-import 'wallet/wallet_pin_page.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class SecuritySettingsPage extends StatefulWidget {
   const SecuritySettingsPage({super.key});
@@ -15,9 +15,8 @@ class SecuritySettingsPage extends StatefulWidget {
 }
 
 class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
-  static const Color _brown = Color(0xFF8B5A2B);
-  static const Color _orange = Color(0xFFF39C12);
-  static const Color _bg = Color(0xFFFAF6F3);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
 
   bool _rememberMe = true;
   bool _updatingRemember = false;
@@ -44,11 +43,15 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
       );
       if (!mounted) return;
       setState(() => _rememberMe = value);
-      AyoSnackBar.info(
-        context,
-        value
-            ? 'Ingat Saya aktif. Sesi dapat dipulihkan pada perangkat ini.'
-            : 'Ingat Saya nonaktif. Aplikasi akan meminta login pada sesi berikutnya.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AyoText(
+            value
+                ? 'Ingat Saya aktif. Session dapat dipulihkan pada perangkat ini.'
+                : 'Ingat Saya nonaktif. Cold start berikutnya akan meminta login.',
+          ),
+          backgroundColor: Colors.green,
+        ),
       );
     } finally {
       if (mounted) setState(() => _updatingRemember = false);
@@ -59,18 +62,18 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Lupakan perangkat ini?'),
-        content: const Text(
+        title: const AyoText('Lupakan perangkat ini?'),
+        content: const AyoText(
           'Email yang diingat akan dihapus dan Remember Me dinonaktifkan. Session saat ini tetap aktif sampai kamu logout atau membuka aplikasi kembali dari kondisi cold start.',
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Batal'),
+            child: const AyoText('Batal'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Lupakan'),
+            child: const AyoText('Lupakan'),
           ),
         ],
       ),
@@ -80,9 +83,11 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     await AuthPreferences.clearRememberedLogin();
     if (!mounted) return;
     setState(() => _rememberMe = false);
-    AyoSnackBar.success(
-      context,
-      'Data login yang diingat pada perangkat ini sudah dibersihkan.',
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: AyoText('Data login yang diingat pada perangkat ini sudah dibersihkan.'),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
@@ -96,16 +101,16 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
         .toList();
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: _brown),
+          icon: Icon(Icons.arrow_back_rounded, color: _brown),
         ),
-        title: const Text(
+        title: AyoText(
           'Keamanan Akun',
           style: TextStyle(color: _brown, fontWeight: FontWeight.w800),
         ),
@@ -142,12 +147,12 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: SwitchListTile(
-              secondary: const Icon(Icons.phonelink_lock_outlined, color: _brown),
-              title: const Text(
+              secondary: Icon(Icons.phonelink_lock_outlined, color: _brown),
+              title: const AyoText(
                 'Ingat Saya',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
-              subtitle: Text(
+              subtitle: AyoText(
                 _rememberMe
                     ? 'Session Supabase dapat dipulihkan saat aplikasi dibuka kembali.'
                     : 'Cold start berikutnya akan meminta login kembali.',
@@ -158,7 +163,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          AyoText(
             'TINDAKAN KEAMANAN',
             style: TextStyle(
               color: _brown,
@@ -177,9 +182,9 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
             child: Column(
               children: <Widget>[
                 ListTile(
-                  leading: const Icon(Icons.lock_reset_rounded, color: _brown),
-                  title: const Text('Ganti Password'),
-                  subtitle: const Text('Perbarui password akun email Anda.'),
+                  leading: Icon(Icons.lock_reset_rounded, color: _brown),
+                  title: const AyoText('Ganti Password'),
+                  subtitle: const AyoText('Perbarui password akun email Anda.'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.push<void>(
                     context,
@@ -190,45 +195,27 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(Icons.phonelink_erase_rounded, color: _brown),
-                  title: const Text('Lupakan perangkat ini'),
-                  subtitle: const Text(
+                  leading: Icon(Icons.phonelink_erase_rounded, color: _brown),
+                  title: const AyoText('Lupakan perangkat ini'),
+                  subtitle: const AyoText(
                     'Hapus email yang diingat dan nonaktifkan pemulihan session.',
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: _forgetThisDevice,
                 ),
                 const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(Icons.shield_rounded, color: _brown),
-                  title: const Text('PIN AyoPay'),
-                  subtitle: const Text(
-                    'Kelola PIN 6 digit untuk pencairan dan rekening.',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.push<void>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const WalletPinPage(),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1, indent: 56),
                 const ListTile(
-                  leading: Icon(
-                    Icons.fingerprint_rounded,
-                    color: Color(0xFF9B8F87),
-                  ),
-                  title: Text('Biometrik Aplikasi'),
-                  subtitle: Text('Opsional untuk tahap hardening lanjutan.'),
-                  trailing: Chip(label: Text('Roadmap')),
+                  leading: Icon(Icons.fingerprint_rounded, color: Color(0xFF9B8F87)),
+                  title: AyoText('PIN / Biometrik Aplikasi'),
+                  subtitle: AyoText('Opsional untuk tahap hardening lanjutan.'),
+                  trailing: Chip(label: AyoText('Roadmap')),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Aksi sensitif seperti penghapusan akun dan transaksi AyoPay divalidasi ulang di server. Akses Admin juga tetap diperiksa oleh RPC Supabase, bukan hanya oleh tampilan aplikasi.',
+          const AyoText(
+            'Aksi sensitif seperti penghapusan akun divalidasi ulang di server. Akses Admin juga tetap diperiksa oleh RPC Supabase, bukan hanya oleh tampilan aplikasi.',
             style: TextStyle(
               fontSize: 11,
               height: 1.45,
@@ -259,7 +246,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFECE1DA)),
       ),
@@ -280,9 +267,9 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                AyoText(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 3),
-                Text(
+                AyoText(
                   body,
                   style: const TextStyle(
                     fontSize: 11.5,

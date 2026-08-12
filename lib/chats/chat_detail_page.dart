@@ -8,9 +8,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../jobs/job_helpers.dart';
 import '../widgets/ayo_snackbar.dart';
 import '../widgets/ayo_avatar.dart';
+import '../widgets/ayo_empty_state.dart';
 import 'chat_helpers.dart';
 import 'chat_service.dart';
 import 'presence_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class ChatDetailPage extends StatefulWidget {
   const ChatDetailPage({
@@ -251,7 +253,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       showDragHandle: true,
       builder: (BuildContext context) {
         return SafeArea(
@@ -261,21 +263,21 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                const AyoText(
                   'Kirim Lampiran',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Color(0xFFFFE8C8),
                     child: Icon(
                       Icons.photo_camera_outlined,
                       color: jobBrownColor,
                     ),
                   ),
-                  title: const Text('Ambil foto dari kamera'),
+                  title: const AyoText('Ambil foto dari kamera'),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
                 ListTile(
@@ -287,7 +289,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       color: Color(0xFF587348),
                     ),
                   ),
-                  title: const Text('Pilih foto dari galeri'),
+                  title: const AyoText('Pilih foto dari galeri'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
               ],
@@ -348,7 +350,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final String? result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       showDragHandle: true,
       builder: (BuildContext context) {
         return Padding(
@@ -362,7 +364,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const Text(
+              const AyoText(
                 'Pratinjau Foto',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
@@ -384,7 +386,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 maxLength: 500,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Tambahkan keterangan (opsional)',
+                  hintText: AyoI18n.t('Tambahkan keterangan (opsional)'),
                   counterText: '',
                   filled: true,
                   fillColor: const Color(0xFFF8F3F6),
@@ -406,7 +408,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   minimumSize: const Size.fromHeight(48),
                 ),
                 icon: const Icon(Icons.send_rounded),
-                label: Text('Kirim ${fileName.isEmpty ? 'Foto' : fileName}'),
+                label: AyoText('Kirim ${fileName.isEmpty ? 'Foto' : fileName}'),
               ),
             ],
           ),
@@ -468,10 +470,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             children: <Widget>[
               Icon(Icons.call_rounded, color: jobOrangeColor),
               SizedBox(width: 10),
-              Expanded(child: Text('Telepon sekarang?')),
+              Expanded(child: AyoText('Telepon sekarang?')),
             ],
           ),
-          content: Text(
+          content: AyoText(
             'Kamu akan membuka aplikasi Telepon untuk menghubungi '
             '$partnerName. Gunakan panggilan hanya untuk koordinasi '
             'pekerjaan aktif. Biaya operator dapat berlaku.',
@@ -480,7 +482,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal'),
+              child: const AyoText('Batal'),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(dialogContext, true),
@@ -489,7 +491,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 foregroundColor: const Color(0xFF4E3400),
               ),
               icon: const Icon(Icons.call_rounded),
-              label: const Text(
+              label: const AyoText(
                 'Telepon',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
@@ -573,7 +575,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context, true),
-        icon: const Icon(Icons.arrow_back_rounded, color: jobBrownColor),
+        icon: Icon(Icons.arrow_back_rounded, color: jobBrownColor),
       ),
       titleSpacing: 0,
       title: Row(
@@ -589,7 +591,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
+                AyoText(
                   partnerName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -599,7 +601,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
+                AyoText(
                   _partnerTyping
                       ? 'sedang mengetik…'
                       : _presenceService.presenceLabel(_partnerPresence),
@@ -624,9 +626,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       actions: <Widget>[
         if (_room?['can_call'] == true)
           IconButton(
-            tooltip: 'Telepon',
+            tooltip: AyoI18n.t('Telepon'),
             onPressed: _callPartner,
-            icon: const Icon(
+            icon: Icon(
               Icons.call_rounded,
               color: jobBrownColor,
             ),
@@ -650,20 +652,20 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 48,
                 color: jobBrownColor,
               ),
               const SizedBox(height: 12),
-              Text(
+              AyoText(
                 _errorMessage ?? 'Percakapan tidak ditemukan.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
               FilledButton(
                 onPressed: _loadHeader,
-                child: const Text('Coba Lagi'),
+                child: const AyoText('Coba Lagi'),
               ),
             ],
           ),
@@ -685,7 +687,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(
+                    child: AyoText(
                       'Pesan belum dapat dimuat: ${snapshot.error}',
                       textAlign: TextAlign.center,
                     ),
@@ -741,18 +743,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
           bottom: BorderSide(color: Color(0xFFF0E9E4)),
         ),
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.work_outline_rounded, size: 17, color: jobBrownColor),
+          Icon(Icons.work_outline_rounded, size: 17, color: jobBrownColor),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: AyoText(
               jobTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -770,7 +772,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 color: jobStatusBackground(jobStatus),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
+              child: AyoText(
                 jobStatusLabel(jobStatus),
                 style: TextStyle(
                   color: jobStatusForeground(jobStatus),
@@ -787,38 +789,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Widget _emptyConversation() {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFE8C8),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.waving_hand_rounded,
-                size: 32,
-                color: jobBrownColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Mulai percakapan',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            const Text(
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+        child: const AyoEmptyState(
+          assetPath: 'assets/images/ayos/ayos_chat_phone.png',
+          badgeIcon: Icons.forum_outlined,
+          compact: true,
+          title: 'Mulai percakapan',
+          description:
               'Gunakan chat ini untuk mengonfirmasi lokasi, jadwal, dan kebutuhan pekerjaan.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF786D66),
-                fontSize: 12,
-                height: 1.45,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -834,7 +812,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           const Expanded(child: Divider(color: Color(0xFFE9E1DD))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
+            child: AyoText(
               chatDayLabel(date),
               style: const TextStyle(
                 fontSize: 9,
@@ -905,7 +883,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         ImageChunkEvent? progress,
                       ) {
                         if (progress == null) return child;
-                        return const SizedBox(
+                        return SizedBox(
                           width: 220,
                           height: 160,
                           child: Center(
@@ -926,7 +904,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               children: <Widget>[
                                 Icon(Icons.broken_image_outlined),
                                 SizedBox(height: 5),
-                                Text('Foto tidak dapat dimuat'),
+                                AyoText('Foto tidak dapat dimuat'),
                               ],
                             ),
                           ),
@@ -944,7 +922,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 ),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
+                  child: AyoText(
                     text,
                     style: TextStyle(
                       color: isMine
@@ -964,7 +942,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
+                  AyoText(
                     chatBubbleTime(message['created_at']),
                     style: TextStyle(
                       color: isMine
@@ -1012,7 +990,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       children: <Widget>[
         Icon(icon, size: 11, color: color),
         const SizedBox(width: 2),
-        Text(
+        AyoText(
           label,
           style: TextStyle(
             color: color,
@@ -1027,7 +1005,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> _openImageViewer(String url) async {
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: Theme.of(context).colorScheme.onSurface,
       builder: (BuildContext context) {
         return Dialog(
           insetPadding: EdgeInsets.zero,
@@ -1045,7 +1023,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         url,
                         fit: BoxFit.contain,
                         errorBuilder: (_, Object error, StackTrace? stackTrace) {
-                          return const Text(
+                          return const AyoText(
                             'Foto tidak dapat dimuat.',
                             style: TextStyle(color: Colors.white),
                           );
@@ -1077,8 +1055,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
           border: Border(
             top: BorderSide(color: Color(0xFFECE5E1)),
           ),
@@ -1094,9 +1072,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 disabledForegroundColor: const Color(0xFFB8ADA7),
                 fixedSize: const Size(40, 40),
               ),
-              tooltip: 'Kirim foto',
+              tooltip: AyoI18n.t('Kirim foto'),
               icon: _isUploadingAttachment
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
@@ -1120,7 +1098,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   if (!isBusy) _sendMessage();
                 },
                 decoration: InputDecoration(
-                  hintText: 'Ketik pesan...',
+                  hintText: AyoI18n.t('Ketik pesan...'),
                   counterText: '',
                   filled: true,
                   fillColor: const Color(0xFFF8F3F6),

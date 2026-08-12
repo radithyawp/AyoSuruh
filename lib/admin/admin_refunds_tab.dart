@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../jobs/job_helpers.dart';
 import '../refunds/refund_helpers.dart';
 import 'admin_service.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import '../theme/ayo_theme.dart';
 
 class AdminRefundsTab extends StatefulWidget {
   const AdminRefundsTab({
@@ -23,8 +25,8 @@ class AdminRefundsTab extends StatefulWidget {
 }
 
 class _AdminRefundsTabState extends State<AdminRefundsTab> {
-  static const Color _brown = Color(0xFF7B4B00);
-  static const Color _orange = Color(0xFFFF9800);
+  static Color get _brown => AyoAdaptiveColors.brown;
+  static const Color _orange = Color(0xFFF6990E);
   static const Color _green = Color(0xFF5F784F);
 
   final AdminService _service = AdminService();
@@ -74,12 +76,12 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
         return StatefulBuilder(
           builder: (BuildContext dialogContext, StateSetter setDialogState) {
             return AlertDialog(
-              title: Text(title),
+              title: AyoText(title),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(message, style: const TextStyle(height: 1.4)),
+                  AyoText(message, style: const TextStyle(height: 1.4)),
                   const SizedBox(height: 14),
                   TextField(
                     minLines: 3,
@@ -100,7 +102,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Batal'),
+                  child: const AyoText('Batal'),
                 ),
                 FilledButton(
                   style: actionColor == null
@@ -116,7 +118,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
                     }
                     Navigator.pop(dialogContext, trimmed);
                   },
-                  child: Text(actionLabel),
+                  child: AyoText(actionLabel),
                 ),
               ],
             );
@@ -204,7 +206,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
-                    child: Text(
+                    child: AyoText(
                       'Tidak ada refund pada filter ini.',
                       textAlign: TextAlign.center,
                     ),
@@ -230,13 +232,13 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
     return Padding(
       padding: const EdgeInsets.only(right: 7),
       child: ChoiceChip(
-        label: Text(label),
+        label: AyoText(label),
         selected: _filter == value,
         onSelected: (_) => setState(() => _filter = value),
         selectedColor: const Color(0xFFFFE2B6),
         labelStyle: TextStyle(
           fontWeight: FontWeight.w800,
-          color: _filter == value ? _brown : Colors.black54,
+          color: _filter == value ? _brown : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10.5,
         ),
         side: const BorderSide(color: Color(0xFFE7D9CF)),
@@ -260,7 +262,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: const Color(0xFFEDE3DC)),
       ),
@@ -279,14 +281,14 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    AyoText(
                       (row['job_title'] ?? 'Refund').toString(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AyoText(
                       'Customer: ${(row['customer_name'] ?? '-').toString()}',
                       style: const TextStyle(
                         fontSize: 10.5,
@@ -300,9 +302,9 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
             ],
           ),
           const SizedBox(height: 11),
-          Text(
+          AyoText(
             formatRupiah(row['amount']),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w900,
               color: _brown,
@@ -345,7 +347,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
                 color: const Color(0xFFFFF1DA),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
+              child: AyoText(
                 'Refund setelah pendapatan Mitra tercatat dapat membuat penyesuaian ledger. Jika dana sudah masuk proses pencairan, admin wajib memeriksa saldo Mitra sebelum menutup kasus.',
                 style: TextStyle(fontSize: 10.5, height: 1.4, color: _brown),
               ),
@@ -359,14 +361,14 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
             const SizedBox(height: 7),
             SelectableText(
               'Order ID: $orderId',
-              style: const TextStyle(fontSize: 9.5, color: Colors.black45),
+              style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
             ),
           ],
           if (requested != null) ...<Widget>[
             const SizedBox(height: 7),
-            Text(
+            AyoText(
               'Diajukan ${DateFormat('dd MMM yyyy, HH:mm').format(requested)}',
-              style: const TextStyle(fontSize: 9.5, color: Colors.black45),
+              style: TextStyle(fontSize: 9.5, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.78)),
             ),
           ],
           if (actionable) ...<Widget>[
@@ -382,7 +384,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
                       foregroundColor: Colors.red.shade700,
                     ),
                     icon: const Icon(Icons.close_rounded, size: 17),
-                    label: const Text('Tolak'),
+                    label: const AyoText('Tolak'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -393,7 +395,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
                         : () => _process(row, 'refunded'),
                     style: FilledButton.styleFrom(backgroundColor: _green),
                     icon: const Icon(Icons.verified_rounded, size: 17),
-                    label: const Text('Refund Selesai'),
+                    label: const AyoText('Refund Selesai'),
                   ),
                 ),
               ],
@@ -408,16 +410,16 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
+        AyoText(
           label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 8.5,
             fontWeight: FontWeight.w900,
-            color: Colors.black38,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.62),
           ),
         ),
         const SizedBox(height: 2),
-        Text(
+        AyoText(
           value,
           style: TextStyle(
             fontSize: 10.5,
@@ -438,7 +440,7 @@ class _AdminRefundsTabState extends State<AdminRefundsTab> {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(99),
       ),
-      child: Text(
+      child: AyoText(
         text,
         textAlign: TextAlign.center,
         style: TextStyle(

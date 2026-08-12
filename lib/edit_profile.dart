@@ -3,6 +3,8 @@ import 'widgets/ayo_snackbar.dart';
 import 'widgets/ayo_avatar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'package:ayosuruh/l10n/ayo_localization.dart';
+import './theme/ayo_theme.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> userRow; // 👈 Menambahkan parameter userRow
@@ -17,7 +19,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // Color Palette
-  final Color primaryBrown = const Color(0xFF8B5A2B);
+  Color get primaryBrown => AyoAdaptiveColors.brown;
   final Color primaryOrange = const Color(0xFFFA9D18);
   final Color bgGrey = const Color(0xFFFAF7F7);
   final Color fieldBg = const Color(0xFFF7F2F4);
@@ -117,7 +119,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final String? avatarUrl = widget.userRow['avatar_url'];
 
     return Scaffold(
-      backgroundColor: bgGrey,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -125,7 +127,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           icon: Icon(Icons.arrow_back, color: primaryBrown),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
+        title: AyoText(
           'Edit Profil',
           style: TextStyle(
             color: primaryBrown,
@@ -151,7 +153,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Input Nama Lengkap
                   _buildInputField(
-                    label: 'Nama Lengkap',
+                    label: AyoI18n.t('Nama Lengkap'),
                     controller: _fullnameController,
                     icon: Icons.person_outline_rounded,
                   ),
@@ -159,7 +161,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Input Email (Read-Only)
                   _buildInputField(
-                    label: 'Email',
+                    label: AyoI18n.t('Email'),
                     controller: _emailController,
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
@@ -169,7 +171,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Input Nomor HP
                   _buildInputField(
-                    label: 'Nomor HP',
+                    label: AyoI18n.t('Nomor HP'),
                     controller: _phoneController,
                     icon: Icons.smartphone_outlined,
                     keyboardType: TextInputType.phone,
@@ -178,7 +180,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Input Alamat Lengkap
                   _buildInputField(
-                    label: 'Alamat Lengkap',
+                    label: AyoI18n.t('Alamat Lengkap'),
                     controller: _addressController,
                     icon: Icons.location_on_outlined,
                     maxLines: 2,
@@ -221,7 +223,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               decoration: BoxDecoration(
                 color: primaryOrange,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -254,7 +256,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AyoText(
           label,
           style: TextStyle(
             fontSize: 12,
@@ -271,12 +273,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: readOnly ? Colors.grey.shade600 : Colors.black87,
+            color: readOnly ? Colors.grey.shade600 : Theme.of(context).colorScheme.onSurface,
           ),
           decoration: InputDecoration(
             filled: true,
             fillColor: readOnly ? Colors.grey.shade200 : fieldBg,
-            prefixIcon: Icon(icon, color: Colors.black54, size: 20),
+            prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -320,7 +322,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AyoText(
               'Informasi ini digunakan untuk memudahkan mitra kami dalam proses penjemputan dan pengantaran pesanan Anda.',
               style: TextStyle(
                 fontSize: 12,
@@ -340,7 +342,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -377,7 +379,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Text(
+                : const AyoText(
                     'Simpan Perubahan',
                     style: TextStyle(
                       fontSize: 15,
