@@ -169,24 +169,27 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       _isGoogleFlow = true;
-      final bool launched = await AuthService.signInWithGoogle();
-      if (!launched && mounted) {
+      final bool authenticated = await AuthService.signInWithGoogle();
+      if (!authenticated) {
         _isGoogleFlow = false;
-        AyoSnackBar.error(context, 'Halaman Google tidak dapat dibuka.');
       }
     } on AuthException catch (error) {
       _isGoogleFlow = false;
       if (!mounted) return;
       AyoSnackBar.error(
         context,
-        'Gagal mendaftar dengan Google: ${error.message}',
+        AyoI18n.isEnglish
+            ? 'Could not sign up with Google. Please try again.'
+            : 'Gagal mendaftar dengan Google: ${error.message}',
       );
     } catch (error) {
       _isGoogleFlow = false;
       if (!mounted) return;
       AyoSnackBar.error(
         context,
-        'Gagal mendaftar dengan Google: $error',
+        AyoI18n.isEnglish
+            ? 'Could not sign up with Google. Please try again.'
+            : 'Gagal mendaftar dengan Google: $error',
       );
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
@@ -204,30 +207,20 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               children: [
                 // --- LOGO & HEADER ---
-                Image.asset(
-                  'assets/images/Logo_Ayo_Suruh.png',
-                  height: 120,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.directions_run_rounded,
-                    size: 80,
-                    color: kPrimaryColor,
+                SizedBox(
+                  width: 220,
+                  height: 178,
+                  child: Image.asset(
+                    'assets/images/logo_ayo_suruh_transparent.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.directions_run_rounded,
+                      size: 110,
+                      color: kPrimaryColor,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                AyoText(
-                  'Ayo Suruh',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: kTitleColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AyoText(
-                  'Butuh bantuan? Ayo suruh kami!',
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
 
                 // --- CARD FORM REGISTER ---
                 Container(

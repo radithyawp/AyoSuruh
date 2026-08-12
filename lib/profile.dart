@@ -299,8 +299,8 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: AyoText(
-          'Keluar Akun',
+        title: Text(
+          AyoI18n.isEnglish ? 'Log out' : 'Keluar Akun',
           style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
         ),
         content: const AyoText('Apakah Anda yakin ingin keluar dari aplikasi?'),
@@ -321,7 +321,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const AyoText('Keluar', style: TextStyle(color: Colors.white)),
+            child: Text(
+              AyoI18n.isEnglish ? 'Log out' : 'Keluar',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -503,16 +506,11 @@ class _ProfilePageState extends State<ProfilePage> {
       elevation: 0,
       title: Row(
         children: <Widget>[
-          Container(
-            width: 34,
-            height: 34,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEFE1),
-              borderRadius: BorderRadius.circular(10),
-            ),
+          SizedBox(
+            width: 38,
+            height: 38,
             child: Image.asset(
-              'assets/images/Logo_Ayo_Suruh.png',
+              'assets/images/ayos_runner_logo.png',
               fit: BoxFit.contain,
             ),
           ),
@@ -1132,9 +1130,9 @@ class _ProfilePageState extends State<ProfilePage> {
       child: OutlinedButton.icon(
         onPressed: _showLogoutConfirmationDialog,
         icon: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
-        label: const AyoText(
-          'Log out',
-          style: TextStyle(
+        label: Text(
+          AyoI18n.isEnglish ? 'Log out' : 'Keluar',
+          style: const TextStyle(
             color: Colors.red,
             fontSize: 15,
             fontWeight: FontWeight.bold,

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -11,7 +12,59 @@ class AuthService {
   static const String passwordRecoveryRedirectUrl =
       'io.supabase.ayosuruh://reset-password/';
 
-  static Future<bool> signInWithGoogle() {
+  // OAuth client type: Web application. This is a public client ID, not a
+  // client secret. Android uses it as serverClientId so the Google ID token has
+  // the audience expected by Supabase Auth.
+  static const String _googleWebClientId =
+      '358694252315-iv42egfmp2hviql1gnv2t2lk92ohjdtq.apps.googleusercontent.com';
+
+  static Future<void>? _googleInitialization;
+
+  static bool get _useNativeGoogleOnAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  static Future<void> _ensureGoogleInitialized() {
+    return _googleInitialization ??= GoogleSignIn.instance.initialize(
+      serverClientId: _googleWebClientId,
+    );
+  }
+
+  static Future<bool> signInWithGoogle() async {
+    if (_useNativeGoogleOnAndroid) {
+      await _ensureGoogleInitialized();
+
+      final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+      if (!googleSignIn.supportsAuthenticate()) {
+        throw const AuthException('GOOGLE_NATIVE_UNAVAILABLE');
+      }
+
+      try {
+        // End only the plugin-side Google session before interactive auth so a
+        // new tap keeps the native account chooser interactive.
+        await googleSignIn.signOut();
+        final GoogleSignInAccount account = await googleSignIn.authenticate();
+        final String? idToken = account.authentication.idToken;
+        if (idToken == null || idToken.isEmpty) {
+          throw const AuthException('GOOGLE_ID_TOKEN_MISSING');
+        }
+
+        final AuthResponse response = await _supabase.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+        );
+        return response.user != null;
+      } on GoogleSignInException catch (error) {
+        if (error.code == GoogleSignInExceptionCode.canceled) {
+          return false;
+        }
+        debugPrint(
+          'Native Google Sign-In failed: ${error.code} ${error.description}',
+        );
+        throw const AuthException('GOOGLE_NATIVE_SIGN_IN_FAILED');
+      }
+    }
+
+    // Keep the existing OAuth/deep-link flow as fallback outside Android.
     return _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb ? Uri.base.origin : mobileRedirectUrl,

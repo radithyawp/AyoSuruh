@@ -129,7 +129,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
         title: AyoText(
           'Pekerjaan',
           style: TextStyle(
-            color: jobDarkBrownColor,
+            color: jobBrownColor,
             fontSize: 20,
             fontWeight: FontWeight.w800,
           ),

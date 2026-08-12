@@ -203,19 +203,23 @@ class _LoginPageState extends State<LoginPage> {
         rememberMe: _rememberMe,
         email: _emailCtrl.text.trim(),
       );
-      final bool launched = await AuthService.signInWithGoogle();
-      if (!launched && mounted) {
-        AyoSnackBar.error(context, 'Halaman Google tidak dapat dibuka.');
-      }
+      await AuthService.signInWithGoogle();
     } on AuthException catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(
         context,
-        'Gagal masuk dengan Google: ${error.message}',
+        AyoI18n.isEnglish
+            ? 'Could not sign in with Google. Please try again.'
+            : 'Gagal masuk dengan Google: ${error.message}',
       );
     } catch (error) {
       if (!mounted) return;
-      AyoSnackBar.error(context, 'Gagal masuk dengan Google: $error');
+      AyoSnackBar.error(
+        context,
+        AyoI18n.isEnglish
+            ? 'Could not sign in with Google. Please try again.'
+            : 'Gagal masuk dengan Google: $error',
+      );
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
@@ -257,30 +261,20 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     // --- LOGO & HEADER ---
-                    Image.asset(
-                      'assets/images/Logo_Ayo_Suruh.png',
-                      height: 120,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.directions_run_rounded,
-                        size: 90,
-                        color: primaryColor,
+                    SizedBox(
+                      width: 220,
+                      height: 178,
+                      child: Image.asset(
+                        'assets/images/logo_ayo_suruh_transparent.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.directions_run_rounded,
+                          size: 110,
+                          color: primaryColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    AyoText(
-                      'Ayo Suruh',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: titleColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    AyoText(
-                      'Butuh bantuan? Ayo suruh kami!',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 14),
 
                     // --- CARD FORM LOGIN ---
                     Container(
@@ -312,7 +306,21 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 5),
+                            Center(
+                              child: Text(
+                                AyoI18n.isEnglish
+                                    ? 'Enjoy our best services and features.'
+                                    : 'Nikmati berbagai layanan dan fitur terbaik dari kami.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  height: 1.35,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
 
                             // Field 1: Masuk dengan Email
                             _buildLabel('Masuk dengan Email'),
