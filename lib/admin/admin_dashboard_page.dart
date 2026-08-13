@@ -179,7 +179,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     ),
                     const SizedBox(height: 16),
                     _notice(
-                      'Dashboard admin memakai revenue platform (komisi 6%), bukan total GMV. Ini memisahkan omzet transaksi dari pendapatan Ayo Suruh.',
+                      AyoI18n.isEnglish
+                          ? 'Admin revenue uses the effective platform commission, not total GMV. The normal rate is 6%, while eligible launch incentives such as the New Partner Bonus may reduce the commission on a specific transaction.'
+                          : 'Revenue admin memakai komisi platform efektif, bukan total GMV. Tarif normal 6%, sementara insentif peluncuran seperti Bonus Mitra Baru dapat menurunkan komisi pada transaksi tertentu.',
                       const Color(0xFFFFF1DA),
                       _brown,
                     ),

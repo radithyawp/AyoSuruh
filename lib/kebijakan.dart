@@ -67,7 +67,7 @@ class KebijakanPage extends StatelessWidget {
                       ),
                       SizedBox(height: 5),
                       AyoText(
-                        AyoI18n.isEnglish ? 'Last updated: 12 August 2026.' : 'Pembaruan terakhir: 12 Agustus 2026.',
+                        AyoI18n.isEnglish ? 'Last updated: 13 August 2026.' : 'Pembaruan terakhir: 13 Agustus 2026.',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF765638),
@@ -93,11 +93,14 @@ class KebijakanPage extends StatelessWidget {
             body:
                 'Ketika Anda membuat atau menjalankan pekerjaan, kami dapat memproses alamat tujuan, koordinat lokasi yang dipilih, kategori, deskripsi, jadwal, penawaran, status pekerjaan, serta data terkait agar customer dan mitra dapat menjalankan layanan secara tepat.',
           ),
-          const _PrivacySection(
+          _PrivacySection(
             number: '3',
-            title: 'Autentikasi dan Akun Google',
-            body:
-                'Login dapat menggunakan email/password atau penyedia identitas seperti Google melalui Supabase Auth. Ayo Suruh tidak menyimpan password mentah. Fitur Ingat Saya mempertahankan preferensi sesi dan email, sedangkan penyimpanan kredensial dapat ditangani oleh password manager atau autofill bawaan perangkat.',
+            title: AyoI18n.isEnglish
+                ? 'Authentication and Phone Confirmation'
+                : 'Autentikasi dan Konfirmasi Nomor HP',
+            body: AyoI18n.isEnglish
+                ? 'Sign-in may use email/password or an identity provider such as Google through Supabase Auth. Ayo Suruh does not store plaintext passwords. On supported Android devices, Phone Number Hint may display SIM-based phone numbers so the user can select a number without granting SMS-reading permission. A number selected through this flow is recorded as confirmed from the device, not as SMS-verified and not as legal identity proof. Manually entered numbers remain marked unconfirmed until a supported confirmation method is completed.'
+                : 'Login dapat menggunakan email/password atau penyedia identitas seperti Google melalui Supabase Auth. Ayo Suruh tidak menyimpan password mentah. Pada perangkat Android yang mendukung, Phone Number Hint dapat menampilkan nomor berbasis SIM agar pengguna dapat memilih nomor tanpa memberikan izin membaca SMS. Nomor yang dipilih melalui alur ini dicatat sebagai dikonfirmasi dari perangkat, bukan terverifikasi lewat SMS dan bukan bukti identitas hukum. Nomor yang diketik manual tetap ditandai belum dikonfirmasi sampai metode konfirmasi yang didukung diselesaikan.',
           ),
           const _PrivacySection(
             number: '4',
@@ -105,11 +108,14 @@ class KebijakanPage extends StatelessWidget {
             body:
                 'Untuk transaksi, kami dapat menyimpan nilai jasa, status pembayaran, identitas transaksi, metode pembayaran, refund, komisi platform, saldo ledger mitra, rekening pencairan, dan status payout. Data sensitif pembayaran diproses melalui penyedia payment gateway dan tidak dimaksudkan untuk menyimpan detail kartu secara langsung di Ayo Suruh.',
           ),
-          const _PrivacySection(
+          _PrivacySection(
             number: '5',
-            title: 'Chat dan Dukungan',
-            body:
-                'Pesan yang dikirim melalui fitur chat dan informasi yang diberikan kepada Pusat Dukungan dapat diproses untuk menjalankan pekerjaan, menyelesaikan kendala, mencegah penyalahgunaan, dan meningkatkan kualitas layanan.',
+            title: AyoI18n.isEnglish
+                ? 'Chat, Voice Calls, and Support'
+                : 'Chat, Panggilan Suara, dan Dukungan',
+            body: AyoI18n.isEnglish
+                ? 'Messages sent through chat and information provided to Support may be processed to operate jobs, resolve issues, prevent abuse, and improve service quality. For an active in-app voice call, microphone audio is transmitted in real time through LiveKit so the Customer and Partner can communicate. Ayo Suruh does not enable call recording or transcription in this feature, and phone numbers are not exposed through the in-app call flow.'
+                : 'Pesan yang dikirim melalui chat dan informasi yang diberikan kepada Pusat Dukungan dapat diproses untuk menjalankan pekerjaan, menyelesaikan kendala, mencegah penyalahgunaan, dan meningkatkan kualitas layanan. Saat panggilan suara in-app aktif, audio mikrofon ditransmisikan secara real-time melalui LiveKit agar Customer dan Mitra dapat berkomunikasi. Ayo Suruh tidak mengaktifkan perekaman atau transkripsi pada fitur panggilan ini, dan nomor telepon tidak ditampilkan melalui alur panggilan in-app.',
           ),
           _PrivacySection(
             number: '6',
@@ -118,11 +124,14 @@ class KebijakanPage extends StatelessWidget {
                 ? 'Data is used to provide app features, match Customer needs with Partners, process transactions, verify accounts and current UPI-student Partner eligibility, display history, improve security, provide support, evaluate the product, and meet relevant operational needs. Verification documents are used only for the stated verification purpose and access should be limited to authorized administrative review.'
                 : 'Data digunakan untuk menyediakan fitur aplikasi, mencocokkan kebutuhan Customer dengan Mitra, memproses transaksi, memverifikasi akun dan eligibility Mitra sebagai mahasiswa UPI pada cakupan saat ini, menampilkan riwayat, meningkatkan keamanan, memberi dukungan, melakukan evaluasi produk, dan memenuhi kebutuhan operasional yang relevan. Dokumen verifikasi digunakan untuk tujuan verifikasi yang telah dijelaskan dan aksesnya dibatasi untuk pemeriksaan administratif yang berwenang.',
           ),
-          const _PrivacySection(
+          _PrivacySection(
             number: '7',
-            title: 'Pihak Ketiga yang Mendukung Layanan',
-            body:
-                'Ayo Suruh dapat menggunakan layanan pihak ketiga seperti Supabase untuk autentikasi/database, Midtrans untuk payment gateway, Google untuk autentikasi, OpenStreetMap untuk peta/geolokasi, dan layanan sistem lain yang diperlukan. Masing-masing penyedia dapat menerapkan kebijakan privasinya sendiri.',
+            title: AyoI18n.isEnglish
+                ? 'Third Parties Supporting the Service'
+                : 'Pihak Ketiga yang Mendukung Layanan',
+            body: AyoI18n.isEnglish
+                ? 'Ayo Suruh may use third-party services including Supabase for authentication/database, Midtrans for payment processing, Google for authentication and device-based Phone Number Hint, OpenStreetMap for maps/geolocation, and LiveKit for real-time in-app voice transport. Each provider may apply its own privacy and security policies.'
+                : 'Ayo Suruh dapat menggunakan layanan pihak ketiga seperti Supabase untuk autentikasi/database, Midtrans untuk payment gateway, Google untuk autentikasi dan Phone Number Hint berbasis perangkat, OpenStreetMap untuk peta/geolokasi, serta LiveKit untuk transport audio panggilan in-app secara real-time. Masing-masing penyedia dapat menerapkan kebijakan privasi dan keamanannya sendiri.',
           ),
           const _PrivacySection(
             number: '8',

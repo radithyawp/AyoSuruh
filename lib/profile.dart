@@ -28,6 +28,9 @@ import 'widgets/ayo_pressable.dart';
 import 'widgets/ayo_avatar.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import './theme/ayo_theme.dart';
+import 'config/feature_flags.dart';
+import 'phone/phone_confirmation_page.dart';
+import 'phone/phone_confirmation_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -158,6 +161,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (result == true) {
       _loadProfileData();
+    }
+  }
+
+  Future<void> _navigateToPhoneConfirmation() async {
+    final bool? changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => const PhoneConfirmationPage(),
+      ),
+    );
+
+    if (changed == true) {
+      await _loadProfileData();
     }
   }
 
@@ -347,13 +363,20 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (error, stackTrace) {
       debugPrint('Error logout Supabase: $error');
       debugPrintStack(stackTrace: stackTrace);
+      if (context.mounted) {
+        AyoSnackBar.error(context, 'Keluar dari akun belum berhasil. Coba lagi.');
+      }
       return;
     }
 
     if (!context.mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+      MaterialPageRoute<void>(
+        builder: (_) => const LoginPage(
+          noticeMessage: 'Berhasil keluar dari akun.',
+        ),
+      ),
       (Route<dynamic> route) => false,
     );
   }
@@ -371,6 +394,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final String displayName = _userRow?['fullname'] ?? 'Pengguna';
     final String email = _userRow?['email'] ?? '-';
     final String phone = _userRow?['phone'] ?? '-';
+    final String phoneVerificationLevel =
+        (_userRow?['phone_verification_level'] ??
+                PhoneConfirmationService.unverified)
+            .toString();
     final String? avatarUrl = _userRow?['avatar_url'];
     final bool isMitra = widget.activeMode == 'mitra' && widget.canUseMitraMode;
 
@@ -388,6 +415,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 displayName,
                 email,
                 phone,
+                phoneVerificationLevel,
                 avatarUrl,
                 isMitra,
               ),
@@ -453,11 +481,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              _buildMenuCard(
-                Icons.confirmation_number_outlined,
-                'Voucher Saya',
-                _navigateToVouchers,
-              ),
+              if (AyoFeatureFlags.vouchersEnabled)
+                _buildMenuCard(
+                  Icons.confirmation_number_outlined,
+                  'Voucher Saya',
+                  _navigateToVouchers,
+                ),
               _buildMenuCard(
                 Icons.person_outline,
                 'Edit Profil',
@@ -540,6 +569,7 @@ class _ProfilePageState extends State<ProfilePage> {
     String name,
     String email,
     String phone,
+    String phoneVerificationLevel,
     String? avatarUrl,
     bool isMitra,
   ) {
@@ -625,6 +655,64 @@ class _ProfilePageState extends State<ProfilePage> {
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: _brownColor,
+          ),
+        ),
+        const SizedBox(height: 7),
+        AyoPressable(
+          onTap: _navigateToPhoneConfirmation,
+          pressedScale: 0.98,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: PhoneConfirmationService.isConfirmed(
+                    phoneVerificationLevel,
+                  )
+                  ? const Color(0xFFEAF3E4)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(
+                color: PhoneConfirmationService.isConfirmed(
+                      phoneVerificationLevel,
+                    )
+                    ? const Color(0xFFBFD5B5)
+                    : Theme.of(context).dividerColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  PhoneConfirmationService.isConfirmed(phoneVerificationLevel)
+                      ? Icons.verified_user_outlined
+                      : Icons.phonelink_lock_outlined,
+                  size: 15,
+                  color: PhoneConfirmationService.isConfirmed(
+                        phoneVerificationLevel,
+                      )
+                      ? const Color(0xFF4F6B43)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 5),
+                AyoText(
+                  phoneVerificationLevel == PhoneConfirmationService.verified
+                      ? 'Nomor terverifikasi'
+                      : PhoneConfirmationService.isConfirmed(
+                            phoneVerificationLevel,
+                          )
+                          ? 'Nomor dikonfirmasi dari perangkat'
+                          : 'Nomor belum dikonfirmasi · Ketuk untuk konfirmasi',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: PhoneConfirmationService.isConfirmed(
+                          phoneVerificationLevel,
+                        )
+                        ? const Color(0xFF4F6B43)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -204,6 +204,15 @@ String? customerAvatar(Map<String, dynamic> job) {
   return null;
 }
 
+bool isFirstJobPriority(Map<String, dynamic> job) {
+  if (job['is_first_job_priority'] != true) return false;
+  final DateTime? until = DateTime.tryParse(
+    (job['priority_until'] ?? '').toString(),
+  )?.toUtc();
+  if (until == null) return false;
+  return until.isAfter(DateTime.now().toUtc());
+}
+
 String selectedMitraName(Map<String, dynamic> job) {
   final dynamic mitra = job['mitra'];
   if (mitra is Map && mitra['fullname'] != null) {

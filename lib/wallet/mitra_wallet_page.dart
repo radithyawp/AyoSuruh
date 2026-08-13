@@ -311,6 +311,10 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
         children: <Widget>[
           _balanceCard(),
+          if (_number(_summary['available_balance']) < 0) ...<Widget>[
+            const SizedBox(height: 14),
+            _walletObligationCard(),
+          ],
           const SizedBox(height: 14),
           _walletSecurityCard(),
           const SizedBox(height: 14),
@@ -413,6 +417,51 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
                 'Cairkan Saldo · Min. ${formatRupiah(minimum)}',
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _walletObligationCard() {
+    final num available = _number(_summary['available_balance']);
+    final num obligation = available < 0 ? available.abs() : 0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE1DE),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFB8AE)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.receipt_long_rounded, color: Colors.red.shade700),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const AyoText(
+                  'SALDO TERUTANG',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                AyoText(
+                  formatRupiah(obligation),
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const AyoText(
+                  'Komisi Cash atau penyesuaian yang belum tertutup akan otomatis dipotong dari saldo dan pendapatan AyoPay berikutnya. Customer tidak dikenakan biaya tambahan.',
+                  style: TextStyle(fontSize: 10.5, height: 1.4),
+                ),
+              ],
             ),
           ),
         ],
@@ -788,7 +837,7 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
               badgeIcon: Icons.account_balance_wallet_outlined,
               title: AyoI18n.t('Belum ada aktivitas saldo'),
               description: AyoI18n.t(
-                'Pendapatan, pencairan, voucher, dan penyesuaian saldo akan muncul di sini.',
+                'Pendapatan, pencairan, komisi, dan penyesuaian saldo akan muncul di sini.',
               ),
             )
           : Column(
@@ -910,6 +959,8 @@ class _MitraWalletPageState extends State<MitraWalletPage> {
         return 'Penyesuaian Refund';
       case 'voucher_subsidy':
         return 'Subsidi Voucher Cash';
+      case 'cash_commission':
+        return 'Komisi Platform Cash';
       default:
         return 'Penyesuaian Saldo';
     }

@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'widgets/ayo_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_service.dart';
 import 'kebijakan.dart';
 import 'login.dart';
+import 'phone/phone_confirmation_service.dart';
 import 'syarat_ketentuan.dart';
 import 'theme/ayo_theme.dart';
 import 'widgets/ayo_pressable.dart';
@@ -42,11 +44,16 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
   bool _isNavigating = false;
   bool _isGoogleFlow = false;
+  bool _isRequestingPhoneHint = false;
+  bool _internalPhoneChange = false;
+  String _phoneVerificationLevel = PhoneConfirmationService.unverified;
+  String? _confirmedPhone;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
+    _phoneCtrl.addListener(_handlePhoneEdited);
     _authSubscription = _supabase.auth.onAuthStateChange.listen((
       AuthState state,
     ) {
@@ -64,12 +71,62 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _phoneCtrl.removeListener(_handlePhoneEdited);
     _fullNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
     super.dispose();
+  }
+
+  void _handlePhoneEdited() {
+    if (_internalPhoneChange || !mounted) return;
+    final String normalized = PhoneConfirmationService.normalizeIndonesiaPhone(
+      _phoneCtrl.text,
+    );
+    if (_confirmedPhone != null && normalized == _confirmedPhone) return;
+    if (_phoneVerificationLevel == PhoneConfirmationService.unverified) return;
+    setState(() => _phoneVerificationLevel = PhoneConfirmationService.unverified);
+  }
+
+  Future<void> _pickPhoneFromDevice() async {
+    if (_isRequestingPhoneHint || !PhoneConfirmationService.supportsDeviceHint) {
+      return;
+    }
+    setState(() => _isRequestingPhoneHint = true);
+    try {
+      final String? phone =
+          await PhoneConfirmationService.requestPhoneNumberHint();
+      if (!mounted) return;
+      if (phone == null) {
+        AyoSnackBar.info(context, 'Pemilihan nomor dari perangkat dibatalkan.');
+        return;
+      }
+      if (!PhoneConfirmationService.isValidIndonesiaPhone(phone)) {
+        AyoSnackBar.error(
+          context,
+          'Nomor dari perangkat belum sesuai format nomor Indonesia.',
+        );
+        return;
+      }
+      _internalPhoneChange = true;
+      _phoneCtrl.text = phone;
+      _internalPhoneChange = false;
+      setState(() {
+        _phoneVerificationLevel = PhoneConfirmationService.deviceConfirmed;
+        _confirmedPhone = phone;
+      });
+      AyoSnackBar.success(context, 'Nomor dari perangkat berhasil dipilih.');
+    } on PlatformException {
+      if (!mounted) return;
+      AyoSnackBar.info(
+        context,
+        'Nomor SIM belum dapat dibaca otomatis. Masukkan nomor secara manual.',
+      );
+    } finally {
+      if (mounted) setState(() => _isRequestingPhoneHint = false);
+    }
   }
 
   Future<void> _finishRegistration({
@@ -114,8 +171,9 @@ class _RegisterPageState extends State<RegisterPage> {
     final String email = _supabase.auth.currentUser?.email?.trim() ?? '';
     await _finishRegistration(
       email: email,
-      message:
-          'Google berhasil digunakan. Silakan login untuk masuk ke Ayo Suruh.',
+      message: AyoI18n.isEnglish
+          ? 'Google account connected. Sign in, then confirm your phone number from Profile.'
+          : 'Google berhasil digunakan. Silakan login, lalu konfirmasi nomor HP dari Profil.',
     );
   }
 
@@ -127,7 +185,9 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       final String email = _emailCtrl.text.trim();
       final String fullName = _fullNameCtrl.text.trim();
-      final String phone = _phoneCtrl.text.trim();
+      final String phone = PhoneConfirmationService.normalizeIndonesiaPhone(
+        _phoneCtrl.text,
+      );
 
       final AuthResponse response = await _supabase.auth.signUp(
         email: email,
@@ -136,6 +196,11 @@ class _RegisterPageState extends State<RegisterPage> {
           'fullname': fullName,
           'full_name': fullName,
           'phone': phone,
+          'phone_verification_level': _phoneVerificationLevel,
+          'phone_confirmation_method':
+              _phoneVerificationLevel == PhoneConfirmationService.deviceConfirmed
+                  ? 'phone_number_hint'
+                  : 'manual',
         },
       );
 
@@ -146,9 +211,16 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
 
+      final bool deviceConfirmed = PhoneConfirmationService.isConfirmed(
+        _phoneVerificationLevel,
+      );
       final String message = response.session == null
-          ? 'Registrasi berhasil. Jika verifikasi email diaktifkan, selesaikan verifikasi terlebih dahulu lalu login.'
-          : 'Registrasi berhasil. Silakan login untuk masuk ke Ayo Suruh.';
+          ? (deviceConfirmed
+                ? 'Registrasi berhasil dan nomor HP dikonfirmasi dari perangkat. Selesaikan verifikasi email jika diminta, lalu login.'
+                : 'Registrasi berhasil. Nomor HP masih belum dikonfirmasi; kamu dapat mengonfirmasinya dari Profil setelah login.')
+          : (deviceConfirmed
+                ? 'Registrasi berhasil dan nomor HP dikonfirmasi dari perangkat. Silakan login untuk masuk ke Ayo Suruh.'
+                : 'Registrasi berhasil. Silakan login lalu konfirmasi nomor HP dari Profil.');
 
       await _finishRegistration(email: email, message: message);
     } on AuthException catch (error) {
@@ -301,8 +373,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 14),
 
-                        // Field 3: Nomor WhatsApp
-                        _buildLabel('Nomor WhatsApp'),
+                        // Field 3: Nomor HP
+                        _buildLabel('Nomor HP'),
                         const SizedBox(height: 6),
                         _buildTextField(
                           controller: _phoneCtrl,
@@ -311,18 +383,78 @@ class _RegisterPageState extends State<RegisterPage> {
                           bgColor: kInputBgColor,
                           keyboardType: TextInputType.phone,
                           validator: (val) {
-                            final trimmed = val?.trim() ?? '';
-                            if (trimmed.isEmpty) {
-                              return 'Nomor WA tidak boleh kosong';
+                            final String phone =
+                                PhoneConfirmationService.normalizeIndonesiaPhone(
+                                  val ?? '',
+                                );
+                            if (phone.isEmpty) {
+                              return 'Nomor HP tidak boleh kosong';
                             }
-                            if (!RegExp(r'^[0-9+]+$').hasMatch(trimmed)) {
-                              return 'Nomor WA hanya boleh berupa angka';
-                            }
-                            if (trimmed.length < 9) {
-                              return 'Nomor WA terlalu pendek (min. 9 digit)';
+                            if (!PhoneConfirmationService.isValidIndonesiaPhone(
+                              phone,
+                            )) {
+                              return 'Nomor HP Indonesia belum valid';
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 8),
+                        if (PhoneConfirmationService.supportsDeviceHint)
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _isRequestingPhoneHint
+                                  ? null
+                                  : _pickPhoneFromDevice,
+                              icon: _isRequestingPhoneHint
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.sim_card_outlined),
+                              label: const AyoText(
+                                'Gunakan nomor dari perangkat ini',
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 7),
+                        Row(
+                          children: <Widget>[
+                            Icon(
+                              PhoneConfirmationService.isConfirmed(
+                                    _phoneVerificationLevel,
+                                  )
+                                  ? Icons.verified_user_outlined
+                                  : Icons.info_outline_rounded,
+                              size: 16,
+                              color: PhoneConfirmationService.isConfirmed(
+                                    _phoneVerificationLevel,
+                                  )
+                                  ? const Color(0xFF5F784F)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: AyoText(
+                                PhoneConfirmationService.isConfirmed(
+                                      _phoneVerificationLevel,
+                                    )
+                                    ? 'Nomor dikonfirmasi dari perangkat'
+                                    : 'Nomor manual akan ditandai belum dikonfirmasi',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 14),
 

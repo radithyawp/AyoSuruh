@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       if (state.event == AuthChangeEvent.signedIn && state.session != null) {
-        unawaited(_completeLogin(showMessage: false));
+        unawaited(_completeLogin(showMessage: true));
       }
     });
   }
@@ -121,14 +121,11 @@ class _LoginPageState extends State<LoginPage> {
       }
       if (!mounted) return;
 
-      if (showMessage || reactivated) {
-        AyoSnackBar.success(
-          context,
-          reactivated
-              ? 'Akun diaktifkan kembali. Selamat datang!'
-              : 'Berhasil masuk! Selamat datang.',
-        );
-      }
+      final String? loginNotice = showMessage || reactivated
+          ? (reactivated
+                ? 'Akun diaktifkan kembali. Selamat datang!'
+                : 'Berhasil masuk! Selamat datang.')
+          : null;
 
       bool isAdmin = false;
       try {
@@ -142,7 +139,9 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute<void>(
           builder: (_) =>
-              isAdmin ? const AdminNavigation() : const MainNavigation(),
+              isAdmin
+              ? AdminNavigation(initialNoticeMessage: loginNotice)
+              : MainNavigation(initialNoticeMessage: loginNotice),
         ),
         (Route<dynamic> route) => false,
       );
@@ -203,7 +202,10 @@ class _LoginPageState extends State<LoginPage> {
         rememberMe: _rememberMe,
         email: _emailCtrl.text.trim(),
       );
-      await AuthService.signInWithGoogle();
+      final bool authenticated = await AuthService.signInWithGoogle();
+      if (!authenticated && mounted) {
+        AyoSnackBar.info(context, 'Pemilihan akun Google dibatalkan.');
+      }
     } on AuthException catch (error) {
       if (!mounted) return;
       AyoSnackBar.error(

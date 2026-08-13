@@ -29,6 +29,11 @@ class NotificationService {
   static const String channelDescription =
       'Notifikasi pekerjaan, pembayaran, chat, dan aktivitas Ayo Suruh';
 
+  static const String callChannelId = 'ayosuruh_calls';
+  static const String callChannelName = 'Panggilan Ayo Suruh';
+  static const String callChannelDescription =
+      'Panggilan suara masuk dari Customer atau Mitra Ayo Suruh';
+
   // Lazy getter: jangan menyentuh Firebase saat singleton hanya direferensikan
   // di Flutter Web. Firebase Web belum dikonfigurasi untuk Ayo Suruh.
   FirebaseMessaging get _messaging => FirebaseMessaging.instance;
@@ -66,6 +71,15 @@ class NotificationService {
     importance: Importance.max,
   );
 
+  static const AndroidNotificationChannel _callChannel =
+      AndroidNotificationChannel(
+        callChannelId,
+        callChannelName,
+        description: callChannelDescription,
+        importance: Importance.max,
+        playSound: true,
+      );
+
   Future<void> initialize() async {
     if (_initialized) return;
 
@@ -91,6 +105,7 @@ class NotificationService {
         >();
 
     await androidPlugin?.createNotificationChannel(_channel);
+    await androidPlugin?.createNotificationChannel(_callChannel);
 
     _foregroundSubscription = FirebaseMessaging.onMessage.listen(
       _showForegroundNotification,
@@ -216,17 +231,22 @@ class NotificationService {
             .hashCode &
         0x7fffffff;
 
+    final bool isVoiceCall =
+        (message.data['type'] ?? '').toString() == 'voice_call_incoming';
+
     await _localNotifications.show(
       id: notificationId,
       title: title ?? 'Ayo Suruh',
       body: body ?? 'Ada aktivitas baru di akunmu.',
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          channelId,
-          channelName,
-          channelDescription: channelDescription,
+          isVoiceCall ? callChannelId : channelId,
+          isVoiceCall ? callChannelName : channelName,
+          channelDescription:
+              isVoiceCall ? callChannelDescription : channelDescription,
           importance: Importance.max,
           priority: Priority.high,
+          playSound: true,
         ),
       ),
       payload: jsonEncode(message.data),

@@ -5,6 +5,7 @@ import 'auth_preferences.dart';
 import '../login.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import '../theme/ayo_theme.dart';
+import '../widgets/ayo_snackbar.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -67,20 +68,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       );
     } on AuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: AyoText(error.message),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, error.message);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: AyoText('Password belum dapat diperbarui: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AyoSnackBar.error(context, 'Password belum dapat diperbarui: $error');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

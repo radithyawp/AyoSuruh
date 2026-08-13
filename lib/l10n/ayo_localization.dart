@@ -72,6 +72,41 @@ abstract final class AyoI18n {
     'Keluar': 'Sign Out',
     'Log out': 'Log out',
     'Keluar Akun': 'Sign Out',
+    'Berhasil masuk! Selamat datang.': 'Signed in successfully. Welcome!',
+    'Akun diaktifkan kembali. Selamat datang!': 'Your account has been reactivated. Welcome!',
+    'Berhasil keluar dari akun.': 'Logged out successfully.',
+    'Berhasil keluar dari akun admin.': 'Admin account logged out successfully.',
+    'Keluar dari akun belum berhasil. Coba lagi.': 'Could not log out. Please try again.',
+    'Pemilihan akun Google dibatalkan.': 'Google account selection was cancelled.',
+    'Konfirmasi Nomor HP': 'Confirm Phone Number',
+    'Nomor HP': 'Phone Number',
+    'Simpan Nomor': 'Save Number',
+    'Gunakan nomor dari perangkat ini': 'Use a number from this device',
+    'Nomor dikonfirmasi dari perangkat': 'Number confirmed from device',
+    'Nomor terverifikasi': 'Verified phone number',
+    'Nomor belum dikonfirmasi': 'Phone number not confirmed',
+    'Nomor belum dikonfirmasi · Ketuk untuk konfirmasi': 'Phone number not confirmed · Tap to confirm',
+    'Nomor manual akan ditandai belum dikonfirmasi': 'A manually entered number will be marked unconfirmed',
+    'Konfirmasi nomor dari perangkat sebelum mengajukan Mitra': 'Confirm the number from your device before applying as a Partner',
+    'Pemilihan nomor dari perangkat dibatalkan.': 'Phone-number selection was cancelled.',
+    'Nomor dari perangkat berhasil dipilih.': 'Number from the device selected successfully.',
+    'Nomor dari perangkat belum sesuai format nomor Indonesia.': 'The number from this device is not a valid Indonesian phone number.',
+    'Nomor SIM belum dapat dibaca otomatis. Masukkan nomor secara manual.': 'The SIM number could not be read automatically. Enter the number manually.',
+    'Masukkan nomor HP Indonesia yang valid.': 'Enter a valid Indonesian phone number.',
+    'Nomor HP berhasil dikonfirmasi dari perangkat.': 'Phone number confirmed from this device.',
+    'Nomor HP berhasil disimpan. Statusnya belum dikonfirmasi.': 'Phone number saved. It is still marked unconfirmed.',
+    'Nomor HP tidak boleh kosong': 'Phone number cannot be empty',
+    'Nomor HP Indonesia belum valid': 'The Indonesian phone number is not valid',
+    'Nomor HP belum valid.': 'The phone number is not valid.',
+    'Konfirmasi nomor HP dari perangkat sebelum mengirim pengajuan Mitra.': 'Confirm your phone number from the device before submitting a Partner application.',
+    'Ayo Suruh dapat meminta Android menampilkan nomor yang tersedia dari SIM di perangkat ini. Cara ini tidak mengirim SMS dan tidak meminta izin membaca SMS. Ini membantu mengurangi salah input nomor, tetapi bukan verifikasi SMS atau bukti identitas hukum.': 'Ayo Suruh can ask Android to show phone numbers available from SIMs on this device. This flow does not send an SMS and does not request permission to read SMS. It helps reduce incorrect number entry, but it is not SMS verification or legal identity proof.',
+    'Pemilihan nomor dari SIM tersedia pada aplikasi Android. Nomor yang diketik manual akan disimpan sebagai belum dikonfirmasi.': 'SIM-based number selection is available in the Android app. A manually entered number will be saved as unconfirmed.',
+    'Jika nomor diubah manual, status konfirmasi perangkat akan dilepas sampai nomor dipilih kembali dari perangkat.': 'If you edit the number manually, device-confirmed status is removed until you select the number from the device again.',
+    'Nomor yang diketik manual tetap dapat disimpan, tetapi akan ditandai belum dikonfirmasi.': 'A manually entered number can still be saved, but it will be marked unconfirmed.',
+    'Registrasi berhasil dan nomor HP dikonfirmasi dari perangkat. Selesaikan verifikasi email jika diminta, lalu login.': 'Registration successful and the phone number was confirmed from the device. Complete email verification if requested, then sign in.',
+    'Registrasi berhasil. Nomor HP masih belum dikonfirmasi; kamu dapat mengonfirmasinya dari Profil setelah login.': 'Registration successful. Your phone number is still unconfirmed; you can confirm it from Profile after signing in.',
+    'Registrasi berhasil dan nomor HP dikonfirmasi dari perangkat. Silakan login untuk masuk ke Ayo Suruh.': 'Registration successful and the phone number was confirmed from the device. Please sign in to continue to Ayo Suruh.',
+    'Registrasi berhasil. Silakan login lalu konfirmasi nomor HP dari Profil.': 'Registration successful. Please sign in, then confirm your phone number from Profile.',
     'Lupa Password?': 'Forgot Password?',
     'Ingat saya di perangkat ini': 'Remember me on this device',
     'Daftar Akun Baru': 'Create a New Account',
@@ -161,8 +196,7 @@ abstract final class AyoI18n {
     'Unggah Dokumen': 'Upload Documents',
     'Foto KTM': 'Student ID Photo',
     'Foto Kartu Identitas': 'Identity Card Photo',
-    'Foto kartu identitas dan foto selfie wajib dilengkapi.':
-        'Identity card photo and selfie are required.',
+    'Foto kartu identitas dan foto selfie wajib dilengkapi.': 'Identity card photo and selfie are required.',
     'Lihat Identitas': 'View ID',
     'Kartu Identitas Mitra': 'Partner Identity Card',
     'Identitas dan selfie terunggah': 'Identity card and selfie uploaded',
@@ -207,7 +241,6 @@ abstract final class AyoI18n {
     'Bayar': 'Pay',
     'Lanjut Pembayaran': 'Continue Payment',
     'Nama Lengkap': 'Full Name',
-    'Nomor HP': 'Phone Number',
     'Alamat Lengkap': 'Full Address',
     'Email': 'Email',
     'Password Baru': 'New Password',
@@ -221,6 +254,28 @@ abstract final class AyoI18n {
     'Ke Home': 'Go Home',
     'Bagikan jasa': 'Share service',
     'Telepon': 'Call',
+    'Panggilan suara': 'Voice call',
+    'Panggilan masuk': 'Incoming call',
+    'Memanggil…': 'Calling…',
+    'Menghubungkan…': 'Connecting…',
+    'Menghubungkan kembali…': 'Reconnecting…',
+    'Menunggu tersambung…': 'Waiting to connect…',
+    'Terhubung': 'Connected',
+    'Panggilan ditolak': 'Call declined',
+    'Panggilan dibatalkan': 'Call cancelled',
+    'Panggilan tidak terjawab': 'Missed call',
+    'Panggilan berakhir': 'Call ended',
+    'Bisukan': 'Mute',
+    'Aktifkan Mikrofon': 'Unmute',
+    'Speaker': 'Speaker',
+    'Earpiece': 'Earpiece',
+    'Akhiri': 'End',
+    'Telepon di Ayo Suruh?': 'Call in Ayo Suruh?',
+    'Buka panggilan': 'Open call',
+    'Izinkan mikrofon agar panggilan suara dapat digunakan.':
+        'Allow microphone access to use voice calls.',
+    'Panggilan hanya tersedia selama pekerjaan masih aktif.':
+        'Calls are only available while the job is active.',
     'Kirim foto': 'Send photo',
     'Ketik pesan...': 'Type a message...',
     'Tambahkan keterangan (opsional)': 'Add a note (optional)',
@@ -325,7 +380,7 @@ abstract final class AyoI18n {
     'Jadikan rekening utama': 'Set as primary account',
     'Batalkan': 'Cancel',
     'Ayo Bantu Sesama!': 'Help Others with Ayo Suruh!',
-    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\\ntim kami yang andal dan terpercaya.':
+    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\\ntim kami yang handal dan terpercaya.':
         'Need help? Let Ayo Suruh handle it! Become part of\\nour reliable and trusted partner community.',
     'Pastikan data terbaca jelas\\nBukan hasil scan atau fotokopi berwarna':
         'Make sure all details are clearly readable\\nDo not use a scan or a color photocopy',
@@ -457,8 +512,12 @@ abstract final class AyoI18n {
     'Hapus Akun Permanen': 'Permanently Delete Account',
     'AyoPay': 'AyoPay',
     'Aktifkan AyoPay': 'Activate AyoPay',
-    'Satu dompet untuk saldo promo, voucher, dan metode pembayaran Ayo Suruh yang akan tersedia bertahap.':
-        'One wallet for promo balances, vouchers, and Ayo Suruh payment methods as they become available.',
+    'AyoPay berhasil diaktifkan dan siap digunakan untuk fitur finansial Ayo Suruh.':
+        'AyoPay has been activated and is ready for Ayo Suruh financial features.',
+    'Saldo dan aktivitas finansial Ayo Suruh tersimpan dalam satu tempat.':
+        'Your Ayo Suruh balance and financial activity are kept in one place.',
+    'Satu dompet untuk mengelola saldo dan fitur pembayaran Ayo Suruh yang tersedia bertahap.':
+        'One wallet to manage your balance and Ayo Suruh payment features as they become available.',
     'Aktifkan Sekarang': 'Activate Now',
     'Kenapa aktifkan AyoPay?': 'Why activate AyoPay?',
     'Saldo AyoPay': 'AyoPay Balance',
@@ -1194,7 +1253,7 @@ abstract final class AyoI18n {
     'Burung gagak bisa mengenali wajah manusia dan mengingatnya dalam waktu lama. Jadi kalau pernah bikin gagak kesel, mungkin jangan sok lupa.',
     'Butuh Bantuan?',
     'Butuh bantuan? Ayo suruh kami!',
-    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang andal dan terpercaya.',
+    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang handal dan terpercaya.',
     'Butuh jasa? Cari dari sini',
     'Cairkan',
     'Calon Mitra',
@@ -2652,6 +2711,8 @@ abstract final class AyoI18n {
     '“Karaoke” berasal dari bahasa Jepang: “kara” berarti kosong dan “okesutora” berarti orkestra. Singkatnya, orkestra tanpa penyanyi—sisanya giliran kamu.',
   };
   static const Map<String, String> _productionEnglish = <String, String>{
+    'Bonus Mitra Baru: 0% komisi untuk pekerjaan pertama. Menunggu masa hold 1 hari.':
+        'New Partner Bonus: 0% commission on the first eligible job. Waiting through the 1-day hold period.',
     'Lainnya': 'Other',
     'Tukang': 'Handyman',
     'Kurir': 'Courier',
@@ -2726,8 +2787,8 @@ abstract final class AyoI18n {
     'Belum ada transaksi AyoPay': 'No AyoPay transactions yet',
     'Mutasi saldo AyoPay akan tampil di sini setelah ada aktivitas.':
         'AyoPay balance activity will appear here after your first transaction.',
-    'Top up AyoPay akan diaktifkan setelah metode pembayaran online siap. Untuk sementara saldo dapat berasal dari promo/voucher yang valid.':
-        'AyoPay top up will be enabled when online payments are ready. For now, balance may come from valid promotions or vouchers.',
+    'Top up AyoPay akan diaktifkan setelah metode pembayaran online siap.':
+        'AyoPay top up will be enabled when online payments are ready.',
     'PIN AyoPay aktif': 'AyoPay PIN active',
     'Diperlukan untuk pencairan, pembatalan pencairan, dan perubahan akun.':
         'Required for withdrawals, withdrawal cancellation, and account changes.',
@@ -2796,7 +2857,7 @@ abstract final class AyoI18n {
     'Identitas legal berfoto lainnya': 'Other legal photo ID',
     'Paspor': 'Passport',
     'Bantu Orang Lain bersama Ayo Suruh!': 'Help Others with Ayo Suruh!',
-    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari tim kami yang andal dan terpercaya.':
+    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari tim kami yang handal dan terpercaya.':
         'Need a hand? Join our reliable and trusted partner community.',
     'Nama Lengkap': 'Full Name',
     'Nomor WhatsApp': 'WhatsApp Number',
@@ -3142,7 +3203,7 @@ abstract final class AyoI18n {
         'Activate AyoPay to unlock special vouchers. Benefits are added to your account automatically after activation.',
     'Refund setelah pendapatan Mitra tercatat dapat membuat penyesuaian ledger. Jika dana sudah masuk proses pencairan, admin wajib memeriksa saldo Mitra sebelum menutup kasus.':
         'A refund after Partner earnings have been recorded may create a ledger adjustment. If funds have already entered the withdrawal process, an admin must review the Partner balance before closing the case.',
-    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang andal dan terpercaya.':
+    'Butuh bantuan? Ayo suruh kami! Jadilah bagian dari\ntim kami yang handal dan terpercaya.':
         'Need a hand? Join our reliable and trusted\nPartner community.',
     ' menjadi mitra Ayo Suruh dan bersedia menjaga kualitas layanan.':
         ' become an Ayo Suruh Partner and commit to maintaining service quality.',
@@ -3367,14 +3428,23 @@ abstract final class AyoI18n {
     'Belum ada pendapatan yang masuk ke dompet.':
         'No earnings have entered the wallet yet.',
     'Belum ada aktivitas saldo': 'No balance activity yet',
-    'Pendapatan, pencairan, voucher, dan penyesuaian saldo akan muncul di sini.':
-        'Earnings, withdrawals, vouchers, and balance adjustments will appear here.',
+    'Pendapatan, pencairan, komisi, dan penyesuaian saldo akan muncul di sini.':
+        'Earnings, withdrawals, commissions, and balance adjustments will appear here.',
     'Pendapatan Pekerjaan': 'Job Earnings',
     'Saldo Ditahan': 'Held Balance',
     'Saldo Dikembalikan': 'Released Balance',
     'Pencairan Berhasil': 'Withdrawal Successful',
     'Penyesuaian Refund': 'Refund Adjustment',
     'Subsidi Voucher Cash': 'Cash Voucher Subsidy',
+    'Komisi Platform Cash': 'Cash Platform Commission',
+    'SALDO TERUTANG': 'OUTSTANDING BALANCE',
+    'Komisi Cash atau penyesuaian yang belum tertutup akan otomatis dipotong dari saldo dan pendapatan AyoPay berikutnya. Customer tidak dikenakan biaya tambahan.':
+        'Unsettled Cash commission or adjustments are automatically offset against your next AyoPay balance and earnings. The Customer is not charged an additional fee.',
+    'Bayar langsung kepada Mitra setelah pekerjaan selesai. Nominal Customer tidak ditambah komisi platform; komisi diselesaikan terpisah melalui saldo AyoPay Mitra.':
+        'Pay the Partner directly after the job is completed. The Customer amount is not increased by the platform commission; the commission is settled separately through the Partner’s AyoPay balance.',
+    'Komisi platform untuk transaksi Cash. Dipotong dari saldo AyoPay; jika saldo belum cukup, menjadi saldo terutang dan otomatis tertutup oleh pendapatan berikutnya.':
+        'Platform commission for a Cash transaction. It is deducted from the AyoPay balance; if the balance is insufficient, it becomes outstanding and is automatically offset by future earnings.',
+
     'Penyesuaian Saldo': 'Balance Adjustment',
     'Pendapatan pekerjaan selesai. Menunggu masa hold 1 hari.':
         'Job earnings recorded. Waiting through the 1-day hold period.',
@@ -3382,7 +3452,8 @@ abstract final class AyoI18n {
         'Balance held for a withdrawal request.',
     'Saldo menunggu proses pencairan.':
         'Balance is waiting for payout processing.',
-    'Pencairan dibatalkan oleh mitra.': 'Withdrawal cancelled by the Partner.',
+    'Pencairan dibatalkan oleh mitra.':
+        'Withdrawal cancelled by the Partner.',
     'Saldo dikembalikan setelah pencairan dibatalkan.':
         'Balance returned after the withdrawal was cancelled.',
     'Subsidi voucher untuk transaksi Cash. Customer membayar nominal setelah diskon langsung ke Mitra.':

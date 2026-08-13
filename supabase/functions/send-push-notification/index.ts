@@ -238,6 +238,7 @@ Deno.serve(async (request) => {
     }
 
     const accessToken = await createAccessToken(account);
+    const isVoiceCall = notification.type === "voice_call_incoming";
 
     const endpoint =
       `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`;
@@ -267,8 +268,9 @@ Deno.serve(async (request) => {
                   restricted_package_name:
                     "com.ayosuruh.app",
                   notification: {
-                    channel_id:
-                      "ayosuruh_high_importance",
+                    channel_id: isVoiceCall
+                      ? "ayosuruh_calls"
+                      : "ayosuruh_high_importance",
                     sound: "default",
                   },
                 },

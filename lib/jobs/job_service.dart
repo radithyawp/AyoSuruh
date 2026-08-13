@@ -46,6 +46,60 @@ class JobService {
     return 6;
   }
 
+  Future<Map<String, dynamic>> fetchMyGrowthBenefits() async {
+    try {
+      final dynamic result = await _client.rpc('get_my_growth_benefits');
+      if (result is List && result.isNotEmpty && result.first is Map) {
+        return Map<String, dynamic>.from(result.first as Map);
+      }
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+    } on PostgrestException catch (error) {
+      final String lower = error.message.toLowerCase();
+      final bool missing = error.code == 'PGRST202' ||
+          lower.contains('get_my_growth_benefits') &&
+              (lower.contains('not find') || lower.contains('does not exist'));
+      if (!missing) rethrow;
+      debugPrint(
+        'Growth incentives migration belum tersedia. Benefit UI dinonaktifkan: $error',
+      );
+    }
+    return <String, dynamic>{
+      'first_job_bonus_available': false,
+      'first_job_bonus_reserved': false,
+      'first_job_bonus_used': false,
+      'normal_platform_fee_percent': await fetchPlatformFeePercent(),
+    };
+  }
+
+  bool _isActiveFirstJobPriority(Map<String, dynamic> job) {
+    if (job['is_first_job_priority'] != true) return false;
+    final DateTime? until = DateTime.tryParse(
+      (job['priority_until'] ?? '').toString(),
+    )?.toUtc();
+    return until != null && until.isAfter(DateTime.now().toUtc());
+  }
+
+  int _compareAvailableJobs(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    final bool aPriority = _isActiveFirstJobPriority(a);
+    final bool bPriority = _isActiveFirstJobPriority(b);
+    if (aPriority != bPriority) return aPriority ? -1 : 1;
+
+    final DateTime aCreated = DateTime.tryParse(
+          (a['created_at'] ?? '').toString(),
+        ) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final DateTime bCreated = DateTime.tryParse(
+          (b['created_at'] ?? '').toString(),
+        ) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return bCreated.compareTo(aCreated);
+  }
+
   Future<List<Map<String, dynamic>>> fetchCategories() async {
     try {
       final dynamic result = await _client
@@ -313,6 +367,31 @@ class JobService {
     return jobId;
   }
 
+  Future<bool> fetchFirstJobPriorityStatus(String jobId) async {
+    try {
+      final Map<String, dynamic>? row = await _client
+          .from('jobs')
+          .select('is_first_job_priority, priority_until')
+          .eq('id', jobId)
+          .maybeSingle();
+      if (row == null || row['is_first_job_priority'] != true) return false;
+      final DateTime? until = DateTime.tryParse(
+        (row['priority_until'] ?? '').toString(),
+      )?.toUtc();
+      return until != null && until.isAfter(DateTime.now().toUtc());
+    } on PostgrestException catch (error) {
+      final String lower = error.message.toLowerCase();
+      if (lower.contains('is_first_job_priority') ||
+          lower.contains('priority_until')) {
+        debugPrint(
+          'Priority First Job migration belum tersedia: $error',
+        );
+        return false;
+      }
+      rethrow;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchCustomerJobs() async {
     final dynamic result = await _client
         .from('jobs')
@@ -320,6 +399,7 @@ class JobService {
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
+          is_first_job_priority, priority_until,
           categories(id, name, icon),
           addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
           destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
@@ -339,6 +419,7 @@ class JobService {
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
+          is_first_job_priority, priority_until,
           categories(id, name, icon),
           addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
           destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
@@ -349,7 +430,10 @@ class JobService {
         .neq('customer_id', currentUserId)
         .or('preferred_mitra_id.is.null,preferred_mitra_id.eq.$currentUserId')
         .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(result as List);
+    final List<Map<String, dynamic>> jobs =
+        List<Map<String, dynamic>>.from(result as List);
+    jobs.sort(_compareAvailableJobs);
+    return jobs;
   }
 
   Future<List<Map<String, dynamic>>> fetchMitraBids() async {
@@ -391,6 +475,7 @@ class JobService {
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
+          is_first_job_priority, priority_until,
           categories(id, name, icon),
           addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
           destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
@@ -410,6 +495,7 @@ class JobService {
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
+          is_first_job_priority, priority_until,
           categories(id, name, icon),
           addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
           destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),
@@ -448,6 +534,7 @@ class JobService {
           id, customer_id, category_id, title, description, budget,
           address_id, latitude, longitude, destination_address_id, destination_latitude, destination_longitude, schedule_date, schedule_time,
           status, progress_stage, work_mode, created_at, mitra_id, preferred_mitra_id,
+          is_first_job_priority, priority_until,
           categories(id, name, icon),
           addresses:addresses!jobs_address_id_fkey(id, label, address, latitude, longitude),
           destination_address:addresses!jobs_destination_address_id_fkey(id, label, address, latitude, longitude),

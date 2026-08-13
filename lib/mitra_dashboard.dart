@@ -31,6 +31,7 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
   bool _isUnauthorized = false;
   String? _errorMessage;
   Map<String, dynamic> _profile = <String, dynamic>{};
+  Map<String, dynamic> _growthBenefits = <String, dynamic>{};
   Map<String, dynamic>? _activeJob;
   List<Map<String, dynamic>> _availableJobs = <Map<String, dynamic>>[];
 
@@ -62,6 +63,7 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
         _jobService.fetchMitraDashboardProfile(),
         _jobService.fetchAssignedMitraJobs(),
         _jobService.fetchAvailableJobs(),
+        _jobService.fetchMyGrowthBenefits(),
       ]);
       final List<Map<String, dynamic>> activeJobs =
           result[1] as List<Map<String, dynamic>>;
@@ -71,6 +73,7 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
       if (!mounted) return;
       setState(() {
         _profile = result[0] as Map<String, dynamic>;
+        _growthBenefits = result[3] as Map<String, dynamic>;
         _activeJob = activeJobs.isEmpty ? null : activeJobs.first;
         _availableJobs = availableJobs.take(3).toList();
         _isUnauthorized = false;
@@ -177,6 +180,10 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
                 key: widget.tutorialAnchors?.homeSearchOrIncome,
                 child: _buildIncomeCard(),
               ),
+              if (_shouldShowFirstJobBonus) ...<Widget>[
+                const SizedBox(height: 12),
+                _buildFirstJobBonusCard(),
+              ],
               const SizedBox(height: 10),
               _buildStats(),
               const SizedBox(height: 14),
@@ -527,6 +534,92 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
     );
   }
 
+  bool get _shouldShowFirstJobBonus {
+    return _growthBenefits['first_job_bonus_available'] == true ||
+        _growthBenefits['first_job_bonus_reserved'] == true;
+  }
+
+  num get _normalPlatformFeePercent {
+    final dynamic value = _growthBenefits['normal_platform_fee_percent'];
+    return value is num ? value : num.tryParse(value?.toString() ?? '') ?? 6;
+  }
+
+  Widget _buildFirstJobBonusCard() {
+    final bool reserved =
+        _growthBenefits['first_job_bonus_reserved'] == true;
+    final num rate = _normalPlatformFeePercent;
+    final String rateLabel = rate.toDouble() == rate.roundToDouble()
+        ? rate.toStringAsFixed(0)
+        : rate.toStringAsFixed(2);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Color.alphaBlend(
+                const Color(0xFFFFB84D).withValues(alpha: 0.14),
+                Theme.of(context).colorScheme.surface,
+              )
+            : const Color(0xFFFFF0D7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF8B6734)
+              : const Color(0xFFFFD296),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.celebration_rounded,
+              color: jobOrangeColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AyoText(
+                  AyoI18n.isEnglish
+                      ? 'New Partner Bonus'
+                      : 'Bonus Mitra Baru',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AyoText(
+                  reserved
+                      ? (AyoI18n.isEnglish
+                          ? 'Your 0% commission bonus is reserved for your first eligible job. Complete the job and payment to use the bonus.'
+                          : 'Bonus 0% komisi sudah dicadangkan untuk pekerjaan pertamamu. Selesaikan pekerjaan dan pembayaran agar bonus terpakai.')
+                      : (AyoI18n.isEnglish
+                          ? 'Enjoy 0% commission on your first eligible successfully completed job. After the bonus is used, the normal $rateLabel% commission applies.'
+                          : 'Nikmati 0% komisi pada pekerjaan pertamamu yang memenuhi syarat dan berhasil selesai. Setelah bonus terpakai, komisi normal $rateLabel% berlaku.'),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAvailableJobs() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,6 +679,29 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
+                              if (isFirstJobPriority(job)) ...<Widget>[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFE4B8),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: AyoText(
+                                    AyoI18n.isEnglish
+                                        ? 'AYOS PRIORITY'
+                                        : 'PRIORITAS AYOS',
+                                    style: const TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF9B5C00),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                              ],
                               AyoText(
                                 job['title'].toString(),
                                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),

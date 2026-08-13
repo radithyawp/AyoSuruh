@@ -18,7 +18,7 @@ class MitraApplicationService {
   Future<Map<String, dynamic>> fetchMyProfile() async {
     final Map<String, dynamic>? row = await _client
         .from('users')
-        .select('id, email, fullname, phone, alamat, role')
+        .select('id, email, fullname, phone, phone_verification_level, alamat, role')
         .eq('id', currentUserId)
         .maybeSingle();
 
