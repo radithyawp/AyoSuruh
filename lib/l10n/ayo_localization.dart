@@ -656,6 +656,10 @@ abstract final class AyoI18n {
         'Post a Service. Find or Create What You Need!',
     'Ayo Suruh tersedia di Play Store':
         'Ayo Suruh is available on the Play Store',
+    'Ayo Suruh kini tersedia di Android dan siap untuk iOS':
+        'Ayo Suruh is available on Android and ready for iOS',
+    'Build native iOS Ayo Suruh sudah tervalidasi. Distribusi publik iOS belum dibuka.':
+        'Ayo Suruh native iOS build has been validated. Public iOS distribution is not available yet.',
     'Mau Tambah Uang Saku': 'Want to Earn Extra Money?',
     'Periksa ulang': 'Review again',
 

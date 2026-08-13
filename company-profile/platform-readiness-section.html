@@ -1,0 +1,33 @@
+<!-- Ayo Suruh platform readiness section — drop into the company profile -->
+<section class="ayo-platform-readiness" aria-labelledby="platform-readiness-title">
+  <div class="ayo-platform-copy">
+    <span class="ayo-platform-eyebrow">PLATFORM</span>
+    <h2 id="platform-readiness-title">Android tersedia. iOS siap.</h2>
+    <p>
+      Ayo Suruh tersedia untuk Android. Native build iOS telah divalidasi
+      pada macOS/Xcode, sementara distribusi publik iOS akan menyusul.
+    </p>
+  </div>
+  <div class="ayo-platform-grid">
+    <article class="ayo-platform-card is-available">
+      <div class="ayo-platform-icon" aria-hidden="true">A</div>
+      <div>
+        <strong>Android</strong>
+        <span>Tersedia</span>
+      </div>
+    </article>
+    <article class="ayo-platform-card is-ready">
+      <div class="ayo-platform-icon" aria-hidden="true">iOS</div>
+      <div>
+        <strong>iOS</strong>
+        <span>Native Build Validated</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<style>
+.ayo-platform-readiness{max-width:1120px;margin:0 auto;padding:32px;border:1px solid rgba(255,255,255,.45);border-radius:28px;background:linear-gradient(135deg,rgba(255,247,241,.88),rgba(255,224,215,.72));box-shadow:0 20px 60px rgba(104,67,47,.12);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.ayo-platform-eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.14em;color:#ee7462}.ayo-platform-copy h2{margin:.35rem 0 .65rem;font-size:clamp(1.8rem,4vw,3rem);color:#3d2c25}.ayo-platform-copy p{max-width:760px;margin:0;color:#6d5c54;line-height:1.7}.ayo-platform-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.ayo-platform-card{display:flex;align-items:center;gap:14px;padding:18px;border-radius:20px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.7)}.ayo-platform-card strong,.ayo-platform-card span{display:block}.ayo-platform-card strong{color:#3d2c25}.ayo-platform-card span{margin-top:3px;color:#75645c;font-size:.9rem}.ayo-platform-icon{display:grid;place-items:center;min-width:52px;height:52px;padding:0 10px;border-radius:16px;background:#fff1eb;color:#ee7462;font-weight:900}.is-available .ayo-platform-icon{background:#ecf6e6;color:#4d7c43}.is-ready .ayo-platform-icon{background:#fff0ec;color:#df6b59}@media(max-width:650px){.ayo-platform-readiness{padding:24px}.ayo-platform-grid{grid-template-columns:1fr}}
+@media(prefers-color-scheme:dark){.ayo-platform-readiness{background:linear-gradient(135deg,rgba(45,35,31,.9),rgba(68,42,36,.82));border-color:rgba(255,255,255,.08)}.ayo-platform-copy h2,.ayo-platform-card strong{color:#fff8f4}.ayo-platform-copy p,.ayo-platform-card span{color:#d6c8c1}.ayo-platform-card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}}
+</style>

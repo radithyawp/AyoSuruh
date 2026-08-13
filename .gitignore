@@ -55,3 +55,6 @@ supabase/functions/.env*
 android/build/
 
 node_modules/
+
+# Local release artifacts
+/release/

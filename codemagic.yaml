@@ -78,4 +78,3 @@ workflows:
       - build/ios/iphoneos/**/*.app
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
-

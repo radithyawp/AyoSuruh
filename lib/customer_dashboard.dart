@@ -90,7 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _PromoItem(
       assetPathId: 'assets/images/home_slider_4_id.png',
       assetPathEn: 'assets/images/home_slider_4_en.png',
-      semanticLabel: 'Ayo Suruh tersedia di Play Store',
+      semanticLabel: 'Ayo Suruh kini tersedia di Android dan siap untuk iOS',
       action: _PromoAction.playStore,
     ),
     _PromoItem(
@@ -110,11 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _triviaItems = _homeTriviaService.fallbackItems;
-    _platformPromos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
-        ? _promos
-            .where((_PromoItem promo) => promo.action != _PromoAction.playStore)
-            .toList(growable: false)
-        : _promos;
+    _platformPromos = _promos;
     _promoController = PageController(
       initialPage: _platformPromos.length * _promoLoopSeed,
     );
@@ -296,6 +292,18 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _openPlayStore() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      if (mounted) {
+        AyoSnackBar.info(
+          context,
+          AyoI18n.t(
+            'Build native iOS Ayo Suruh sudah tervalidasi. Distribusi publik iOS belum dibuka.',
+          ),
+        );
+      }
+      return;
+    }
+
     final bool launched = await launchUrl(
       _playStoreUri,
       mode: LaunchMode.externalApplication,
