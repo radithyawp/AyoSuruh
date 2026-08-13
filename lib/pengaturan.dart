@@ -425,7 +425,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
                   const SizedBox(height: 32),
                   Center(
                     child: AyoText(
-                      'Versi 1.0.0 (Build 1)',
+                      'Versi 1.1.0 (Build 2)',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),

@@ -6,6 +6,7 @@ import 'customer_job_detail_page.dart';
 import '../notification.dart';
 import '../mitra/mitra_application_page.dart';
 import '../mitra/mitra_application_service.dart';
+import '../widgets/ayo_crystal.dart';
 import 'mitra_job_detail_page.dart';
 
 import 'job_helpers.dart';
@@ -34,6 +35,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
   late final TabController _tabController;
 
   bool _isLoading = true;
+  bool _headerScrolled = false;
   String? _errorMessage;
   List<Map<String, dynamic>> _jobs = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _opportunities = <Map<String, dynamic>>[];
@@ -110,6 +112,15 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
     if (changed == true) await _loadJobs();
   }
 
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final bool scrolled = notification.metrics.pixels > 8;
+    if (scrolled != _headerScrolled && mounted) {
+      setState(() => _headerScrolled = scrolled);
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> activeJobs = _jobs.where((job) {
@@ -119,13 +130,15 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
       return <String>['completed', 'cancelled'].contains(job['status']);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: jobBackgroundColor,
+    return AyoGradientBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: jobBackgroundColor,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: AyoCrystalBarLayer(scrolled: _headerScrolled),
         title: AyoText(
           'Pekerjaan',
           style: TextStyle(
@@ -157,10 +170,13 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
         ),
 
       ),
-      body: _buildBody(activeJobs, historyJobs),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: _buildBody(activeJobs, historyJobs),
+      ),
       floatingActionButton: Padding(
         key: widget.tutorialPrimaryActionKey,
-        padding: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.only(bottom: 92),
         child: FloatingActionButton.extended(
           heroTag: 'customer-jobs-create-job-fab',
           onPressed: _openCreateJob,
@@ -172,6 +188,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
+      ),
       ),
     );
   }
@@ -264,7 +281,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
               ],
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 100),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 156),
               itemCount: _opportunities.length + 1,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
@@ -321,7 +338,7 @@ class _CustomerJobsPageState extends State<CustomerJobsPage>
               ],
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 100),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 156),
               itemCount: jobs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {

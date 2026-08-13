@@ -19,6 +19,7 @@ import 'tutorial/ayos_tutorial.dart';
 import 'theme/ayo_theme.dart';
 import 'widgets/ayo_avatar.dart';
 import 'widgets/ayo_category_visual.dart';
+import 'widgets/ayo_crystal.dart';
 import 'widgets/ayo_snackbar.dart';
 import 'widgets/home_trivia_ticker.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
@@ -51,6 +52,8 @@ class _DashboardPageState extends State<DashboardPage> {
   static const int _promoLoopSeed = 1000;
   late final PageController _promoController;
   Timer? _promoTimer;
+  late final ScrollController _homeScrollController;
+  bool _headerScrolled = false;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -107,8 +110,16 @@ class _DashboardPageState extends State<DashboardPage> {
     _triviaItems = _homeTriviaService.fallbackItems;
     _promoController =
         PageController(initialPage: _promos.length * _promoLoopSeed);
+    _homeScrollController = ScrollController()..addListener(_handleHomeScroll);
     _fetchDashboardData();
     _schedulePromoAdvance();
+  }
+
+  void _handleHomeScroll() {
+    final bool next = _homeScrollController.hasClients &&
+        _homeScrollController.offset > 12;
+    if (next == _headerScrolled || !mounted) return;
+    setState(() => _headerScrolled = next);
   }
 
   void _schedulePromoAdvance() {
@@ -138,6 +149,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void dispose() {
     _promoTimer?.cancel();
     _promoController.dispose();
+    _homeScrollController.dispose();
     super.dispose();
   }
 
@@ -325,18 +337,23 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final double topInset = MediaQuery.paddingOf(context).top + 76;
+    final double bottomSafeSpace = MediaQuery.paddingOf(context).bottom + 140;
     return Scaffold(
-      backgroundColor: jobBackgroundColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: jobOrangeColor),
-            )
-          : RefreshIndicator(
-              color: jobOrangeColor,
-              onRefresh: _fetchDashboardData,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 32),
+      body: AyoGradientBackground(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: jobOrangeColor),
+              )
+            : RefreshIndicator(
+                color: jobOrangeColor,
+                onRefresh: _fetchDashboardData,
+                child: ListView(
+                  controller: _homeScrollController,
+                  padding: EdgeInsets.fromLTRB(0, topInset + 8, 0, bottomSafeSpace),
                 children: <Widget>[
                   if (_errorMessage != null)
                     Padding(
@@ -356,8 +373,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: KeyedSubtree(
+                    child: SizedBox(
                       key: widget.tutorialAnchors?.homeHeader,
+                      width: double.infinity,
                       child: _buildHeader(),
                     ),
                   ),
@@ -393,27 +411,42 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: _buildRecentJobsSection(),
                   ),
                 ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final Color iconColor = Theme.of(context).colorScheme.onSurface;
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: jobBackgroundColor,
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       toolbarHeight: 68,
       titleSpacing: 18,
+      flexibleSpace: AyoCrystalBarLayer(scrolled: _headerScrolled),
       title: Row(
         children: <Widget>[
-          SizedBox(
-            width: 38,
-            height: 38,
-            child: Image.asset(
-              'assets/images/ayos_runner_logo.png',
-              fit: BoxFit.contain,
+          AnimatedScale(
+            scale: _headerScrolled ? 0.94 : 1,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            child: AyoCrystalSurface(
+              intensity: _headerScrolled ? 0.92 : 0.52,
+              blurSigma: _headerScrolled ? 16 : 7,
+              elevated: _headerScrolled,
+              borderRadius: const BorderRadius.all(Radius.circular(14)),
+              padding: const EdgeInsets.all(5),
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: Image.asset(
+                  'assets/images/ayos_runner_logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 9),
@@ -424,9 +457,15 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           const SizedBox(width: 8),
-          NotificationBell(
-            color: jobDarkBrownColor,
-            activeMode: 'customer',
+          AyoCrystalSurface(
+            intensity: _headerScrolled ? 0.96 : 0.64,
+            blurSigma: _headerScrolled ? 18 : 8,
+            elevated: _headerScrolled,
+            borderRadius: const BorderRadius.all(Radius.circular(15)),
+            child: NotificationBell(
+              color: iconColor,
+              activeMode: 'customer',
+            ),
           ),
         ],
       ),
@@ -491,21 +530,29 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: jobBorderColor),
-      ),
+    return AyoCrystalSurface(
+      intensity: _headerScrolled ? 0.96 : 0.68,
+      blurSigma: _headerScrolled ? 18 : 9,
+      elevated: _headerScrolled,
+      borderRadius: const BorderRadius.all(Radius.circular(15)),
       child: TextField(
         readOnly: true,
         onTap: _showServiceSearch,
         decoration: InputDecoration(
-          prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF746A64)),
+          filled: false,
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           hintText: AyoI18n.t('Cari layanan...'),
-          hintStyle: TextStyle(fontSize: 12, color: Color(0xFF9B918C)),
+          hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 11),
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
@@ -587,12 +634,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  AyoCategoryImage(
-                    name: name,
-                    width: 72,
-                    height: 72,
-                    radius: 18,
-                  ),
+                  AyoCategoryHomeIcon(name: name, size: 72, radius: 20),
                   const SizedBox(height: 7),
                   AyoText(
                     name,
@@ -627,13 +669,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ),
-              TextButton(
-                onPressed: _showServiceSearch,
-                child: AyoText(
-                  'Lihat semua',
-                  style: AyoTypography.link(context, color: AyoColors.coral),
-                ),
-              ),
+              AyoSeeAllButton(onPressed: _showServiceSearch),
             ],
           ),
         ),
@@ -691,13 +727,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
               ),
-              TextButton(
-                onPressed: _showServiceSearch,
-                child: AyoText(
-                  'Lihat semua',
-                  style: AyoTypography.link(context, color: AyoColors.coral),
-                ),
-              ),
+              AyoSeeAllButton(onPressed: _showServiceSearch),
             ],
           ),
         ),

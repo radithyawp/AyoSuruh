@@ -51,6 +51,25 @@ function formatWib(date: Date): string {
   return `${shifted.toISOString().slice(0, 19).replace('T', ' ')} +0700`;
 }
 
+function findQrisUrl(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const actions = Array.isArray((raw as Record<string, unknown>).actions)
+    ? ((raw as Record<string, unknown>).actions as unknown[])
+    : [];
+  const preferredNames = ['generate-qr-code-v2', 'generate-qr-code'];
+  for (const name of preferredNames) {
+    const action = actions.find((entry) => {
+      if (!entry || typeof entry !== 'object') return false;
+      return String((entry as Record<string, unknown>).name ?? '') === name;
+    });
+    if (action && typeof action === 'object') {
+      const url = String((action as Record<string, unknown>).url ?? '').trim();
+      if (url) return url;
+    }
+  }
+  return undefined;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -89,7 +108,14 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const jobId = String(body.job_id ?? '').trim();
+    const sandboxQrisRequested = body.sandbox_qris === true;
     if (!jobId) return json({ error: 'job_id wajib diisi.' }, 400);
+    if (sandboxQrisRequested && isProduction) {
+      return json(
+        { error: 'Helper QRIS Sandbox tidak tersedia pada environment Production.' },
+        409,
+      );
+    }
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const { data: job, error: jobError } = await admin
@@ -145,10 +171,20 @@ Deno.serve(async (req) => {
       existing?.payment_required === true &&
       existing?.status === 'pending' &&
       existing?.redirect_url &&
-      existing?.snap_token &&
       (!existingExpiry || existingExpiry.getTime() > Date.now());
 
-    if (existingActive) {
+    if (existingActive && sandboxQrisRequested) {
+      const existingQrisUrl = findQrisUrl(existing?.raw_response);
+      if (String(existing?.payment_type ?? '').toLowerCase() === 'qris' && existingQrisUrl) {
+        return json({
+          success: true,
+          reused: true,
+          payment: existing,
+          sandbox_qr_url: existingQrisUrl,
+          sandbox_simulator_url: 'https://simulator.sandbox.midtrans.com/v2/qris/index',
+        });
+      }
+    } else if (existingActive && existing?.snap_token) {
       return json({ success: true, reused: true, payment: existing });
     }
 
@@ -218,6 +254,123 @@ Deno.serve(async (req) => {
     if (email) customerDetails.email = email.slice(0, 255);
     const phone = normalizePhone(customer.phone);
     if (phone) customerDetails.phone = phone;
+
+    if (sandboxQrisRequested) {
+      const qrisBody = {
+        payment_type: 'qris',
+        transaction_details: {
+          order_id: orderId,
+          gross_amount: grossAmount,
+        },
+        item_details: itemDetails,
+        customer_details: customerDetails,
+        custom_expiry: {
+          order_time: formatWib(createdAt),
+          expiry_duration: 30,
+          unit: 'minute',
+        },
+        custom_field1: jobId,
+        custom_field2: String(job.mitra_id),
+      };
+
+      const qrisResponse = await fetch('https://api.sandbox.midtrans.com/v2/charge', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${btoa(`${serverKey}:`)}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(qrisBody),
+      });
+      const qrisData = await qrisResponse.json().catch(() => ({}));
+
+      if (!qrisResponse.ok) {
+        console.error('Midtrans QRIS sandbox create failed', qrisData);
+        return json(
+          {
+            error:
+              qrisData?.error_messages?.join?.(', ') ??
+              qrisData?.status_message ??
+              'Midtrans menolak pembuatan QRIS Sandbox.',
+          },
+          qrisResponse.status >= 400 && qrisResponse.status < 500 ? 400 : 502,
+        );
+      }
+
+      const qrisUrl = findQrisUrl(qrisData);
+      if (!qrisUrl) {
+        return json({ error: 'Respons Midtrans tidak memuat URL QRIS Sandbox.' }, 502);
+      }
+
+      const paymentPayload = {
+        job_id: jobId,
+        amount: baseAmount,
+        service_fee: serviceFee,
+        provider: 'midtrans',
+        payment_required: true,
+        status: 'pending',
+        paid_at: null,
+        order_id: orderId,
+        snap_token: null,
+        redirect_url: qrisUrl,
+        transaction_id: qrisData.transaction_id ?? null,
+        transaction_status: qrisData.transaction_status ?? 'pending',
+        fraud_status: qrisData.fraud_status ?? null,
+        payment_type: 'qris',
+        status_code: qrisData.status_code ?? null,
+        status_message: qrisData.status_message ?? 'Menunggu simulasi QRIS Sandbox.',
+        expires_at: expiresAt.toISOString(),
+        raw_response: qrisData,
+        raw_notification: null,
+      };
+
+      const { data: payment, error: paymentError } = await admin
+        .from('payments')
+        .upsert(paymentPayload, { onConflict: 'job_id' })
+        .select('*')
+        .single();
+      if (paymentError) {
+        console.error('QRIS sandbox payment upsert failed', paymentError);
+        return json({ error: 'QRIS dibuat, tetapi transaksi gagal disimpan.' }, 500);
+      }
+
+      const { error: attemptError } = await admin
+        .from('payment_attempts')
+        .upsert(
+          {
+            payment_id: payment.id,
+            job_id: jobId,
+            order_id: orderId,
+            snap_token: null,
+            redirect_url: qrisUrl,
+            amount: baseAmount,
+            service_fee: serviceFee,
+            status: 'pending',
+            transaction_id: qrisData.transaction_id ?? null,
+            transaction_status: qrisData.transaction_status ?? 'pending',
+            payment_type: 'qris',
+            status_code: qrisData.status_code ?? null,
+            status_message: qrisData.status_message ?? 'Menunggu simulasi QRIS Sandbox.',
+            expires_at: expiresAt.toISOString(),
+            raw_response: qrisData,
+          },
+          { onConflict: 'order_id' },
+        );
+      if (attemptError) {
+        console.error('QRIS sandbox payment attempt insert failed', attemptError);
+      }
+
+      return json(
+        {
+          success: true,
+          reused: false,
+          payment,
+          sandbox_qr_url: qrisUrl,
+          sandbox_simulator_url: 'https://simulator.sandbox.midtrans.com/v2/qris/index',
+        },
+        201,
+      );
+    }
 
     const snapBody = {
       transaction_details: {

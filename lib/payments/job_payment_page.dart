@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/ayo_snackbar.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,7 +38,9 @@ class _JobPaymentPageState extends State<JobPaymentPage>
 
   bool _isLoading = true;
   bool _isCreating = false;
+  bool _isCreatingSandboxQris = false;
   bool _isRefreshing = false;
+  String? _sandboxQrisUrl;
   String? _errorMessage;
   Map<String, dynamic>? _payment;
   Map<String, dynamic>? _refund;
@@ -210,6 +213,107 @@ class _JobPaymentPageState extends State<JobPaymentPage>
     );
     if (!opened && mounted) {
       AyoSnackBar.error(context, 'Halaman Midtrans tidak dapat dibuka.');
+    }
+  }
+
+  String get _currentSandboxQrisUrl {
+    final String cached = (_sandboxQrisUrl ?? '').trim();
+    if (cached.isNotEmpty) return cached;
+
+    final String paymentType = (_payment?['payment_type'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (paymentType != 'qris') return '';
+
+    final String redirectUrl = (_payment?['redirect_url'] ?? '').toString().trim();
+    if (redirectUrl.contains('midtrans.com') &&
+        redirectUrl.contains('/qr-code')) {
+      return redirectUrl;
+    }
+    return '';
+  }
+
+  Future<String?> _ensureSandboxQrisUrl() async {
+    final String current = _currentSandboxQrisUrl;
+    if (current.isNotEmpty) return current;
+    if (_isCreatingSandboxQris) return null;
+
+    setState(() => _isCreatingSandboxQris = true);
+    try {
+      final Map<String, dynamic> result = await _paymentService
+          .createSandboxQrisTransaction(widget.jobId);
+      final dynamic rawPayment = result['payment'];
+      final Map<String, dynamic>? payment = rawPayment is Map
+          ? Map<String, dynamic>.from(rawPayment)
+          : await _paymentService.fetchJobPayment(widget.jobId);
+      if (payment != null) {
+        _applyPayment(payment);
+      }
+      await _loadAttempts();
+
+      final String qrisUrl = (result['sandbox_qr_url'] ?? '').toString().trim();
+      if (qrisUrl.isEmpty) {
+        throw StateError('URL QRIS Sandbox belum tersedia.');
+      }
+      if (mounted) {
+        setState(() => _sandboxQrisUrl = qrisUrl);
+      } else {
+        _sandboxQrisUrl = qrisUrl;
+      }
+      return qrisUrl;
+    } catch (error) {
+      if (mounted) {
+        AyoSnackBar.error(
+          context,
+          AyoI18n.isEnglish
+              ? 'Could not create Sandbox QRIS: $error'
+              : 'QRIS Sandbox belum dapat dibuat: $error',
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _isCreatingSandboxQris = false);
+    }
+  }
+
+  Future<void> _copySandboxQrisUrl() async {
+    final String? qrisUrl = await _ensureSandboxQrisUrl();
+    if (qrisUrl == null || qrisUrl.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: qrisUrl));
+    if (!mounted) return;
+    AyoSnackBar.success(
+      context,
+      AyoI18n.t('URL QRIS Sandbox sudah disalin.'),
+    );
+  }
+
+  Future<void> _openSandboxQrisSimulator() async {
+    final String? qrisUrl = await _ensureSandboxQrisUrl();
+    if (qrisUrl == null || qrisUrl.isEmpty) return;
+
+    await Clipboard.setData(ClipboardData(text: qrisUrl));
+    if (!mounted) return;
+    AyoSnackBar.success(
+      context,
+      AyoI18n.t(
+        'URL QRIS sudah disalin. Tempel di simulator lalu tekan Scan QR.',
+      ),
+    );
+
+    final Uri simulatorUri = Uri.parse(
+      'https://simulator.sandbox.midtrans.com/v2/qris/index',
+    );
+    final bool opened = await launchUrl(
+      simulatorUri,
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
+    if (!opened && mounted) {
+      AyoSnackBar.info(
+        context,
+        AyoI18n.t('Simulator QRIS Midtrans tidak dapat dibuka.'),
+      );
     }
   }
 
@@ -527,6 +631,10 @@ class _JobPaymentPageState extends State<JobPaymentPage>
                   ),
                 ),
               ],
+              if (kDebugMode) ...<Widget>[
+                const SizedBox(height: 12),
+                _sandboxQrisHelperCard(),
+              ],
               if (kDebugMode &&
                   (_payment?['order_id'] ?? '').toString().trim().isNotEmpty &&
                   status == 'pending') ...<Widget>[
@@ -585,6 +693,148 @@ class _JobPaymentPageState extends State<JobPaymentPage>
               ],
             ],
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sandboxQrisHelperCard() {
+    final String qrisUrl = _currentSandboxQrisUrl;
+    final bool hasQrisUrl = qrisUrl.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: paymentOrange.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: paymentOrange.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.qr_code_2_rounded,
+                  color: paymentOrange,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: AyoText(
+                  'QRIS Sandbox Helper',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: paymentOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const AyoText(
+                  'DEBUG',
+                  style: TextStyle(
+                    color: paymentOrange,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const AyoText(
+            'Khusus pengujian di HP. Ayo Suruh akan membuat QRIS Sandbox, menyalin URL QR, lalu membuka simulator Midtrans.',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.45,
+              color: Color(0xFF6D6059),
+            ),
+          ),
+          if (hasQrisUrl) ...<Widget>[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: paymentOrange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: AyoText(
+                'QRIS siap · URL tersedia untuk simulator',
+                style: TextStyle(
+                  color: paymentBrown,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isCreatingSandboxQris
+                  ? null
+                  : _openSandboxQrisSimulator,
+              style: FilledButton.styleFrom(
+                backgroundColor: paymentOrange,
+                foregroundColor: paymentDarkBrown,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+              ),
+              icon: _isCreatingSandboxQris
+                  ? SizedBox(
+                      width: 17,
+                      height: 17,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: paymentDarkBrown,
+                      ),
+                    )
+                  : const Icon(Icons.open_in_new_rounded),
+              label: AyoText(
+                hasQrisUrl
+                    ? 'Buka QRIS Simulator'
+                    : 'Simulasikan QRIS Sandbox',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isCreatingSandboxQris ? null : _copySandboxQrisUrl,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: paymentBrown,
+                side: const BorderSide(color: paymentOrange),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+              ),
+              icon: const Icon(Icons.copy_rounded),
+              label: const AyoText(
+                'Salin URL QR',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
         ],
       ),
     );

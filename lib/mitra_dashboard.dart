@@ -10,6 +10,7 @@ import 'services/mitra_services_page.dart';
 import 'tutorial/ayos_tutorial.dart';
 import 'widgets/ayo_avatar.dart';
 import 'widgets/ayo_empty_state.dart';
+import 'widgets/ayo_crystal.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 
 class MitraDashboardPage extends StatefulWidget {
@@ -150,13 +151,14 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
     }
 
     return Scaffold(
-      backgroundColor: jobBackgroundColor,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: jobOrangeColor,
-          onRefresh: _loadDashboard,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      backgroundColor: Colors.transparent,
+      body: AyoGradientBackground(
+        child: SafeArea(
+          child: RefreshIndicator(
+            color: jobOrangeColor,
+            onRefresh: _loadDashboard,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
             children: <Widget>[
               if (_errorMessage != null)
                 Container(
@@ -202,6 +204,7 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
                 child: _buildAvailableJobs(),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -210,46 +213,58 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
 
   Widget _buildHeader() {
     final String? avatar = _profile['avatar_url']?.toString();
-    return Row(
-      children: <Widget>[
-        AyoAvatar(
-          imageUrl: avatar,
-          size: 46,
-          backgroundColor: const Color(0xFFFFE5C0),
-          logoPadding: 7,
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              AyoText(
-                'Halo, Mitra!',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              AyoText(
-                (_profile['fullname'] ?? 'Mitra Ayo Suruh').toString(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: jobBrownColor,
-                  fontSize: 18,
-                  height: 1.16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+    return AyoCrystalSurface(
+      intensity: 0.78,
+      blurSigma: 14,
+      borderRadius: const BorderRadius.all(Radius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: <Widget>[
+          AyoAvatar(
+            imageUrl: avatar,
+            size: 46,
+            backgroundColor: const Color(0xFFFFE5C0),
+            logoPadding: 7,
           ),
-        ),
-        NotificationBell(
-          color: jobBrownColor,
-          size: 28,
-          activeMode: 'mitra',
-        ),
-      ],
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AyoText(
+                  'Halo, Mitra!',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                AyoText(
+                  (_profile['fullname'] ?? 'Mitra Ayo Suruh').toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: jobBrownColor,
+                    fontSize: 18,
+                    height: 1.16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AyoCrystalSurface(
+            intensity: 0.82,
+            blurSigma: 12,
+            elevated: false,
+            borderRadius: const BorderRadius.all(Radius.circular(15)),
+            child: NotificationBell(
+              color: Theme.of(context).colorScheme.onSurface,
+              size: 26,
+              activeMode: 'mitra',
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -628,7 +643,7 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             const AyoText('Pekerjaan Tersedia', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-            TextButton(onPressed: _openAllJobs, child: const AyoText('Lihat Semua')),
+            AyoSeeAllButton(onPressed: _openAllJobs, label: 'Lihat Semua'),
           ],
         ),
         const SizedBox(height: 4),

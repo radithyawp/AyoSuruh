@@ -15,6 +15,7 @@ import 'tutorial/ayos_tutorial.dart';
 import 'notifications/notification_router.dart';
 import 'services/notification_service.dart' as push_notifications;
 import 'widgets/ayo_snackbar.dart';
+import 'widgets/ayo_crystal.dart';
 import 'chats/presence_service.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 
@@ -241,6 +242,66 @@ class _MainNavigationState extends State<MainNavigation>
     }
   }
 
+  bool _homeTutorialAnchorIsReady() {
+    final BuildContext? targetContext =
+        _tutorialAnchors.homeHeader.currentContext;
+    if (targetContext == null || !targetContext.mounted) return false;
+
+    final RenderObject? object = targetContext.findRenderObject();
+    return object is RenderBox &&
+        object.attached &&
+        object.hasSize &&
+        object.size.width > 120 &&
+        object.size.height > 24;
+  }
+
+  /// Automatic tutorial after login must wait for both the MainNavigation
+  /// route transition and the async Home layout. Replays from Settings already
+  /// start from a settled shell, which is why they did not show this race.
+  Future<void> _showInitialTutorialWhenReady(String mode) async {
+    if (await AyosTutorial.hasSeen(mode) || !mounted) return;
+
+    for (int attempt = 0; attempt < 50; attempt++) {
+      if (!mounted) return;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      final Animation<double>? routeAnimation =
+          ModalRoute.of(context)?.animation;
+      final bool routeSettled =
+          routeAnimation == null ||
+          routeAnimation.status == AnimationStatus.completed;
+
+      if (routeSettled && _homeTutorialAnchorIsReady()) {
+        // Give async greeting/address/avatar content a few final frames before
+        // the dialog starts measuring its first spotlight target.
+        await Future<void>.delayed(const Duration(milliseconds: 180));
+        if (!mounted) return;
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || !_homeTutorialAnchorIsReady()) return;
+
+        await AyosTutorial.showIfNeeded(
+          context,
+          mode: mode,
+          anchors: _tutorialAnchors,
+          onSelectTab: _selectTutorialTab,
+        );
+        return;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+    }
+
+    if (!mounted) return;
+    // Fallback: AyosTutorial itself also waits for a stable target rect.
+    await AyosTutorial.showIfNeeded(
+      context,
+      mode: mode,
+      anchors: _tutorialAnchors,
+      onSelectTab: _selectTutorialTab,
+    );
+  }
+
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     if (_isLoadingAccess) {
       _pendingNotificationTap = Map<String, dynamic>.from(data);
@@ -338,12 +399,7 @@ class _MainNavigationState extends State<MainNavigation>
       if (!openedFromNotification) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            AyosTutorial.showIfNeeded(
-              context,
-              mode: resolvedMode,
-              anchors: _tutorialAnchors,
-              onSelectTab: _selectTutorialTab,
-            );
+            unawaited(_showInitialTutorialWhenReady(resolvedMode));
           }
         });
       }
@@ -485,6 +541,7 @@ class _MainNavigationState extends State<MainNavigation>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      extendBody: true,
       body: Stack(
         children: List<Widget>.generate(4, (int index) {
           if (!_mountedTabs.contains(index)) {
@@ -524,20 +581,16 @@ class _MainNavigationState extends State<MainNavigation>
           );
         }),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).navigationBarTheme.backgroundColor ??
-              Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              width: 1.0,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        child: AyoCrystalSurface(
+          intensity: 0.94,
+          blurSigma: 22,
+          borderRadius: const BorderRadius.all(Radius.circular(28)),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.only(bottom: 2),
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 const int itemCount = 4;
@@ -707,10 +760,11 @@ class _NavSplashPainter extends CustomPainter {
         ? Curves.easeOut.transform(progress / 0.26)
         : Curves.easeIn.transform((1 - progress) / 0.74);
 
+    final double spanMultiplier = (index == 1 || index == 2) ? 3.55 : 2.75;
     final double maxWidth =
-        (itemWidth * 2.55).clamp(itemWidth, size.width).toDouble();
+        (itemWidth * spanMultiplier).clamp(itemWidth, size.width).toDouble();
     final double splashWidth =
-        itemWidth * 0.42 + (maxWidth - itemWidth * 0.42) * expansion;
+        itemWidth * 0.56 + (maxWidth - itemWidth * 0.56) * expansion;
     final double centerX = itemWidth * (index + 0.5);
 
     double left = centerX - splashWidth / 2;
@@ -741,7 +795,7 @@ class _NavSplashPainter extends CustomPainter {
         (peak + shoulder).clamp(peak, 1.0).toDouble();
     // Splash sengaja sedikit lebih tebal daripada ripple agar gelombang
     // gradasinya terbaca jelas, tetapi tetap hilang lembut di ujung animasi.
-    final double alpha = 0.32 * fade;
+    final double alpha = 0.48 * fade;
 
     final Paint paint = Paint()
       ..shader = LinearGradient(
@@ -749,9 +803,9 @@ class _NavSplashPainter extends CustomPainter {
         end: Alignment.centerRight,
         colors: <Color>[
           color.withValues(alpha: 0),
-          color.withValues(alpha: alpha * 0.32),
+          color.withValues(alpha: alpha * 0.42),
           color.withValues(alpha: alpha),
-          color.withValues(alpha: alpha * 0.32),
+          color.withValues(alpha: alpha * 0.42),
           color.withValues(alpha: 0),
         ],
         stops: <double>[
@@ -763,7 +817,16 @@ class _NavSplashPainter extends CustomPainter {
         ],
       ).createShader(rect);
 
-    canvas.drawRect(rect, paint);
+    final Rect glowRect = Rect.fromLTRB(
+      rect.left,
+      3,
+      rect.right,
+      size.height - 3,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(glowRect, const Radius.circular(24)),
+      paint,
+    );
   }
 
   @override
