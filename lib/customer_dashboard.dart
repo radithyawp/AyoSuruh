@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,6 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
     decimalDigits: 0,
   );
   static const int _promoLoopSeed = 1000;
+  late final List<_PromoItem> _platformPromos;
   late final PageController _promoController;
   Timer? _promoTimer;
   late final ScrollController _homeScrollController;
@@ -108,8 +110,14 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _triviaItems = _homeTriviaService.fallbackItems;
-    _promoController =
-        PageController(initialPage: _promos.length * _promoLoopSeed);
+    _platformPromos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+        ? _promos
+            .where((_PromoItem promo) => promo.action != _PromoAction.playStore)
+            .toList(growable: false)
+        : _promos;
+    _promoController = PageController(
+      initialPage: _platformPromos.length * _promoLoopSeed,
+    );
     _homeScrollController = ScrollController()..addListener(_handleHomeScroll);
     _fetchDashboardData();
     _schedulePromoAdvance();
@@ -131,7 +139,7 @@ class _DashboardPageState extends State<DashboardPage> {
       }
 
       final int currentRawPage =
-          (_promoController.page ?? (_promos.length * _promoLoopSeed))
+          (_promoController.page ?? (_platformPromos.length * _promoLoopSeed))
               .round();
       _promoController.animateToPage(
         currentRawPage + 1,
@@ -570,7 +578,8 @@ class _DashboardPageState extends State<DashboardPage> {
           controller: _promoController,
           onPageChanged: (_) => _schedulePromoAdvance(),
           itemBuilder: (BuildContext context, int index) {
-            final _PromoItem promo = _promos[index % _promos.length];
+            final _PromoItem promo =
+                _platformPromos[index % _platformPromos.length];
 
             return AnimatedBuilder(
               animation: _promoController,
@@ -596,11 +605,11 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               builder: (BuildContext context, Widget? child) {
                 double visiblePage =
-                    (_promos.length * _promoLoopSeed).toDouble();
+                    (_platformPromos.length * _promoLoopSeed).toDouble();
                 if (_promoController.hasClients &&
                     _promoController.position.hasContentDimensions) {
                   visiblePage = _promoController.page ??
-                      (_promos.length * _promoLoopSeed).toDouble();
+                      (_platformPromos.length * _promoLoopSeed).toDouble();
                 }
 
                 final double distance =

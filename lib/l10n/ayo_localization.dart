@@ -47,6 +47,33 @@ abstract final class AyoI18n {
     'Hapus': 'Delete',
     'Edit': 'Edit',
     'Kembali': 'Back',
+    'Informasi Versi': 'Version Information',
+    'Versi Aplikasi': 'App Version',
+    'Nomor Build': 'Build Number',
+    'Dukungan Platform': 'Platform Support',
+    'Status iOS': 'iOS Status',
+    'Build native tervalidasi': 'Native build validated',
+    'Distribusi iOS': 'iOS Distribution',
+    'Belum tersedia publik': 'Not publicly available yet',
+    'Riwayat Versi': 'Version History',
+    'Versi saat ini': 'Current version',
+    'Rilis pertama': 'Initial release',
+    'Tampilan crystal dan gradasi baru pada navigasi utama.':
+        'New crystal visuals and gradients across primary navigation.',
+    'Logo kategori layanan diperbarui dengan identitas visual terbaru.':
+        'Service category logos were refreshed with the latest visual identity.',
+    'Navigasi floating dan ruang aman konten disempurnakan.':
+        'Floating navigation and content safe areas were refined.',
+    'Build native iOS berhasil divalidasi di macOS/Xcode melalui Codemagic.':
+        'The native iOS build was successfully validated on macOS/Xcode through Codemagic.',
+    'Rilis awal Ayo Suruh untuk Customer dan Mitra.':
+        'Initial Ayo Suruh release for Customers and Partners.',
+    'Alur pekerjaan, penawaran Mitra, chat, dan notifikasi tersedia.':
+        'Jobs, Partner offers, chat, and notifications are available.',
+    'Pembayaran, AyoPay, Dompet Mitra, serta rating pekerjaan diperkenalkan.':
+        'Payments, AyoPay, Partner Wallet, and job ratings were introduced.',
+    'Verifikasi Mitra, profil, bantuan, dan pengaturan akun tersedia.':
+        'Partner verification, profiles, help, and account settings are available.',
     'Lanjut': 'Continue',
     'Selanjutnya': 'Next',
     'Lewati': 'Skip',
