@@ -92,6 +92,11 @@ class NotificationService {
 
     const initializationSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
     );
 
     await _localNotifications.initialize(
@@ -162,6 +167,21 @@ class NotificationService {
         return;
       }
 
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apnsToken;
+        for (int attempt = 0; attempt < 12; attempt++) {
+          apnsToken = await _messaging.getAPNSToken();
+          if (apnsToken != null && apnsToken.isNotEmpty) break;
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        }
+        if (apnsToken == null || apnsToken.isEmpty) {
+          debugPrint(
+            'APNs token belum tersedia; sinkronisasi FCM iOS ditunda.',
+          );
+          return;
+        }
+      }
+
       final token = await _messaging.getToken();
 
       if (token != null && token.isNotEmpty) {
@@ -178,9 +198,15 @@ class NotificationService {
     if (token.trim().isEmpty || _supabase.auth.currentUser == null) return;
 
     try {
+      final String platform = switch (defaultTargetPlatform) {
+        TargetPlatform.iOS => 'ios',
+        TargetPlatform.android => 'android',
+        _ => defaultTargetPlatform.name,
+      };
+
       await _supabase.rpc(
         'register_fcm_token',
-        params: {'p_token': token, 'p_platform': 'android'},
+        params: {'p_token': token, 'p_platform': platform},
       );
 
       _currentToken = token;
@@ -247,6 +273,11 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
           playSound: true,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
       ),
       payload: jsonEncode(message.data),

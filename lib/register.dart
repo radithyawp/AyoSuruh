@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'widgets/ayo_snackbar.dart';
@@ -43,7 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isNavigating = false;
-  bool _isGoogleFlow = false;
+  String? _pendingSocialProvider;
   bool _isRequestingPhoneHint = false;
   bool _internalPhoneChange = false;
   String _phoneVerificationLevel = PhoneConfirmationService.unverified;
@@ -59,11 +60,12 @@ class _RegisterPageState extends State<RegisterPage> {
     ) {
       final String provider =
           state.session?.user.appMetadata['provider']?.toString() ?? '';
-      if (_isGoogleFlow &&
+      final String? pendingProvider = _pendingSocialProvider;
+      if (pendingProvider != null &&
           state.event == AuthChangeEvent.signedIn &&
           state.session != null &&
-          provider == 'google') {
-        unawaited(_completeGoogleRegistration());
+          provider == pendingProvider) {
+        unawaited(_completeSocialRegistration(pendingProvider));
       }
     });
   }
@@ -145,7 +147,7 @@ class _RegisterPageState extends State<RegisterPage> {
         await _supabase.auth.signOut();
       }
 
-      _isGoogleFlow = false;
+      _pendingSocialProvider = null;
       if (!mounted) return;
 
       Navigator.pushAndRemoveUntil(
@@ -158,7 +160,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } catch (error) {
       _isNavigating = false;
-      _isGoogleFlow = false;
+      _pendingSocialProvider = null;
       if (!mounted) return;
       AyoSnackBar.error(
         context,
@@ -167,13 +169,14 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Future<void> _completeGoogleRegistration() async {
+  Future<void> _completeSocialRegistration(String provider) async {
     final String email = _supabase.auth.currentUser?.email?.trim() ?? '';
+    final bool isApple = provider == 'apple';
     await _finishRegistration(
       email: email,
       message: AyoI18n.isEnglish
-          ? 'Google account connected. Sign in, then confirm your phone number from Profile.'
-          : 'Google berhasil digunakan. Silakan login, lalu konfirmasi nomor HP dari Profil.',
+          ? '${isApple ? 'Apple' : 'Google'} account connected. Sign in, then confirm your phone number from Profile.'
+          : '${isApple ? 'Apple' : 'Google'} berhasil digunakan. Silakan login, lalu konfirmasi nomor HP dari Profil.',
     );
   }
 
@@ -240,13 +243,13 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      _isGoogleFlow = true;
+      _pendingSocialProvider = 'google';
       final bool authenticated = await AuthService.signInWithGoogle();
       if (!authenticated) {
-        _isGoogleFlow = false;
+        _pendingSocialProvider = null;
       }
     } on AuthException catch (error) {
-      _isGoogleFlow = false;
+      _pendingSocialProvider = null;
       if (!mounted) return;
       AyoSnackBar.error(
         context,
@@ -255,7 +258,7 @@ class _RegisterPageState extends State<RegisterPage> {
             : 'Gagal mendaftar dengan Google: ${error.message}',
       );
     } catch (error) {
-      _isGoogleFlow = false;
+      _pendingSocialProvider = null;
       if (!mounted) return;
       AyoSnackBar.error(
         context,
@@ -267,6 +270,43 @@ class _RegisterPageState extends State<RegisterPage> {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _appleSignUp() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      _pendingSocialProvider = 'apple';
+      final bool authenticated = await AuthService.signInWithApple();
+      if (!authenticated) {
+        _pendingSocialProvider = null;
+        if (mounted) {
+          AyoSnackBar.info(context, 'Daftar dengan Apple dibatalkan.');
+        }
+      }
+    } on AuthException catch (error) {
+      _pendingSocialProvider = null;
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        AyoI18n.isEnglish
+            ? 'Could not sign up with Apple. Please try again.'
+            : 'Gagal mendaftar dengan Apple: ${error.message}',
+      );
+    } catch (error) {
+      _pendingSocialProvider = null;
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        AyoI18n.isEnglish
+            ? 'Could not sign up with Apple. Please try again.'
+            : 'Gagal mendaftar dengan Apple: $error',
+      );
+    } finally {
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -632,6 +672,46 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                         ),
+                        if (!kIsWeb &&
+                            defaultTargetPlatform == TargetPlatform.iOS) ...<Widget>[
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: _isLoading ? null : _appleSignUp,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey[300]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.apple,
+                                    size: 20,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  AyoText(
+                                    'Daftar dengan Apple',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

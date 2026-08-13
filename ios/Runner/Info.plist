@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ayosuruh</string>
+	<string>Ayo Suruh</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,9 +24,21 @@
 				<string>io.supabase.ayosuruh</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.358694252315-0r01c963fpgr4kbehtg8l3fnslq2fdna</string>
+			</array>
+		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>358694252315-0r01c963fpgr4kbehtg8l3fnslq2fdna.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>358694252315-iv42egfmp2hviql1gnv2t2lk92ohjdtq.apps.googleusercontent.com</string>
 	<key>CFBundleName</key>
-	<string>ayosuruh</string>
+	<string>Ayo Suruh</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -67,22 +79,28 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Lokasi digunakan untuk memilih titik pekerjaan dan membantu mitra menemukan tujuan.</string>
+	<string>Lokasi digunakan untuk memilih titik pekerjaan, menampilkan jarak, dan membantu Mitra menuju lokasi pekerjaan.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Kamera digunakan untuk mengambil foto selfie dan dokumen pendaftaran mitra.</string>
+	<string>Kamera digunakan untuk mengambil selfie, foto identitas, bukti pekerjaan, dan media yang Anda pilih kirim.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Galeri digunakan untuk memilih foto KTM, selfie, bukti pekerjaan, dan lampiran chat.</string>
+	<string>Galeri digunakan untuk memilih foto identitas, bukti pekerjaan, katalog jasa, dan lampiran chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon digunakan saat Anda melakukan panggilan suara di dalam Ayo Suruh.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Saat live tracking pekerjaan mobilitas aktif, Ayo Suruh menggunakan lokasi agar Customer tetap dapat melihat posisi Mitra meskipun aplikasi berada di latar belakang.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

@@ -39,6 +39,8 @@ dependencies:
   flutter_dotenv: ^6.0.1
   supabase_flutter: ^2.16.0
   google_sign_in: ^7.2.0
+  sign_in_with_apple: ^8.1.0
+  crypto: ^3.0.7
   image_picker: ^1.2.3
   camera: ^0.12.0+2
   dotenv: ^4.2.0
@@ -120,9 +122,12 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#FFF8F2"
 
   image_path: "assets/images/Logo_Ayo_Suruh.png"
+  image_path_ios: "assets/images/ios_app_icon.png"
 
   adaptive_icon_background: "#FFF8F2"
   adaptive_icon_foreground: "assets/images/Logo_Ayo_Suruh.png"

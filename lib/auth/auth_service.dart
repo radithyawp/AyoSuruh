@@ -1,5 +1,9 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../phone/phone_confirmation_service.dart';
@@ -20,19 +24,34 @@ class AuthService {
   static const String _googleWebClientId =
       '358694252315-iv42egfmp2hviql1gnv2t2lk92ohjdtq.apps.googleusercontent.com';
 
+  // OAuth client type: iOS, registered for bundle ID com.ayosuruh.app in
+  // the same Google Cloud project as the Web client used by Supabase Auth.
+  // This is a public OAuth client ID and is safe to bundle in the app.
+  static const String _googleIosClientId =
+      '358694252315-0r01c963fpgr4kbehtg8l3fnslq2fdna.apps.googleusercontent.com';
+
   static Future<void>? _googleInitialization;
 
-  static bool get _useNativeGoogleOnAndroid =>
+  static bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get _isIOS =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get supportsNativeApple => _isIOS;
+
+  static bool get _useNativeGoogle => _isAndroid || _isIOS;
 
   static Future<void> _ensureGoogleInitialized() {
+    final String? iosClientId = _isIOS && _googleIosClientId.trim().isNotEmpty
+        ? _googleIosClientId.trim()
+        : null;
     return _googleInitialization ??= GoogleSignIn.instance.initialize(
+      clientId: iosClientId,
       serverClientId: _googleWebClientId,
     );
   }
 
   static Future<bool> signInWithGoogle() async {
-    if (_useNativeGoogleOnAndroid) {
+    if (_useNativeGoogle) {
       await _ensureGoogleInitialized();
 
       final GoogleSignIn googleSignIn = GoogleSignIn.instance;
@@ -75,6 +94,72 @@ class AuthService {
           : LaunchMode.externalApplication,
       queryParams: const <String, String>{'prompt': 'select_account'},
     );
+  }
+
+  /// Native Sign in with Apple for iOS.
+  ///
+  /// The raw nonce is sent to Supabase while Apple receives its SHA-256 hash,
+  /// matching Supabase's native Apple sign-in requirements. Apple only returns
+  /// the user's name on the first authorization, so store it immediately when
+  /// it is available.
+  static Future<bool> signInWithApple() async {
+    if (!supportsNativeApple) {
+      throw const AuthException('APPLE_NATIVE_UNAVAILABLE');
+    }
+
+    final String rawNonce = _supabase.auth.generateRawNonce();
+    final String hashedNonce = sha256
+        .convert(utf8.encode(rawNonce))
+        .toString();
+
+    try {
+      final AuthorizationCredentialAppleID credential =
+          await SignInWithApple.getAppleIDCredential(
+            scopes: const <AppleIDAuthorizationScopes>[
+              AppleIDAuthorizationScopes.email,
+              AppleIDAuthorizationScopes.fullName,
+            ],
+            nonce: hashedNonce,
+          );
+
+      final String? idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const AuthException('APPLE_ID_TOKEN_MISSING');
+      }
+
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+
+      final String givenName = credential.givenName?.trim() ?? '';
+      final String familyName = credential.familyName?.trim() ?? '';
+      final String fullName = <String>[
+        givenName,
+        familyName,
+      ].where((String part) => part.isNotEmpty).join(' ');
+
+      if (response.user != null && fullName.isNotEmpty) {
+        final Map<String, dynamic> metadata = <String, dynamic>{
+          'fullname': fullName,
+          'full_name': fullName,
+        };
+        if (givenName.isNotEmpty) metadata['given_name'] = givenName;
+        if (familyName.isNotEmpty) metadata['family_name'] = familyName;
+        await _supabase.auth.updateUser(UserAttributes(data: metadata));
+      }
+
+      return response.user != null;
+    } on SignInWithAppleAuthorizationException catch (error) {
+      if (error.code == AuthorizationErrorCode.canceled) {
+        return false;
+      }
+      debugPrint(
+        'Native Apple Sign-In failed: ${error.code} ${error.message}',
+      );
+      throw const AuthException('APPLE_NATIVE_SIGN_IN_FAILED');
+    }
   }
 
   static Future<void> sendPasswordResetEmail(String email) {

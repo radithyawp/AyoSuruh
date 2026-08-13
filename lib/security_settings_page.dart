@@ -231,6 +231,8 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     switch (provider.toLowerCase()) {
       case 'google':
         return 'Google';
+      case 'apple':
+        return 'Apple';
       case 'email':
         return 'Email / password';
       default:

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -221,6 +222,40 @@ class _LoginPageState extends State<LoginPage> {
         AyoI18n.isEnglish
             ? 'Could not sign in with Google. Please try again.'
             : 'Gagal masuk dengan Google: $error',
+      );
+    } finally {
+      if (mounted && !_isNavigating) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _appleLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthPreferences.saveLoginPreference(
+        rememberMe: _rememberMe,
+        email: _emailCtrl.text.trim(),
+      );
+      final bool authenticated = await AuthService.signInWithApple();
+      if (!authenticated && mounted) {
+        AyoSnackBar.info(context, 'Masuk dengan Apple dibatalkan.');
+      }
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        AyoI18n.isEnglish
+            ? 'Could not sign in with Apple. Please try again.'
+            : 'Gagal masuk dengan Apple: ${error.message}',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AyoSnackBar.error(
+        context,
+        AyoI18n.isEnglish
+            ? 'Could not sign in with Apple. Please try again.'
+            : 'Gagal masuk dengan Apple: $error',
       );
     } finally {
       if (mounted && !_isNavigating) setState(() => _isLoading = false);
@@ -560,6 +595,46 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                             ),
+                            if (!kIsWeb &&
+                                defaultTargetPlatform == TargetPlatform.iOS) ...<Widget>[
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: OutlinedButton(
+                                  onPressed: _isLoading ? null : _appleLogin,
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: Colors.grey[300]!),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Icon(
+                                        Icons.apple,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      AyoText(
+                                        'Masuk dengan Apple',
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

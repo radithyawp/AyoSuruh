@@ -26,13 +26,26 @@ Future<void> main() async {
   if (!kIsWeb) {
     await LiveKitClient.initialize();
 
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    bool firebaseReady = false;
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      firebaseReady = true;
+    } on UnsupportedError catch (error) {
+      debugPrint(
+        'Firebase belum dikonfigurasi untuk platform ini: $error',
+      );
+    } on FirebaseException catch (error) {
+      debugPrint(
+        'Firebase gagal diinisialisasi pada platform ini: ${error.message}',
+      );
+    }
 
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-    await NotificationService.instance.initialize();
+    if (firebaseReady) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      await NotificationService.instance.initialize();
+    }
   }
 
   await AppSettingsController.instance.load();

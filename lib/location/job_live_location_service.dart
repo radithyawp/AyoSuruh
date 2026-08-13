@@ -139,6 +139,15 @@ class JobLiveLocationService {
           setOngoing: true,
         ),
       );
+    } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      settings = AppleSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        activityType: ActivityType.otherNavigation,
+        distanceFilter: 12,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+        allowBackgroundLocationUpdates: true,
+      );
     } else {
       settings = const LocationSettings(
         accuracy: LocationAccuracy.high,
