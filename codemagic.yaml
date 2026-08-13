@@ -1,0 +1,33 @@
+workflows:
+  ios-unsigned-ci:
+    name: Ayo Suruh iOS - Unsigned CI
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: 3.41.7
+      xcode: 26.4
+      cocoapods: default
+
+    scripts:
+      - name: Show build environment
+        script: |
+          flutter --version
+          xcodebuild -version
+          dart --version
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Analyze project
+        script: |
+          flutter analyze
+
+      - name: Build iOS without code signing
+        script: |
+          flutter build ios --debug --no-codesign
+
+    artifacts:
+      - build/ios/iphoneos/**/*.app
+      - /tmp/xcodebuild_logs/*.log
