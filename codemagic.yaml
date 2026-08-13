@@ -16,6 +16,12 @@ workflows:
           xcodebuild -version
           dart --version
 
+      - name: Create CI placeholder env
+        script: |
+          mkdir -p assets
+          touch assets/.env
+          echo "Created assets/.env for unsigned compile validation only."
+
       - name: Get Flutter packages
         script: |
           flutter pub get
@@ -31,3 +37,4 @@ workflows:
     artifacts:
       - build/ios/iphoneos/**/*.app
       - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
