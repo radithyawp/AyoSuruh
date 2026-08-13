@@ -464,6 +464,59 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
     return null;
   }
 
+  Rect? _readTargetRect(GlobalKey target) {
+    final BuildContext? targetContext = target.currentContext;
+    if (targetContext == null || !targetContext.mounted) return null;
+
+    final RenderObject? object = targetContext.findRenderObject();
+    if (object is! RenderBox || !object.hasSize || !object.attached) return null;
+    if (object.size.width <= 1 || object.size.height <= 1) return null;
+
+    final Offset topLeft = object.localToGlobal(Offset.zero);
+    return topLeft & object.size;
+  }
+
+  bool _rectIsStable(Rect previous, Rect current) {
+    const double tolerance = 1.25;
+    return (previous.left - current.left).abs() <= tolerance &&
+        (previous.top - current.top).abs() <= tolerance &&
+        (previous.width - current.width).abs() <= tolerance &&
+        (previous.height - current.height).abs() <= tolerance;
+  }
+
+  /// First-login tutorial can start while the Home route, async profile data,
+  /// and the first ListView layout are still settling. Sampling a single rect
+  /// in that window leaves the spotlight at an obsolete position. Wait until
+  /// the real widget has stayed in the same global rect for several frames.
+  Future<Rect?> _waitForStableTargetRect(GlobalKey target) async {
+    Rect? previous;
+    int stableSamples = 0;
+
+    for (int attempt = 0; attempt < 36; attempt++) {
+      if (!mounted) return null;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return null;
+
+      final Rect? current = _readTargetRect(target);
+      if (current != null) {
+        if (previous != null && _rectIsStable(previous, current)) {
+          stableSamples++;
+          if (stableSamples >= 3) return current;
+        } else {
+          stableSamples = 0;
+        }
+        previous = current;
+      } else {
+        previous = null;
+        stableSamples = 0;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 45));
+    }
+
+    return _readTargetRect(target);
+  }
+
   Future<void> _prepareCurrentStep() async {
     if (!mounted || _steps.isEmpty) return;
     setState(() => _preparing = true);
@@ -501,11 +554,10 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       if (keepAtTop) {
         final ScrollableState? scrollable = Scrollable.maybeOf(visibleTarget);
         if (scrollable != null && scrollable.position.hasPixels) {
-          await scrollable.position.animateTo(
-            scrollable.position.minScrollExtent,
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
-          );
+          // Keep the first Home anchors at the ListView's real top. Calling
+          // ensureVisible afterwards with a near-zero alignment would scroll
+          // the greeting back underneath the fixed crystal AppBar.
+          scrollable.position.jumpTo(scrollable.position.minScrollExtent);
           if (!mounted) return;
           await WidgetsBinding.instance.endOfFrame;
         }
@@ -514,38 +566,34 @@ class _AyosInteractiveTutorialState extends State<_AyosInteractiveTutorial> {
       final BuildContext? refreshedTarget = step.target.currentContext;
       if (refreshedTarget == null || !refreshedTarget.mounted) return;
 
-      await Scrollable.ensureVisible(
-        refreshedTarget,
-        alignment: keepAtTop ? 0.02 : 0.34,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-        duration: const Duration(milliseconds: 330),
-        curve: Curves.easeOutCubic,
-      );
+      if (!keepAtTop) {
+        await Scrollable.ensureVisible(
+          refreshedTarget,
+          alignment: 0.34,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+          duration: const Duration(milliseconds: 330),
+          curve: Curves.easeOutCubic,
+        );
+      }
     } catch (_) {
       // Target di luar Scrollable (mis. FAB/navbar) tetap bisa disorot.
     }
 
     if (!mounted) return;
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    if (!mounted) return;
 
-    final BuildContext? targetContext = step.target.currentContext;
-    if (targetContext == null || !targetContext.mounted) {
+    // Do not freeze the spotlight from a transitional frame. This is most
+    // important on the automatic first-login tutorial, where Home may still be
+    // completing its route animation/profile fetch even though the anchor
+    // already exists.
+    final Rect? stableRect = await _waitForStableTargetRect(step.target);
+    if (!mounted) return;
+    if (stableRect == null) {
       await _skipUnavailableStep();
       return;
     }
 
-    final RenderObject? object = targetContext.findRenderObject();
-    if (object is! RenderBox || !object.hasSize) {
-      await _skipUnavailableStep();
-      return;
-    }
-
-    final Offset topLeft = object.localToGlobal(Offset.zero);
-    final Rect rect = topLeft & object.size;
-    if (!mounted) return;
     setState(() {
-      _targetRect = rect.inflate(6);
+      _targetRect = stableRect.inflate(6);
       _preparing = false;
     });
   }

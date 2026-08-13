@@ -26,6 +26,7 @@ import 'tutorial/ayos_tutorial.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/ayo_pressable.dart';
 import 'widgets/ayo_avatar.dart';
+import 'widgets/ayo_crystal.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import './theme/ayo_theme.dart';
 import 'config/feature_flags.dart';
@@ -62,10 +63,13 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _mitraBaseLocation;
   bool _isLoading = true;
   bool _isSwitchingMode = false;
+  bool _headerScrolled = false;
 
   // Warna-warna Utama Ayo Suruh
   static const Color _primaryOrange = Color(0xFFF6990E);
   static Color get _brownColor => AyoAdaptiveColors.brown;
+  static const String _appVersion = '1.1.0';
+  static const String _buildNumber = '2';
 
   @override
   void initState() {
@@ -381,6 +385,260 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+
+  Future<void> _showVersionInfo() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        final ThemeData theme = Theme.of(sheetContext);
+        final Color accent = theme.brightness == Brightness.dark
+            ? AyoColors.amber
+            : AyoColors.brown;
+
+        Widget infoRow(IconData icon, String label, String value) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(icon, size: 20, color: accent),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      AyoText(
+                        label,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      AyoText(
+                        value,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Material(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.72),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: AyoI18n.isEnglish ? 'Back' : 'Kembali',
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 52,
+                      height: 52,
+                      child: Image.asset(
+                        'assets/images/ayos_runner_logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          AyoText(
+                            'Informasi Versi',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          AyoText(
+                            'Ayo Suruh v$_appVersion',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                AyoCrystalSurface(
+                  intensity: 0.78,
+                  blurSigma: 12,
+                  elevated: false,
+                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      infoRow(
+                        Icons.info_outline_rounded,
+                        'Versi Aplikasi',
+                        _appVersion,
+                      ),
+                      infoRow(
+                        Icons.tag_rounded,
+                        'Nomor Build',
+                        _buildNumber,
+                      ),
+                      infoRow(
+                        Icons.devices_rounded,
+                        'Dukungan Platform',
+                        'Android & iOS',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                AyoText(
+                  'Riwayat Versi',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _versionHistoryCard(
+                  sheetContext,
+                  version: 'Versi 1.1.0 (Build 2)',
+                  badge: 'Versi saat ini',
+                  changes: const <String>[
+                    'Tampilan crystal dan gradasi baru pada navigasi utama.',
+                    'Logo kategori layanan diperbarui dengan identitas visual terbaru.',
+                    'Navigasi floating dan ruang aman konten disempurnakan.',
+                    'Dukungan platform mencakup Android dan iOS.',
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _versionHistoryCard(
+                  sheetContext,
+                  version: 'Versi 1.0.0 (Build 1)',
+                  badge: 'Rilis pertama',
+                  changes: const <String>[
+                    'Rilis awal Ayo Suruh untuk Customer dan Mitra.',
+                    'Alur pekerjaan, penawaran Mitra, chat, dan notifikasi tersedia.',
+                    'Pembayaran, AyoPay, Dompet Mitra, serta rating pekerjaan diperkenalkan.',
+                    'Verifikasi Mitra, profil, bantuan, dan pengaturan akun tersedia.',
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _versionHistoryCard(
+    BuildContext context, {
+    required String version,
+    required String badge,
+    required List<String> changes,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final Color accent = theme.brightness == Brightness.dark
+        ? AyoColors.amber
+        : AyoColors.brown;
+
+    return AyoCrystalSurface(
+      intensity: 0.68,
+      blurSigma: 10,
+      elevated: false,
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
+      padding: const EdgeInsets.fromLTRB(15, 13, 15, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: AyoText(
+                  version,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: accent.withValues(alpha: 0.18)),
+                ),
+                child: AyoText(
+                  badge,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...changes.map((String change) => _versionBullet(context, change)),
+        ],
+      ),
+    );
+  }
+
+  Widget _versionBullet(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 7,
+            height: 7,
+            margin: const EdgeInsets.only(top: 6),
+            decoration: const BoxDecoration(
+              color: AyoColors.coral,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AyoText(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final bool scrolled = notification.metrics.pixels > 8;
+    if (scrolled != _headerScrolled && mounted) {
+      setState(() => _headerScrolled = scrolled);
+    }
+    return false;
+  }
+
   /* ---------- BUILD METHOD ---------- */
   @override
   Widget build(BuildContext context) {
@@ -401,12 +659,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final String? avatarUrl = _userRow?['avatar_url'];
     final bool isMitra = widget.activeMode == 'mitra' && widget.canUseMitraMode;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    return AyoGradientBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
-        child: Column(
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+          child: Column(
           children: [
             // --- HEADER AVATAR & AKUN (Klik Avatar Untuk Ubah Foto) ---
             KeyedSubtree(
@@ -513,16 +774,38 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 20),
 
             // --- FOOTER VERSI ---
-            AyoText(
-              'Ayo Suruh v2.4.0',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+            AyoPressable(
+              onTap: _showVersionInfo,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    AyoText(
+                      'Ayo Suruh v$_appVersion',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
+          ),
         ),
+      ),
       ),
     );
   }
@@ -532,7 +815,9 @@ class _ProfilePageState extends State<ProfilePage> {
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      flexibleSpace: AyoCrystalBarLayer(scrolled: _headerScrolled),
       title: Row(
         children: <Widget>[
           SizedBox(

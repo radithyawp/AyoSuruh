@@ -12,17 +12,19 @@ abstract final class AyoColors {
   static const Color greenDark = Color(0xFF526846);
   static const Color brown = Color(0xFF6E481F);
   static const Color brownDark = Color(0xFF3F3027);
-  static const Color canvas = Color(0xFFFFFAF7);
-  static const Color surface = Colors.white;
-  static const Color border = Color(0xFFECE2DC);
+  static const Color canvas = Color(0xFFFFF9F5);
+  static const Color surface = Color(0xFFFFFEFC);
+  static const Color surfaceCrystal = Color(0xE6FFF9F4);
+  static const Color border = Color(0xFFE9DDD6);
   static const Color muted = Color(0xFF746A64);
 }
 
 abstract final class AyoDarkColors {
-  static const Color canvas = Color(0xFF12100F);
-  static const Color surface = Color(0xFF1D1917);
-  static const Color surfaceRaised = Color(0xFF27211E);
-  static const Color border = Color(0xFF40352F);
+  static const Color canvas = Color(0xFF100F0E);
+  static const Color surface = Color(0xFF1B1816);
+  static const Color surfaceRaised = Color(0xFF26201D);
+  static const Color surfaceCrystal = Color(0xE625201D);
+  static const Color border = Color(0xFF3B312C);
   static const Color onSurface = Color(0xFFF7EEE9);
   static const Color muted = Color(0xFFB9AAA2);
   static const Color warm = Color(0xFFEBC8B0);
@@ -162,10 +164,6 @@ abstract final class AyoTheme {
       onTertiary: AyoColors.brownDark,
       surface: surface,
       onSurface: onSurface,
-      onSurfaceVariant: muted,
-      surfaceContainer: dark ? const Color(0xFF211C1A) : const Color(0xFFFFFCFA),
-      surfaceContainerHigh: dark ? const Color(0xFF27211E) : const Color(0xFFFFF8F4),
-      surfaceContainerHighest: dark ? const Color(0xFF302824) : const Color(0xFFF7F0EC),
       outline: border,
       outlineVariant: dark ? const Color(0xFF342C28) : const Color(0xFFF3ECE7),
       error: dark ? const Color(0xFFFF8A80) : const Color(0xFFC54D43),
@@ -392,10 +390,14 @@ abstract final class AyoTheme {
         shape: const StadiumBorder(),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: dark ? AyoDarkColors.navigation : Colors.white,
+        backgroundColor: dark
+            ? AyoDarkColors.navigation.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.92),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        indicatorColor: dark ? const Color(0xFF33402E) : const Color(0xFFEAF0E5),
+        indicatorColor: dark
+            ? const Color(0xFF3A302B)
+            : const Color(0xFFFFE9DD),
         height: 68,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {

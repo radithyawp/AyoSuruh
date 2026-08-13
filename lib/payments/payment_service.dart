@@ -162,6 +162,22 @@ class PaymentService {
     );
   }
 
+  Future<Map<String, dynamic>> createSandboxQrisTransaction(
+    String jobId,
+  ) async {
+    final FunctionResponse response = await _client.functions.invoke(
+      'create-midtrans-snap',
+      body: <String, dynamic>{
+        'job_id': jobId,
+        'sandbox_qris': true,
+      },
+    );
+    return _parseFunctionResponse(
+      response,
+      'QRIS Sandbox belum dapat dibuat.',
+    );
+  }
+
   Future<Map<String, dynamic>> refreshPaymentStatus(String jobId) async {
     final FunctionResponse response = await _client.functions.invoke(
       'refresh-midtrans-status',

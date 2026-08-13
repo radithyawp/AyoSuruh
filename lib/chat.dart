@@ -9,6 +9,7 @@ import 'chats/presence_service.dart';
 import 'jobs/job_helpers.dart';
 import 'services/service_marketplace_page.dart';
 import 'widgets/ayo_empty_state.dart';
+import 'widgets/ayo_crystal.dart';
 import 'notification.dart';
 import 'widgets/ayo_avatar.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
@@ -44,6 +45,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _isRefreshing = false;
   String? _errorMessage;
   String _query = '';
+  bool _headerScrolled = false;
 
   @override
   void initState() {
@@ -154,88 +156,118 @@ class _ChatPageState extends State<ChatPage> {
     }).toList();
   }
 
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final bool scrolled = notification.metrics.pixels > 8;
+    if (scrolled != _headerScrolled && mounted) {
+      setState(() => _headerScrolled = scrolled);
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: jobBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 8, 10, 2),
-              child: Row(
+    return AyoGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Stack(
                 children: <Widget>[
-                  Expanded(
-                    child: AyoText(
-                      'Chat',
-                      style: TextStyle(
-                        color: jobBrownColor,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                  Positioned.fill(
+                    child: AyoCrystalBarLayer(scrolled: _headerScrolled),
                   ),
-                  NotificationBell(
-                    color: jobDarkBrownColor,
-                    activeMode: widget.activeMode,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 8, 10, 2),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: AyoText(
+                                'Chat',
+                                style: TextStyle(
+                                  color: jobBrownColor,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            NotificationBell(
+                              color: jobDarkBrownColor,
+                              activeMode: widget.activeMode,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: AyoText(
+                          'Koordinasikan pekerjaan dengan customer atau mitra.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      KeyedSubtree(
+                        key: widget.tutorialKey,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+                          child: AyoCrystalSurface(
+                            intensity: _headerScrolled ? 0.92 : 0.60,
+                            blurSigma: _headerScrolled ? 18 : 8,
+                            elevated: _headerScrolled,
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(16),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (String value) =>
+                                  setState(() => _query = value),
+                              decoration: InputDecoration(
+                                hintText: AyoI18n.t('Cari nama atau pekerjaan...'),
+                                prefixIcon: Icon(
+                                  Icons.search_rounded,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                                suffixIcon: _query.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _query = '');
+                                        },
+                                        icon: const Icon(Icons.close_rounded),
+                                      ),
+                                filled: false,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18),
-              child: AyoText(
-                'Koordinasikan pekerjaan dengan customer atau mitra.',
-                style: TextStyle(
-                  color: Color(0xFF81746C),
-                  fontSize: 11,
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleScrollNotification,
+                  child: _buildContent(),
                 ),
               ),
-            ),
-            KeyedSubtree(
-              key: widget.tutorialKey,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-                child: TextField(
-                controller: _searchController,
-                onChanged: (String value) => setState(() => _query = value),
-                decoration: InputDecoration(
-                  hintText: AyoI18n.t('Cari nama atau pekerjaan...'),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: Color(0xFF8B7E76),
-                  ),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _query = '');
-                          },
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFEDE4DF)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFEDE4DF)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: jobOrangeColor),
-                  ),
-                ),
-              ),
-            ),
-            ),
-            Expanded(child: _buildContent()),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -274,6 +306,7 @@ class _ChatPageState extends State<ChatPage> {
         onRefresh: _loadRooms,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 112),
           children: <Widget>[
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.13),
             AyoEmptyState(
@@ -325,7 +358,7 @@ class _ChatPageState extends State<ChatPage> {
       color: jobOrangeColor,
       onRefresh: _loadRooms,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(14, 2, 14, 24),
+        padding: const EdgeInsets.fromLTRB(14, 2, 14, 116),
         itemCount: rooms.length,
         separatorBuilder: (BuildContext context, int index) =>
             const SizedBox(height: 9),

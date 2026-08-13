@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/ayo_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'widgets/home_shortcut_button.dart';
+import 'widgets/ayo_crystal.dart';
 import 'package:ayosuruh/l10n/ayo_localization.dart';
 import './theme/ayo_theme.dart';
 
@@ -267,6 +268,7 @@ class _HelpPageState extends State<HelpPage> {
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: const AyoCrystalBarLayer(scrolled: true),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: _brownColor),
           onPressed: () => Navigator.pop(context),
@@ -282,8 +284,9 @@ class _HelpPageState extends State<HelpPage> {
 
         actions: const <Widget>[HomeShortcutButton()],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      body: AyoGradientBackground(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         children: <Widget>[
           _buildHeaderWithSearch(),
           const SizedBox(height: 36),
@@ -300,16 +303,9 @@ class _HelpPageState extends State<HelpPage> {
                 ),
               ),
               if (_query.trim().isEmpty)
-                TextButton(
+                AyoSeeAllButton(
                   onPressed: () => setState(() => _showAll = !_showAll),
-                  child: AyoText(
-                    _showAll ? 'Ringkas' : 'Lihat Semua',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: _brownColor,
-                    ),
-                  ),
+                  label: _showAll ? 'Ringkas' : 'Lihat Semua',
                 ),
             ],
           ),
@@ -366,6 +362,7 @@ class _HelpPageState extends State<HelpPage> {
           ),
           const SizedBox(height: 32),
         ],
+        ),
       ),
     );
   }

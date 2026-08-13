@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../notification.dart';
+import '../widgets/ayo_crystal.dart';
 
 import 'job_helpers.dart';
 import 'job_service.dart';
@@ -26,6 +27,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
   late final TabController _tabController;
 
   bool _isLoading = true;
+  bool _headerScrolled = false;
   String? _errorMessage;
   List<Map<String, dynamic>> _availableJobs = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _bids = <Map<String, dynamic>>[];
@@ -83,15 +85,26 @@ class _MitraJobsPageState extends State<MitraJobsPage>
     if (changed == true) await _loadData();
   }
 
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final bool scrolled = notification.metrics.pixels > 8;
+    if (scrolled != _headerScrolled && mounted) {
+      setState(() => _headerScrolled = scrolled);
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: jobBackgroundColor,
+    return AyoGradientBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: jobBackgroundColor,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: AyoCrystalBarLayer(scrolled: _headerScrolled),
         title: AyoText(
           'Pekerjaan',
           style: TextStyle(
@@ -124,7 +137,11 @@ class _MitraJobsPageState extends State<MitraJobsPage>
         ),
 
       ),
-      body: _buildBody(),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: _buildBody(),
+      ),
+      ),
     );
   }
 
@@ -172,7 +189,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
               ],
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
               itemCount: _availableJobs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
@@ -207,7 +224,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
               ],
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
               itemCount: _bids.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {
@@ -297,7 +314,7 @@ class _MitraJobsPageState extends State<MitraJobsPage>
               ],
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
               itemCount: _activeJobs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (BuildContext context, int index) {

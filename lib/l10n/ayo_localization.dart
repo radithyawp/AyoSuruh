@@ -40,6 +40,22 @@ abstract final class AyoI18n {
     'Syarat & Ketentuan': 'Terms & Conditions',
     'Kebijakan Privasi': 'Privacy Policy',
     'Tentang Ayo Suruh': 'About Ayo Suruh',
+    'Informasi Versi': 'Version Information',
+    'Versi Aplikasi': 'App Version',
+    'Nomor Build': 'Build Number',
+    'Dukungan Platform': 'Platform Support',
+    'Yang baru di versi ini': "What's new in this version",
+    'Riwayat Versi': 'Version History',
+    'Versi saat ini': 'Current version',
+    'Rilis pertama': 'Initial release',
+    'Tampilan crystal dan gradasi baru pada navigasi utama.': 'New crystal styling and blended gradients across the main navigation.',
+    'Logo kategori layanan diperbarui dengan identitas visual terbaru.': 'Service category logos now use the latest visual identity.',
+    'Navigasi floating dan ruang aman konten disempurnakan.': 'Floating navigation and content safe spacing have been refined.',
+    'Dukungan platform mencakup Android dan iOS.': 'Platform support includes Android and iOS.',
+    'Rilis awal Ayo Suruh untuk Customer dan Mitra.': 'Initial Ayo Suruh release for Customers and Partners.',
+    'Alur pekerjaan, penawaran Mitra, chat, dan notifikasi tersedia.': 'Job flows, Partner offers, chat, and notifications became available.',
+    'Pembayaran, AyoPay, Dompet Mitra, serta rating pekerjaan diperkenalkan.': 'Payments, AyoPay, Partner Wallet, and job ratings were introduced.',
+    'Verifikasi Mitra, profil, bantuan, dan pengaturan akun tersedia.': 'Partner verification, profiles, support, and account settings became available.',
     'Edit Profil': 'Edit Profile',
     'Simpan Perubahan': 'Save Changes',
     'Simpan': 'Save',
@@ -56,6 +72,8 @@ abstract final class AyoI18n {
     'Tutup': 'Close',
     'Lihat Semua': 'View All',
     'Lihat semua': 'View all',
+    'Ringkas': 'Show Less',
+    'Desain & Pemrograman': 'Design & Coding',
     'Lihat Pekerjaan': 'View Job',
     'Lihat Detail': 'View Details',
     'Beranda': 'Home',
@@ -299,6 +317,8 @@ abstract final class AyoI18n {
     'Pihak Ketiga yang Mendukung Layanan':
         'Third Parties Supporting the Service',
     'Versi 1.0.0 (Build 1)': 'Version 1.0.0 (Build 1)',
+    'Versi 1.1.0': 'Version 1.1.0',
+    'Versi 1.1.0 (Build 2)': 'Version 1.1.0 (Build 2)',
     'AYOS · Mode Mitra': 'AYOS · Partner Mode',
     'AYOS · Kenalan Yuk': 'AYOS · Quick Tour',
     'Kenalan dulu sama Beranda 👋': 'Meet your Home screen 👋',
@@ -545,6 +565,19 @@ abstract final class AyoI18n {
     'Buka Pembayaran Tunai': 'Open Cash Payment',
     'Bayar Tunai / Cash': 'Cash Payment',
     'Cek Status Midtrans': 'Check Midtrans Status',
+    'QRIS Sandbox Helper': 'QRIS Sandbox Helper',
+    'Khusus pengujian di HP. Ayo Suruh akan membuat QRIS Sandbox, menyalin URL QR, lalu membuka simulator Midtrans.':
+        'For phone testing only. Ayo Suruh will create a Sandbox QRIS, copy the QR URL, then open the Midtrans simulator.',
+    'QRIS siap · URL tersedia untuk simulator':
+        'QRIS ready · URL available for the simulator',
+    'Buka QRIS Simulator': 'Open QRIS Simulator',
+    'Simulasikan QRIS Sandbox': 'Simulate Sandbox QRIS',
+    'Salin URL QR': 'Copy QR URL',
+    'URL QRIS Sandbox sudah disalin.': 'Sandbox QRIS URL copied.',
+    'URL QRIS sudah disalin. Tempel di simulator lalu tekan Scan QR.':
+        'QRIS URL copied. Paste it into the simulator, then press Scan QR.',
+    'Simulator QRIS Midtrans tidak dapat dibuka.':
+        'Could not open the Midtrans QRIS Simulator.',
     'Riwayat Percobaan': 'Attempt History',
     'Buka rincian': 'Open details',
     'Pembatalan & Refund': 'Cancellation & Refund',
@@ -3211,6 +3244,8 @@ abstract final class AyoI18n {
         'Minimum Rp1,000 • Maximum Rp10,000,000. This price is only an initial reference; the final offer still follows the bidding system.',
     '© 2026 Ayo Suruh. Dikembangkan sebagai proyek kewirausahaan Teknik Komputer UPI Kampus Cibiru.':
         '© 2026 Ayo Suruh. Developed as an entrepreneurship project by Computer Engineering, UPI Cibiru Campus.',
+    '© 2026 Ayo Suruh. Dikembangkan oleh mahasiswa Teknik Komputer UPI Kampus Cibiru.':
+        '© 2026 Ayo Suruh. Developed by Computer Engineering students at UPI Cibiru Campus.',
     ' kami.': ' our.',
     ' serta ': ' and ',
     'Saya menyetujui ': 'I agree to ',
@@ -3801,7 +3836,13 @@ abstract final class AyoI18n {
   }
 
   static String t(String input) {
-    if (!isEnglish || input.isEmpty) return input;
+    if (input.isEmpty) return input;
+    if (!isEnglish) {
+      if (input.trim().toLowerCase() == 'design & coding') {
+        return 'Desain & Pemrograman';
+      }
+      return input;
+    }
     final String? finalPolish = _finalPolishEnglish[input];
     if (finalPolish != null) return finalPolish;
     final String? production = _productionEnglish[input];
